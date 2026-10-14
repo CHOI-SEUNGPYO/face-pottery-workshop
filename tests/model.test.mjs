@@ -1,0 +1,5 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {freshModel,deform,validateModel,createHistory,unwrap,area,eraseAt} from '../src/model.js';
+test('a sculpted pot survives undo, save/restore and seam edits',()=>{const m=freshModel(),h=createHistory(2);h.push(m);deform(m,.999,.5,.2);assert.ok(m.offsets.some(v=>v>0));assert.ok(m.offsets[20*80]>0,'edits wrap through the UV seam');assert.deepEqual(h.pop(),freshModel());const restored=validateModel(JSON.parse(JSON.stringify(m)));assert.deepEqual(restored,m);assert.equal(validateModel({...m,offsets:[NaN]}),null);assert.equal(validateModel({...m,marks:[{tool:'script',points:[]}]}),null);});
+test('hole contours close across the seam and erase locally',()=>{const points=unwrap([[.98,.4],[.02,.4],[.02,.5],[.98,.5]]);assert.ok(area(points)>.003&&area(points)<.005);const m=freshModel();m.marks=[{tool:'hole',points}];eraseAt(m,.99,.4);assert.equal(m.marks.length,0);const h=createHistory(2);for(let i=0;i<3;i++){m.height=1+i*.1;h.push(m);}assert.equal(h.length,2);assert.equal(h.pop().height,1.2);});
