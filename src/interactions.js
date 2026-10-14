@@ -1,4 +1,4 @@
-import {clamp,deform,unwrap,area,eraseAt} from './model.js';
+import {clamp,deform,unwrap,area,eraseAt,invalidateProcess} from './model.js';
 
 export class Interactions {
   constructor(pottery,surface,preview,onCommit,onMessage){
@@ -34,7 +34,7 @@ export class Interactions {
     else if(this.stage===2||this.stage===3)this.sample(e);
     e.preventDefault();
   }
-  invalidate(){const m=this.pottery.model;m.fired=false;m.dug=0;m.brush=[];m.assembled=false;}
+  invalidate(){invalidateProcess(this.pottery.model);}
   up(e){
     const d=this.drag;if(!d||e.pointerId!==d.id)return;const model=this.pottery.model;
     if(this.stage===2&&d.points.length){

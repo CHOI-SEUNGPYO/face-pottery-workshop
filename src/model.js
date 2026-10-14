@@ -2,6 +2,14 @@ export const ROWS = 40, COLS = 80;
 export const clamp = (x,a,b) => Math.max(a,Math.min(b,x));
 export const wrapDistance = (a,b) => Math.min(Math.abs(a-b),1-Math.abs(a-b));
 export function freshModel(){return {version:1,stage:1,height:1,offsets:Array((ROWS+1)*COLS).fill(0),marks:[],crown:[],fired:false,dug:0,brush:[],assembled:false};}
+export function advanceIssue(stage,model){
+  if(stage===2&&model.crown.length<3)return '정수리에 내 구멍을 하나 만들어 볼까요?';
+  if(stage===5&&!model.fired)return '과정 보기 버튼으로 토기를 먼저 구워 보세요.';
+  if(stage===6&&model.dug<65)return '흙을 조금 더 걷어 내면 토기와 시루가 보여요.';
+  if(stage===7&&!model.assembled)return '토기를 시루 위로 옮겨 보세요.';
+  return '';
+}
+export function invalidateProcess(model){model.fired=false;model.dug=0;model.brush=[];model.assembled=false;}
 export function baseRadius(t){
   const points=[[0,.54],[.08,.72],[.25,.98],[.48,1.08],[.68,1.0],[.83,.8],[.94,.48],[1,.48]];
   for(let i=1;i<points.length;i++)if(t<=points[i][0]){

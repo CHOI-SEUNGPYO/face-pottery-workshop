@@ -11,7 +11,7 @@ export class Pottery {
     this.renderer.setPixelRatio(Math.min(devicePixelRatio,2));this.renderer.outputColorSpace=THREE.SRGBColorSpace;this.renderer.setClearColor(0,0);
     container.append(this.renderer.domElement);this.scene=new THREE.Scene();this.camera=new THREE.OrthographicCamera(-2,2,2,-2,.1,40);
     this.scene.add(new THREE.HemisphereLight(0xfff6e8,0x624830,2.1));const key=new THREE.DirectionalLight(0xffeed8,3.2);key.position.set(-3,5,5);this.scene.add(key);const fill=new THREE.DirectionalLight(0xe3f0f4,.9);fill.position.set(4,2,-3);this.scene.add(fill);
-    this.pot=new THREE.Group();this.scene.add(this.pot);
+    this.pot=new THREE.Group();this.scene.add(this.pot);this.guides=new THREE.Group();this.pot.add(this.guides);this.guideCount=0;
     this.mask=makeCanvas();this.bump=makeCanvas();this.baseBump=makeCanvas();this.colorMap=makeCanvas();this.noise();this.baseColor=makeCanvas();this.baseColor.getContext('2d').drawImage(this.colorMap,0,0);this.plainColor=new THREE.CanvasTexture(this.baseColor);this.plainColor.colorSpace=THREE.SRGBColorSpace;
     this.maskTexture=new THREE.CanvasTexture(this.mask);this.bumpTexture=new THREE.CanvasTexture(this.bump);this.colorTexture=new THREE.CanvasTexture(this.colorMap);this.colorTexture.colorSpace=THREE.SRGBColorSpace;
     for(const t of [this.maskTexture,this.bumpTexture,this.colorTexture]){t.wrapS=THREE.RepeatWrapping;t.anisotropy=Math.min(4,this.renderer.capabilities.getMaxAnisotropy());}
@@ -59,11 +59,22 @@ export class Pottery {
     if(this.model.crown.length>=3){const hole=new THREE.Path();this.model.crown.forEach(([x,y],i)=>i?hole.lineTo(x*.46,y*.46):hole.moveTo(x*.46,y*.46));hole.closePath();shape.holes.push(hole);}
     const g=new THREE.ExtrudeGeometry(shape,{depth:.07,bevelEnabled:true,bevelThickness:.012,bevelSize:.012,bevelSegments:2,steps:1,curveSegments:48});g.rotateX(-Math.PI/2);this.cap.geometry.dispose();this.cap.geometry=g;this.cap.position.y=this.model.height;
   }
-  update(model=this.model){this.model=model;this.body.geometry.dispose();this.inner.geometry.dispose();this.body.geometry=this.geometry();this.inner.geometry=this.geometry(true);this.base.position.y=-model.height+.015;this.paint();this.crown();this.setFired(model.fired?1:0);this.layout();}
+  update(model=this.model){this.model=model;this.body.geometry.dispose();this.inner.geometry.dispose();this.body.geometry=this.geometry();this.inner.geometry=this.geometry(true);this.base.position.y=-model.height+.015;this.paint();this.crown();this.setGuides(this.guideCount);this.setFired(model.fired?1:0);this.layout();}
+  setGuides(count){
+    this.guideCount=count;
+    for(const line of [...this.guides.children]){line.geometry.dispose();line.material.dispose();this.guides.remove(line);}
+    for(let i=0;i<count;i++){
+      const col=Math.round((i+.5)/count*COLS),a=col/COLS*TAU,points=[];
+      for(let row=3;row<ROWS-2;row++){const v=row/ROWS,r=baseRadius(v)+this.model.offsets[row*COLS+col%COLS]+.025;points.push(new THREE.Vector3(Math.sin(a)*r,(v*2-1)*this.model.height,Math.cos(a)*r));}
+      const line=new THREE.Line(new THREE.BufferGeometry().setFromPoints(points),new THREE.LineDashedMaterial({color:0xffe4ab,dashSize:.07,gapSize:.05,transparent:true,opacity:.85}));line.computeLineDistances();this.guides.add(line);
+    }
+    this.guides.visible=this.stage===3;this.render();
+  }
   setFired(t){const wet=new THREE.Color(0xbe7c52),dry=new THREE.Color(0x82715b);this.material.color.copy(wet).lerp(dry,t);this.capMaterial.color.copy(this.material.color);this.material.roughness=.84+t*.16;this.insideMaterial.color.set(0x60402c).lerp(new THREE.Color(0x453c31),t);this.render();}
   setStage(stage){this.stage=stage;this.layout();}
   mount(container){if(container!==this.container){this.observer.unobserve(this.container);this.container=container;container.append(this.renderer.domElement);this.observer.observe(container);}this.resize();}
   layout(){
+    this.guides.visible=this.stage===3;
     this.pot.scale.setScalar(1);this.pot.position.set(0,0,0);this.pot.rotation.y=this.angle;this.siru.visible=this.stage===6||this.stage===7;this.siru.scale.setScalar(.65);this.siru.position.set(.8,-.35,0);
     if(this.stage===6){this.pot.scale.setScalar(.65);this.pot.position.set(-.65,0,0);}
     if(this.stage===7){this.pot.scale.setScalar(.55);this.pot.position.set(this.model.assembled?.8:-.85,-.17+this.model.height*.55,0);}
@@ -78,5 +89,4 @@ export class Pottery {
   crownPoint(clientX,clientY){const r=this.renderer.domElement.getBoundingClientRect();this.ray.setFromCamera(new THREE.Vector2((clientX-r.left)/r.width*2-1,-(clientY-r.top)/r.height*2+1),this.camera);const point=this.ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0),-this.model.height),new THREE.Vector3());if(!point)return null;this.pot.worldToLocal(point);const x=point.x/.46,y=-point.z/.46;return Math.hypot(x,y)<.93?[x,y]:null;}
   move(dx,dy){this.pot.position.x+=dx;this.pot.position.y+=dy;this.render();}
   tryAssemble(){const yes=Math.abs(this.pot.position.x-.8)<.52&&Math.abs(this.pot.position.y-(-.17+this.model.height*.55))<.55;if(yes){this.model.assembled=true;}this.layout();return yes;}
-  projectTarget(){const v=new THREE.Vector3(.8,.34,0).project(this.camera);return {x:(v.x+1)/2,y:(1-v.y)/2};}
 }

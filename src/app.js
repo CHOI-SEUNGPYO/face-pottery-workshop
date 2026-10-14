@@ -1,5 +1,5 @@
 import { stages, sourceURL } from './content.js';
-import { freshModel,validateModel,createHistory } from './model.js';
+import { freshModel,validateModel,createHistory,advanceIssue } from './model.js';
 import { Pottery } from './pottery.js';
 import { Interactions } from './interactions.js';
 import { Excavation } from './excavation.js';
@@ -40,6 +40,7 @@ function ensurePottery(){
     $('#end-scene').addEventListener('pointerdown',e=>{endDrag={id:e.pointerId,x:e.clientX};$('#end-scene').setPointerCapture(e.pointerId);});
     $('#end-scene').addEventListener('pointermove',e=>{if(endDrag&&e.pointerId===endDrag.id){pottery.rotate((e.clientX-endDrag.x)*.012);endDrag.x=e.clientX;}});
     for(const type of ['pointerup','pointercancel'])$('#end-scene').addEventListener(type,()=>endDrag=null);
+    $('#end-scene').addEventListener('keydown',e=>{if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();pottery.rotate(e.key==='ArrowLeft'?-.2:.2);}});
     return true;
   }catch(error){console.error(error);show($('#scene-error'),true);$('#scene-error').textContent='입체 화면을 열 수 없어요. Chrome 또는 Edge의 그래픽 가속을 확인한 뒤 새로고침해 주세요.';return false;}
 }
@@ -67,6 +68,7 @@ function undoEdit(){
 function go(n){
   interaction?.cancel();if(pottery)model=pottery.model;
   stopFire();excavation.stop();stage=n;show($('#welcome'),n===0);show($('#workshop'),n>0&&n<9);show($('#ending'),n===9);
+  window.scrollTo({top:0,behavior:'instant'});
   show($('#soil'),false);show($('#compare'),n===8);show($('#task-progress'),false);$('#next').disabled=false;
   if(n===0){show($('#resume'),!!saved);return;}
   if(!ensurePottery()){$('#next').disabled=true;return;}
@@ -78,16 +80,14 @@ function go(n){
   $('#character').src=`asset/게임용 에셋/${s.character}.png`;$('#action-hint').textContent=s.hint;
   $('#next').innerHTML=`${s.next} <span aria-hidden="true">→</span>`;
   show($('#rotate-controls'),[1,3,4,8].includes(n));tool=s.tools[0][0];interaction.set(n,tool);renderTools();
+  show($('#face-guides'),n===3);
   if(n===6)setupExcavation();
   if(n===7&&model.assembled)$('#action-hint').textContent='함께 놓아 봤어요. 이 배치는 추정한 모습이에요.';
   save();
 }
 function next(){
   if(fireTimer)return;
-  if(stage===2&&model.crown.length<3)return toast('정수리에 내 구멍을 하나 만들어 볼까요?');
-  if(stage===5&&!model.fired)return toast('과정 보기 버튼으로 토기를 먼저 구워 보세요.');
-  if(stage===6&&model.dug<65)return toast('흙을 조금 더 걷어 내면 토기와 시루가 보여요.');
-  if(stage===7&&!model.assembled)return toast('토기를 시루 위로 옮겨 보세요.');
+  const issue=advanceIssue(stage,model);if(issue)return toast(issue);
   go(Math.min(9,stage+1));
 }
 function newWork(){model=freshModel();history.clear();if(pottery)pottery.update(model);go(1);}
@@ -99,6 +99,7 @@ $('#dialog-close').onclick=()=>$('#dialog').close();
 $('#help').onclick=()=>dialog('손끝으로 만들어 봐요',`<p>${stages[stage].hint}</p><p>${stages[stage].tip.replace(/\n/g,' ')}</p><p>도구를 선택하고 흙 위를 천천히 움직여 보세요. 회전 버튼이나 키보드의 왼쪽·오른쪽 화살표로 다른 면을 살펴볼 수 있어요.</p>`);
 document.querySelectorAll('[data-action="about"]').forEach(b=>b.onclick=about);
 document.querySelectorAll('[data-rotate]').forEach(b=>b.onclick=()=>pottery?.rotate(Number(b.dataset.rotate)));
+$('#guide-count').onchange=e=>pottery?.setGuides(Number(e.target.value));
 $('#story-close').onclick=()=>{$('.work-area').classList.add('story-collapsed');$('.work-area').classList.remove('story-open');$('#story-open').setAttribute('aria-expanded','false');$('#story-open').focus();};
 $('#story-open').onclick=()=>{$('.work-area').classList.remove('story-collapsed');$('.work-area').classList.add('story-open');$('#story-open').setAttribute('aria-expanded','true');$('#story-close').focus();};
 document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='z'&&stage>0&&stage<4&&!$('#dialog').open){e.preventDefault();undoEdit();}});
