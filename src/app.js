@@ -2,6 +2,7 @@ import { stages, sourceURL } from './content.js';
 import { freshModel,validateModel,createHistory } from './model.js';
 import { Pottery } from './pottery.js';
 import { Interactions } from './interactions.js';
+import { Excavation } from './excavation.js';
 
 const $ = s => document.querySelector(s);
 const show = (el,visible) => {el.hidden=!visible;};
@@ -11,6 +12,7 @@ try{saved=validateModel(JSON.parse(localStorage.getItem(storageKey)));}catch{}
 let model=saved||freshModel(),stage=0,tool='shape',pottery,interaction;
 const history=createHistory();
 let fireTimer=null,fireStarted=0;
+const excavation=new Excavation($('#soil'),(persist=true)=>{updateProgress(model.dug,model.dug===100?'내 작품을 찾았어요!':`${model.dug}% 찾았어요`);if(persist)save();},()=>{toast('내 토기와 시루를 찾았어요!');save();});
 
 function toast(message){
   $('#toast').textContent=message;$('#toast').classList.add('show');
@@ -32,7 +34,7 @@ function ensurePottery(){
   if(pottery)return true;
   try{
     pottery=new Pottery($('#scene'),model);
-    interaction=new Interactions(pottery,$('#stage-surface'),$('#drawing polyline'),before=>{model=pottery.model;history.push(before);save();renderTools();},toast);
+    interaction=new Interactions(pottery,$('#stage-surface'),$('#drawing polyline'),before=>{model=pottery.model;history.push(before);save();renderTools();if(stage===7&&model.assembled)$('#action-hint').textContent='함께 놓아 봤어요. 이 배치는 추정한 모습이에요.';},toast);
     $('#stage-surface').addEventListener('render-lost',()=>{show($('#scene-error'),true);$('#scene-error').textContent='입체 화면 연결이 잠시 끊겼어요. 새로고침하면 저장된 작품을 이어갈 수 있어요.';});
     let endDrag=null;
     $('#end-scene').addEventListener('pointerdown',e=>{endDrag={id:e.pointerId,x:e.clientX};$('#end-scene').setPointerCapture(e.pointerId);});
@@ -53,6 +55,8 @@ function renderTools(){
 function selectTool(id){
   const destinations={'edit-body':1,'edit-crown':2,'edit-face':3};if(destinations[id])return go(destinations[id]);
   if(id==='fire')return startFire();
+  if(id==='brush'){excavation.assist();return;}
+  if(id==='move'){if(!model.assembled){history.push(model);model.assembled=true;pottery.update(model);save();$('#action-hint').textContent='함께 놓아 봤어요. 이 배치는 추정한 모습이에요.';toast('시루 위에 내 토기를 놓았어요!');}return;}
   tool=id;interaction?.set(stage,tool);renderTools();
   const hints={rotate:'흙 위를 좌우로 끌어 다른 면을 살펴보세요.',carve:'눈과 입이 될 선을 그려 보세요.',press:'콧등 양옆을 눌러 높낮이를 만들어 보세요.',hole:'작게 톡 누르거나, 구멍의 테두리를 둥글게 그려 보세요.',erase:'지우고 싶은 선이나 구멍의 가장자리를 문질러요.',crown:'가운데 윗면에 테두리를 그려요. 톡 누르면 작은 둥근 구멍이 생겨요.'};
   $('#action-hint').textContent=hints[id]||stages[stage].hint;
@@ -62,7 +66,7 @@ function undoEdit(){
 }
 function go(n){
   interaction?.cancel();if(pottery)model=pottery.model;
-  stopFire();stage=n;show($('#welcome'),n===0);show($('#workshop'),n>0&&n<9);show($('#ending'),n===9);
+  stopFire();excavation.stop();stage=n;show($('#welcome'),n===0);show($('#workshop'),n>0&&n<9);show($('#ending'),n===9);
   show($('#soil'),false);show($('#compare'),n===8);show($('#task-progress'),false);$('#next').disabled=false;
   if(n===0){show($('#resume'),!!saved);return;}
   if(!ensurePottery()){$('#next').disabled=true;return;}
@@ -75,9 +79,11 @@ function go(n){
   $('#next').innerHTML=`${s.next} <span aria-hidden="true">→</span>`;
   show($('#rotate-controls'),[1,3,4,8].includes(n));tool=s.tools[0][0];interaction.set(n,tool);renderTools();
   if(n===6)setupExcavation();
+  if(n===7&&model.assembled)$('#action-hint').textContent='함께 놓아 봤어요. 이 배치는 추정한 모습이에요.';
   save();
 }
 function next(){
+  if(fireTimer)return;
   if(stage===2&&model.crown.length<3)return toast('정수리에 내 구멍을 하나 만들어 볼까요?');
   if(stage===5&&!model.fired)return toast('과정 보기 버튼으로 토기를 먼저 구워 보세요.');
   if(stage===6&&model.dug<65)return toast('흙을 조금 더 걷어 내면 토기와 시루가 보여요.');
@@ -97,9 +103,19 @@ $('#story-close').onclick=()=>{$('.work-area').classList.add('story-collapsed');
 $('#story-open').onclick=()=>{$('.work-area').classList.remove('story-collapsed');$('.work-area').classList.add('story-open');$('#story-open').setAttribute('aria-expanded','true');$('#story-close').focus();};
 document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='z'&&stage>0&&stage<4&&!$('#dialog').open){e.preventDefault();undoEdit();}});
 
-// The next implementation phase connects the timed firing and brush excavation.
+function updateProgress(value,text){show($('#task-progress'),true);$('#task-progress progress').value=value;$('#task-progress span').textContent=text;}
 function stopFire(){if(fireTimer){cancelAnimationFrame(fireTimer);fireTimer=null;}$('#fire-overlay').classList.remove('active');}
-function startFire(){toast('굽기 장면을 준비하고 있어요.');}
-function setupExcavation(){}
+function startFire(){
+  if(fireTimer)return;fireStarted=performance.now();$('#next').disabled=true;
+  const duration=matchMedia('(prefers-reduced-motion: reduce)').matches?2400:7500;
+  const tick=now=>{
+    if(stage!==5)return;const t=Math.min(1,(now-fireStarted)/duration);pottery.setFired(t);
+    $('#fire-overlay').classList.toggle('active',t>.25&&t<.8);
+    const words=t<.25?'천천히 말려요':t<.8?'따뜻하게 구워요':t<1?'조금씩 식혀요':'내 토기가 완성됐어요!';
+    updateProgress(Math.round(t*100),words);$('#action-hint').textContent='실제 유물의 제작 시간을 재현한 장면은 아니에요.';
+    if(t<1)fireTimer=requestAnimationFrame(tick);else{fireTimer=null;model.fired=true;model.dug=0;model.brush=[];model.assembled=false;pottery.update(model);$('#next').disabled=false;save();renderTools();toast('이제 내 토기를 다시 찾으러 가 볼까요?');}
+  };fireTimer=requestAnimationFrame(tick);
+}
+function setupExcavation(){show($('#soil'),true);excavation.start(model);updateProgress(model.dug,model.dug===100?'내 작품을 찾았어요!':`${model.dug}% 찾았어요`);}
 
 go(0);

@@ -66,7 +66,7 @@ export class Pottery {
   layout(){
     this.pot.scale.setScalar(1);this.pot.position.set(0,0,0);this.pot.rotation.y=this.angle;this.siru.visible=this.stage===6||this.stage===7;this.siru.scale.setScalar(.65);this.siru.position.set(.8,-.35,0);
     if(this.stage===6){this.pot.scale.setScalar(.65);this.pot.position.set(-.65,0,0);}
-    if(this.stage===7){this.pot.scale.setScalar(.55);this.pot.position.set(this.model.assembled?.8:-.85,.34,0);}
+    if(this.stage===7){this.pot.scale.setScalar(.55);this.pot.position.set(this.model.assembled?.8:-.85,-.17+this.model.height*.55,0);}
     if(this.stage===8){this.pot.scale.setScalar(.7);this.pot.position.x=-.83;}
     this.shadow.position.set(this.pot.position.x,this.pot.position.y-this.model.height*this.pot.scale.y-.03,0);this.shadow.scale.setScalar(this.pot.scale.x);this.shadow.visible=this.stage!==2;
     this.resize();
@@ -77,6 +77,6 @@ export class Pottery {
   hit(clientX,clientY){const r=this.renderer.domElement.getBoundingClientRect();this.ray.setFromCamera(new THREE.Vector2((clientX-r.left)/r.width*2-1,-(clientY-r.top)/r.height*2+1),this.camera);return this.ray.intersectObject(this.body,false)[0];}
   crownPoint(clientX,clientY){const r=this.renderer.domElement.getBoundingClientRect();this.ray.setFromCamera(new THREE.Vector2((clientX-r.left)/r.width*2-1,-(clientY-r.top)/r.height*2+1),this.camera);const point=this.ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0),-this.model.height),new THREE.Vector3());if(!point)return null;this.pot.worldToLocal(point);const x=point.x/.46,y=-point.z/.46;return Math.hypot(x,y)<.93?[x,y]:null;}
   move(dx,dy){this.pot.position.x+=dx;this.pot.position.y+=dy;this.render();}
-  tryAssemble(){const yes=Math.abs(this.pot.position.x-.8)<.52&&Math.abs(this.pot.position.y-.34)<.55;if(yes){this.model.assembled=true;}this.layout();return yes;}
+  tryAssemble(){const yes=Math.abs(this.pot.position.x-.8)<.52&&Math.abs(this.pot.position.y-(-.17+this.model.height*.55))<.55;if(yes){this.model.assembled=true;}this.layout();return yes;}
   projectTarget(){const v=new THREE.Vector3(.8,.34,0).project(this.camera);return {x:(v.x+1)/2,y:(1-v.y)/2};}
 }
