@@ -19,6 +19,21 @@ export function baseRadius(t){
   }return .48;
 }
 export function deform(model,u,v,amount,radius=.15){for(let row=2;row<ROWS-2;row++){const dy=row/ROWS-v;for(let col=0;col<COLS;col++){const dx=wrapDistance(col/COLS,u)*1.6;const d=(dx*dx+dy*dy)/(radius*radius);if(d<4){const i=row*COLS+col;model.offsets[i]=clamp(model.offsets[i]+amount*Math.exp(-d*2),-.38,.5);}}}}
+// Carry nearby shaping into the ends instead of leaving a fixed rim and foot.
+export function shapedRadius(model,row,col){
+  const centre=clamp(row,5,27);let offset=0;
+  for(let d=-2;d<=2;d++)offset+=model.offsets[(centre+d)*COLS+(col+COLS)%COLS]*(3-Math.abs(d))/9;
+  return Math.max(.18,baseRadius(row/ROWS)+offset);
+}
+export function sculptProfile(model,u,v,amount){
+  for(let row=2;row<32;row++){
+    const vertical=Math.exp(-2*((row/ROWS-clamp(v,.1,.65))/.22)**2),edge=Math.min(1,(32-row)/3,row/3);
+    for(let col=0;col<COLS;col++){
+      const weight=Math.exp(-2*(wrapDistance(col/COLS,u)/.23)**2)*vertical*edge,i=row*COLS+col;
+      model.offsets[i]=clamp(model.offsets[i]+amount*weight,-.38,.5);
+    }
+  }
+}
 export function area(points){return Math.abs(points.reduce((s,p,i)=>{const q=points[(i+1)%points.length];return s+p[0]*q[1]-q[0]*p[1];},0))/2;}
 export function unwrap(points){if(!points.length)return [];const out=[points[0].slice()];for(let i=1;i<points.length;i++){let [u,v]=points[i];while(u-out[i-1][0]>.5)u-=1;while(u-out[i-1][0]<-.5)u+=1;out.push([u,v]);}return out;}
 export function pointSegmentDistance(p,a,b){const x=b[0]-a[0],y=b[1]-a[1];const t=clamp(((p[0]-a[0])*x+(p[1]-a[1])*y)/(x*x+y*y||1),0,1);return Math.hypot(p[0]-a[0]-t*x,p[1]-a[1]-t*y);}
