@@ -1,0 +1,16 @@
+<!doctype html><html lang="ko"><meta charset="utf-8"><title>조형 회귀 검사</title>
+<style>*{box-sizing:border-box}body{margin:0;background:#f8f2e6;color:#594235;font:18px sans-serif}h1{font-size:25px;margin:25px}main{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;padding:0 20px}section{min-width:0;background:#f8f2e6;border:1px solid #dfceb8;border-radius:24px;text-align:center}h2{font-size:20px}section>div{height:420px;position:relative}p{padding:0 18px;line-height:1.6;font-size:15px}canvas{display:block;width:100%;height:100%}</style>
+<h1>실제 렌더러로 확인하는 조형 수정</h1><main>
+<section><h2>이어진 흙 몸체</h2><div id="whole"></div><p>고정된 원판 없이 윗면과 몸체가 이어집니다.</p></section>
+<section><h2>그린 별 모양 구멍</h2><div id="star"></div><p>테두리가 닫혀도 원으로 바꾸지 않습니다.</p></section>
+<section><h2>반복해서 누른 뒤</h2><div id="pressed"></div><p>납작하게 만들고 120번 눌러도 위·아래가 분리되지 않습니다.</p></section>
+</main><script type="module">
+import {Pottery} from '../src/pottery.js';
+import {freshModel} from '../src/model.js';
+import {strokeContour} from '../src/contour.js';
+const plain=new Pottery(document.querySelector('#whole'),freshModel());plain.setStage(1);
+const star=freshModel();star.crown=strokeContour(Array.from({length:10},(_,i)=>{const a=Math.PI/2+i*Math.PI/5,r=i%2?.33:.78;return [Math.cos(a)*r,Math.sin(a)*r];}));
+const hole=new Pottery(document.querySelector('#star'),star);hole.setStage(2);
+const pressed=structuredClone(star);pressed.height=.65;pressed.marks=Array.from({length:120},(_,i)=>({tool:'press',points:[[i%2?.25:.75,i%3?.79:.05]]}));
+const stress=new Pottery(document.querySelector('#pressed'),pressed);stress.setStage(3);
+</script></html>

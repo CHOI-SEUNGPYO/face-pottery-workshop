@@ -1,4 +1,5 @@
-import {clamp,deform,unwrap,area,eraseAt,invalidateProcess} from './model.js';
+import {clamp,sculptProfile,unwrap,area,eraseAt,invalidateProcess} from './model.js';
+import {strokeContour} from './contour.js';
 
 export class Interactions {
   constructor(pottery,surface,preview,onCommit,onMessage){
@@ -11,35 +12,44 @@ export class Interactions {
     if(e.button!==0||this.drag||![1,2,3,4,7,8,9].includes(this.stage))return;
     if(e.target.closest('button'))return;const hit=this.pottery.hit(e.clientX,e.clientY);
     const rotate=this.tool==='rotate'||[4,8,9].includes(this.stage);const crown=this.stage===2?this.pottery.crownPoint(e.clientX,e.clientY):null;
-    if(!rotate&&!hit&&!crown)return;
-    this.drag={id:e.pointerId,x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY,hit,points:[],screen:[],before:structuredClone(this.pottery.model),changed:false,rotate};
+    const grab=this.stage===1&&!rotate?this.pottery.shapeGrab(e.clientX,e.clientY):null;
+    if(this.stage===1&&!rotate&&!grab)return;
+    if(this.stage===2&&(!crown||Math.hypot(...crown)>1.25))return;
+    if(!rotate&&!hit&&!crown&&!grab)return;
+    this.drag={id:e.pointerId,x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY,hit,grab,points:[],screen:[],before:structuredClone(this.pottery.model),changed:false,rotate};
+    this.surface.classList.toggle('is-sculpting',!!grab);
     this.surface.setPointerCapture(e.pointerId);this.surface.focus({preventScroll:true});
     this.sample(e);e.preventDefault();
   }
   sample(e){
     const d=this.drag;if(!d)return;const r=this.surface.getBoundingClientRect();
-    if(this.stage===2){const p=this.pottery.crownPoint(e.clientX,e.clientY);if(p){d.points.push(p);d.screen.push([e.clientX-r.left,e.clientY-r.top]);}}
+    if(this.stage===2){const p=this.pottery.crownPoint(e.clientX,e.clientY);if(p&&(!d.points.length||Math.hypot(p[0]-d.points.at(-1)[0],p[1]-d.points.at(-1)[1])>.002)){d.points.push(p);d.screen.push([e.clientX-r.left,e.clientY-r.top]);}}
     else if(this.stage===3&&!d.rotate){const h=this.pottery.hit(e.clientX,e.clientY);if(h&&h.uv.y>.05&&h.uv.y<.94){d.points.push([h.uv.x,h.uv.y]);d.screen.push([e.clientX-r.left,e.clientY-r.top]);}}
     if((this.stage===2||this.stage===3)&&!d.rotate)this.preview.setAttribute('points',d.screen.map(p=>p.join(',')).join(' '));
   }
   move(e){
     const d=this.drag;if(!d||e.pointerId!==d.id)return;const dx=e.clientX-d.x,dy=e.clientY-d.y;d.x=e.clientX;d.y=e.clientY;
     if(d.rotate){this.pottery.rotate(dx*.012);return;}
-    if(this.stage===1&&d.hit){
-      const rect=this.surface.getBoundingClientRect(),u=d.hit.uv.x,v=d.hit.uv.y;const sign=d.startX-rect.left-rect.width/2>0?1:-1;
-      deform(this.pottery.model,u,v,dx/rect.width*3*sign,.16);
-      if(v>.74||v<.18)this.pottery.model.height=clamp(this.pottery.model.height-dy/rect.height*(v>.74?1:-1),.65,1.45);
-      d.changed=true;this.invalidate();this.pottery.update();
+    if(this.stage===1&&d.grab){
+      const {v,side,unitsPerPixel}=d.grab;
+      if(!d.axis&&Math.hypot(e.clientX-d.startX,e.clientY-d.startY)>4)d.axis=(v>.68||v<.18)&&Math.abs(e.clientY-d.startY)>Math.abs(e.clientX-d.startX)?'height':'width';
+      if(!d.axis)return;
+      if(d.axis==='height')this.pottery.model.height=clamp(this.pottery.model.height-dy*unitsPerPixel*(v>.68?1:-1),.65,1.45);
+      else sculptProfile(this.pottery.model,((side*.25-this.pottery.angle/(Math.PI*2))%1+1)%1,v,dx*unitsPerPixel*side*1.25);
+      d.changed=true;this.invalidate();if(!this.frame)this.frame=requestAnimationFrame(()=>{this.frame=null;this.pottery.refreshShape();});
     }else if(this.stage===7){const rect=this.surface.getBoundingClientRect();this.pottery.move(dx/rect.width*(this.pottery.camera.right-this.pottery.camera.left),-dy/rect.height*(this.pottery.camera.top-this.pottery.camera.bottom));d.changed=true;}
-    else if(this.stage===2||this.stage===3)this.sample(e);
+    else if(this.stage===2||this.stage===3){const samples=e.getCoalescedEvents?.()||[];for(const sample of samples)this.sample(sample);this.sample(e);}
     e.preventDefault();
   }
   invalidate(){invalidateProcess(this.pottery.model);}
   up(e){
     const d=this.drag;if(!d||e.pointerId!==d.id)return;const model=this.pottery.model;
+    if(this.frame){cancelAnimationFrame(this.frame);this.frame=null;}
+    if(!d.rotate&&(this.stage===2||this.stage===3))this.sample(e);
     if(this.stage===2&&d.points.length){
-      let points=d.points;if(points.length<4||Math.hypot(e.clientX-d.startX,e.clientY-d.startY)<8){const [x,y]=points[0];points=Array.from({length:32},(_,i)=>[x+Math.cos(i/32*Math.PI*2)*.28,y+Math.sin(i/32*Math.PI*2)*.28]);}
-      if(points.every(p=>Math.hypot(...p)<.96)&&area(points)>.025){model.crown=points.filter((_,i)=>i%Math.max(1,Math.floor(points.length/180))===0);this.invalidate();d.changed=true;}else this.onMessage('가운데 윗면 안에 조금 더 크게 그려 보세요.');
+      const radius=d.points.reduce((max,p)=>Math.max(max,Math.hypot(...p)),0),fit=radius>.95?.95/radius:1;
+      const points=strokeContour(d.points.map(([x,y])=>[x*fit,y*fit]));
+      if(points.length>=3){model.crown=points;this.invalidate();d.changed=true;this.onMessage(fit<1?'모양을 유지하면서 흙 안에 들어오도록 조금 줄였어요.':'그린 모양대로 구멍을 뚫었어요!');}else this.onMessage('점을 찍는 대신, 구멍의 테두리를 이어 그려 보세요.');
     }
     if(this.stage===3&&!d.rotate&&d.points.length){
       if(this.tool==='erase'){const count=model.marks.length;for(const [u,v]of d.points)eraseAt(model,u,v);d.changed=count!==model.marks.length;}
@@ -48,8 +58,8 @@ export class Interactions {
       if(d.changed)this.invalidate();
     }
     if(this.stage===7&&d.changed){d.changed=this.pottery.tryAssemble();this.onMessage(d.changed?'두 토기를 함께 놓아 봤어요!':'시루 바로 위로 조금 더 옮겨 보세요.');}
-    this.preview.setAttribute('points','');this.drag=null;
+    this.preview.setAttribute('points','');this.drag=null;this.surface.classList.remove('is-sculpting');
     if(d.changed){this.pottery.update();this.onCommit(d.before);}else this.pottery.render();
   }
-  cancel(){if(!this.drag)return;this.pottery.model=this.drag.before;this.pottery.update();this.drag=null;this.preview.setAttribute('points','');}
+  cancel(){if(this.frame){cancelAnimationFrame(this.frame);this.frame=null;}if(!this.drag)return;this.pottery.model=this.drag.before;this.pottery.update();this.drag=null;this.preview.setAttribute('points','');this.surface.classList.remove('is-sculpting');}
 }
