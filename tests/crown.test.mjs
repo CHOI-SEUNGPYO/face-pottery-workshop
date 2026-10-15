@@ -12,7 +12,7 @@ const crossed=[0,4,8,2,6].map(i=>outline[i]);
 const event=(p,id=1)=>({button:0,pointerId:id,clientX:p[0],clientY:p[1],target:{closest:()=>null},preventDefault(){}});
 
 test('a closed star survives the real pointer handler, both as an outline and a crossed stroke',()=>{
-  for(const input of [outline,crossed,outline.map(([x,y])=>[x*1.5,y*1.5])]){
+  for(const input of [outline,crossed]){
     const model=freshModel();let commits=0;
     const pottery={model,hit:()=>null,crownPoint:(x,y)=>[x,y],update(){},render(){}};
     const surface={addEventListener(){},getBoundingClientRect:()=>({left:0,top:0}),setPointerCapture(){},focus(){},classList:{toggle(){},remove(){}}};
@@ -29,6 +29,16 @@ test('a closed star survives the real pointer handler, both as an outline and a 
     assert.ok([...mesh.geometry.attributes.position.array].every(Number.isFinite));
     mesh.geometry.dispose();mesh.material.dispose();
   }
+});
+
+test('an off-centre crown contour stays where it was drawn; outside input is not silently resized',()=>{
+  const contour=outline.map(([x,y])=>[x*.5+.3,y*.5]);assert.deepEqual(strokeContour(contour),contour);
+  const model=freshModel();model.crown=contour;let commits=0,message='';
+  const pottery={model,hit:()=>null,crownPoint:(x,y)=>[x,y],update(){},render(){}};
+  const surface={addEventListener(){},getBoundingClientRect:()=>({left:0,top:0}),setPointerCapture(){},focus(){},classList:{toggle(){},remove(){}}};
+  const input=new Interactions(pottery,surface,{setAttribute(){}},()=>commits++,text=>message=text);input.set(2,'crown');
+  input.down(event([.5,0]));input.move(event([1.1,.3]));input.move(event([.4,.5]));input.up(event([.5,0]));
+  assert.equal(commits,0);assert.deepEqual(model.crown,contour);assert.match(message,/가장자리/);
 });
 
 test('tiny strokes do not create circles; nearly closed shapes retain corners',()=>{
