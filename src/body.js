@@ -16,20 +16,19 @@ export function bodyGeometry(model,inner=false){
       if(nearest<spread*spread*3)indent+=(mark.tool==='press'?.065:.025)*Math.exp(-nearest/(spread*spread));
     }
     // A stroke cannot detach the shoulder or the foot. Repeated pressing also has a depth limit.
-    const joinFade=Math.min(1,v/.12,(.8-v)/.12);
+    const joinFade=Math.max(0,Math.min(1,v/.12,(1-v)/.12));
     radius-=Math.min(.2,indent)*joinFade;
-    radius=Math.max(.18,radius)-(inner?WALL_THICKNESS:0);
+    radius=Math.max(0,radius-(inner?WALL_THICKNESS:0));
     pos.push(Math.sin(a)*radius,(v*2-1)*model.height,Math.cos(a)*radius);uv.push(u,v);
     if(row<SHOULDER_ROW&&col<COLS){const i=row*(COLS+1)+col;indices.push(i,i+1,i+COLS+1,i+1,i+COLS+2,i+COLS+1);}
   }
   const side=new THREE.BufferGeometry();side.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));side.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));side.setIndex(indices);side.computeVertexNormals();
-  if(inner)return side;
-  const sideNormals=side.attributes.normal;
-  for(let row=SHOULDER_ROW-2;row<=SHOULDER_ROW;row++)for(let col=0;col<=COLS;col++){
-    const a=col/COLS*Math.PI*2,r=shapedRadius(model,SHOULDER_ROW,col),i=row*(COLS+1)+col;
-    const target=new THREE.Vector3(.8*model.height*Math.sin(a)/r,1,.8*model.height*Math.cos(a)/r).normalize();
-    const n=new THREE.Vector3().fromBufferAttribute(sideNormals,i).lerp(target,(row-SHOULDER_ROW+2)/2).normalize();sideNormals.setXYZ(i,n.x,n.y,n.z);
+  for(let row=0;row<=ROWS;row++){
+    const first=row*(COLS+1),last=first+COLS,n=row===ROWS?new THREE.Vector3(0,1,0):new THREE.Vector3().fromBufferAttribute(side.attributes.normal,first).add(new THREE.Vector3().fromBufferAttribute(side.attributes.normal,last)).normalize();
+    side.attributes.normal.setXYZ(first,n.x,n.y,n.z);side.attributes.normal.setXYZ(last,n.x,n.y,n.z);
+    if(row===ROWS)for(let col=1;col<COLS;col++)side.attributes.normal.setXYZ(first+col,0,1,0);
   }
+  if(inner)return side;
   const plain=side.toNonIndexed();side.dispose();
   const append=(target,source)=>{for(const value of source)target.push(value);};
   pos.length=0;uv.length=0;append(pos,plain.attributes.position.array);append(uv,plain.attributes.uv.array);append(normals,plain.attributes.normal.array);

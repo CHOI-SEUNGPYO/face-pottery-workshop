@@ -1,50 +1,62 @@
 import * as THREE from '../vendor/three.module.js';
-import {shapedRadius,COLS} from './model.js';
+import {shapedRadius,COLS,ROWS} from './model.js';
 import {insideLoop} from './openings.js';
 
-export const SHOULDER_ROW=32;
-export function topPoint(model,x,y,depth=0){
-  const r=Math.hypot(x,y),u=(Math.atan2(x,-y)/(Math.PI*2)+1)%1,c=u*COLS,i=Math.floor(c),f=c-i;
-  const radius=shapedRadius(model,SHOULDER_ROW,i)*(1-f)+shapedRadius(model,SHOULDER_ROW,i+1)*f;
-  return [x*radius,.6+.4*(1-r*r)-depth,-y*radius];
+// The complete vertical profile closes at the top. There is no separate head cap.
+export const SHOULDER_ROW=ROWS;
+export function crownRadius(model){
+  let radius=.3;
+  for(let row=24;row<ROWS;row++)for(const col of [0,20,40,60])radius=Math.max(radius,shapedRadius(model,row,col));
+  return radius;
+}
+export function topPoint(model,x,y,depth=0,radius=crownRadius(model)){
+  const distance=Math.hypot(x,y)*radius,u=(Math.atan2(x,-y)/(Math.PI*2)+1)%1,c=u*COLS,i=Math.floor(c),f=c-i;
+  let previous=0,height=1;
+  for(let row=ROWS-1;row>=0;row--){
+    const r=shapedRadius(model,row,i)*(1-f)+shapedRadius(model,row,(i+1)%COLS)*f;
+    if(r>=distance){height=((row+1-(distance-previous)/(r-previous||1))/ROWS*2-1);break;}
+    previous=r;
+  }
+  return [x*radius,height-depth,-y*radius];
+}
+
+export function mouthOutline(model){
+  const loop=model.crown;if(loop.length<3)return [];
+  const signed=loop.reduce((sum,p,i)=>{const q=loop[(i+1)%loop.length];return sum+p[0]*q[1]-q[0]*p[1];},0),direction=signed>0?1:-1;
+  const radius=crownRadius(model),clearance=Math.max(.002,.995-Math.max(...loop.map(p=>Math.hypot(...p)))),width=Math.min(.055/radius,clearance*.5);
+  return loop.map((p,i)=>{
+    const a=loop[(i+loop.length-1)%loop.length],b=loop[(i+1)%loop.length],la=Math.hypot(p[0]-a[0],p[1]-a[1])||1,lb=Math.hypot(b[0]-p[0],b[1]-p[1])||1;
+    const nx=direction*((p[1]-a[1])/la+(b[1]-p[1])/lb),ny=-direction*((p[0]-a[0])/la+(b[0]-p[0])/lb),length=Math.hypot(nx,ny)||1;
+    return [p[0]+nx/length*width,p[1]+ny/length*width];
+  });
+}
+
+export function mouthCut(model){
+  const outline=mouthOutline(model),radius=crownRadius(model);
+  const bottom=outline.length?(Math.min(...outline.map(p=>topPoint(model,...p,0,radius)[1]))-.16)*model.height:Infinity;
+  return {outline,radius,bottom};
+}
+export function insideMouth(point,cut){
+  return point.y>cut.bottom&&insideLoop(point.x/cut.radius,-point.z/cut.radius,cut.outline);
 }
 
 export function crownGeometry(model){
-  const outside=Array.from({length:COLS},(_,i)=>new THREE.Vector2(Math.sin(i/COLS*Math.PI*2),-Math.cos(i/COLS*Math.PI*2)));
-  const holes=model.crown.length>=3?[model.crown.map(p=>new THREE.Vector2(...p))]:[];
-  const centres=holes.map(loop=>loop.reduce((sum,p)=>sum.add(p),new THREE.Vector2()).multiplyScalar(1/loop.length));
-  const innerHoles=holes.map((loop,i)=>{
-    const inset=loop.map(p=>p.clone().lerp(centres[i],.08)),original=loop.map(p=>p.toArray());
-    return inset.every((p,j)=>Array.from({length:8},(_,k)=>p.clone().lerp(inset[(j+1)%inset.length],k/8)).every(q=>insideLoop(q.x,q.y,original)))?inset:loop;
-  });
-  const pos=[],normals=[],uv=[];
-  const emit=(a,b,c,depth,reverse=false)=>{
-    const vertices=[a,b,c].map(p=>topPoint(model,p.x,p.y,depth));
-    const normal=new THREE.Vector3().subVectors(new THREE.Vector3(...vertices[1]),new THREE.Vector3(...vertices[0])).cross(new THREE.Vector3().subVectors(new THREE.Vector3(...vertices[2]),new THREE.Vector3(...vertices[0])));
-    if((normal.y<0)!==reverse)[b,c]=[c,b];
-    for(const p of [a,b,c]){
-      const v=topPoint(model,p.x,p.y,depth),r=Math.max(.1,Math.hypot(v[0],v[2])/Math.max(.001,p.length()));
-      const n=new THREE.Vector3(.8*v[0]/(r*r),1,.8*v[2]/(r*r)).normalize().multiplyScalar(reverse?-1:1);
-      pos.push(...v);normals.push(n.x,n.y,n.z);uv.push((p.x+1)/2,(p.y+1)/2);
-    }
-  };
-  const subdivide=(a,b,c,depth,reverse,level=0)=>{
-    if(level<3&&Math.max(a.distanceTo(b),b.distanceTo(c),c.distanceTo(a))>.16){
-      const ab=a.clone().add(b).multiplyScalar(.5),bc=b.clone().add(c).multiplyScalar(.5),ca=c.clone().add(a).multiplyScalar(.5);
-      subdivide(a,ab,ca,depth,reverse,level+1);subdivide(ab,b,bc,depth,reverse,level+1);subdivide(ca,bc,c,depth,reverse,level+1);subdivide(ab,bc,ca,depth,reverse,level+1);
-    }else emit(a,b,c,depth,reverse);
-  };
-  for(const [loops,depth,reverse]of [[holes,0,false],[innerHoles,.11,true]]){
-    const triangles=THREE.ShapeUtils.triangulateShape(outside,loops),points=[...outside,...loops.flat()];
-    for(const [a,b,c]of triangles)subdivide(points[a],points[b],points[c],depth,reverse);
-  }
-  // Only the drawn opening has a wall; there is no raised circular collar.
-  for(let index=0;index<holes.length;index++)for(let i=0;i<holes[index].length;i++)for(let part=0;part<8;part++){
-    const loop=holes[index],inner=innerHoles[index],a=loop[i].clone().lerp(loop[(i+1)%loop.length],part/8),b=loop[i].clone().lerp(loop[(i+1)%loop.length],(part+1)/8),ia=inner[i].clone().lerp(inner[(i+1)%inner.length],part/8),ib=inner[i].clone().lerp(inner[(i+1)%inner.length],(part+1)/8),verts=[topPoint(model,a.x,a.y),topPoint(model,b.x,b.y),topPoint(model,ib.x,ib.y,.11),topPoint(model,ia.x,ia.y,.11)];
-    for(const ids of [[0,1,2],[0,2,3]]){
-      const n=new THREE.Vector3().subVectors(new THREE.Vector3(...verts[ids[1]]),new THREE.Vector3(...verts[ids[0]])).cross(new THREE.Vector3().subVectors(new THREE.Vector3(...verts[ids[2]]),new THREE.Vector3(...verts[ids[0]]))).normalize();
-      for(const id of ids){pos.push(...verts[id]);normals.push(n.x,n.y,n.z);uv.push(id%2,id<2?1:0);}
+  const inner=model.crown,outer=mouthOutline(model),positions=[],uv=[];
+  if(inner.length<3)return new THREE.BufferGeometry().setAttribute('position',new THREE.Float32BufferAttribute([],3)).setAttribute('normal',new THREE.Float32BufferAttribute([],3)).setAttribute('uv',new THREE.Float32BufferAttribute([],2));
+  const radius=crownRadius(model),surface=(p,depth=0)=>topPoint(model,...p,depth,radius);
+  const triangle=(a,b,c)=>{for(const p of [a,b,c]){positions.push(...p);uv.push(p[0]/(2*radius)+.5,p[2]/(2*radius)+.5);}};
+  for(let i=0;i<inner.length;i++){
+    const next=(i+1)%inner.length,steps=Math.max(1,Math.ceil(Math.hypot(inner[i][0]-inner[next][0],inner[i][1]-inner[next][1])*radius/.025));
+    for(let j=0;j<steps;j++){
+      const at=(loop,t)=>loop[i].map((value,k)=>value+(loop[next][k]-value)*t);
+      const a=at(outer,j/steps),b=at(outer,(j+1)/steps),c=at(inner,j/steps),d=at(inner,(j+1)/steps);
+      const ab=surface(a),bb=surface(b),cb=surface(c,.11),db=surface(d,.11);
+      const levelA=Math.max(ab[1],cb[1]+.11)+.1,levelB=Math.max(bb[1],db[1]+.11)+.1;
+      const atip=[a[0]*radius,levelA,-a[1]*radius],btip=[b[0]*radius,levelB,-b[1]*radius],ctip=[c[0]*radius,levelA,-c[1]*radius],dtip=[d[0]*radius,levelB,-d[1]*radius];
+      triangle(ab,bb,btip);triangle(ab,btip,atip);
+      triangle(atip,btip,dtip);triangle(atip,dtip,ctip);
+      triangle(ctip,dtip,db);triangle(ctip,db,cb);
     }
   }
-  const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));geometry.setAttribute('normal',new THREE.Float32BufferAttribute(normals,3));geometry.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));return geometry;
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.computeVertexNormals();return g;
 }
