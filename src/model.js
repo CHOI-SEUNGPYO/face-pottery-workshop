@@ -34,6 +34,16 @@ export function sculptProfile(model,u,v,amount){
     }
   }
 }
+export function reshapeProfile(model,before,v,outward,upward){
+  const radii=Array.from({length:ROWS+1},(_,row)=>baseRadius(row/ROWS)+before.offsets.slice(row*COLS,(row+1)*COLS).reduce((sum,x)=>sum+x,0)/COLS);
+  const shift=clamp(upward/(2*before.height),-.1,.1);
+  for(let row=0;row<=ROWS;row++){
+    const t=row/ROWS,weight=Math.exp(-2*((t-v)/.17)**2),source=clamp(t-shift*weight,0,1)*ROWS;
+    const low=Math.floor(source),radius=radii[low]+(radii[Math.min(ROWS,low+1)]-radii[low])*(source-low);
+    const offset=clamp(radius+outward*weight-baseRadius(t),-.38,.5);
+    model.offsets.fill(offset,row*COLS,(row+1)*COLS);
+  }
+}
 export function area(points){return Math.abs(points.reduce((s,p,i)=>{const q=points[(i+1)%points.length];return s+p[0]*q[1]-q[0]*p[1];},0))/2;}
 export function unwrap(points){if(!points.length)return [];const out=[points[0].slice()];for(let i=1;i<points.length;i++){let [u,v]=points[i];while(u-out[i-1][0]>.5)u-=1;while(u-out[i-1][0]<-.5)u+=1;out.push([u,v]);}return out;}
 export function pointSegmentDistance(p,a,b){const x=b[0]-a[0],y=b[1]-a[1];const t=clamp(((p[0]-a[0])*x+(p[1]-a[1])*y)/(x*x+y*y||1),0,1);return Math.hypot(p[0]-a[0]-t*x,p[1]-a[1]-t*y);}

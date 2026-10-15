@@ -1,4 +1,4 @@
-import {clamp,sculptProfile,unwrap,area,eraseAt,invalidateProcess} from './model.js';
+import {clamp,reshapeProfile,unwrap,area,eraseAt,invalidateProcess} from './model.js';
 import {strokeContour} from './contour.js';
 
 export class Interactions {
@@ -7,7 +7,7 @@ export class Interactions {
     surface.addEventListener('pointerdown',e=>this.down(e));surface.addEventListener('pointermove',e=>this.move(e));surface.addEventListener('pointerup',e=>this.up(e));surface.addEventListener('pointercancel',()=>this.cancel());
     surface.addEventListener('keydown',e=>{if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();pottery.rotate(e.key==='ArrowLeft'?-.2:.2);}});
   }
-  set(stage,tool){this.cancel();this.stage=stage;this.tool=tool;}
+  set(stage,tool){this.cancel();this.stage=stage;this.tool=tool;this.pottery.setTool?.(tool);}
   down(e){
     if(e.button!==0||this.drag||![1,2,3,4,7,8,9].includes(this.stage))return;
     if(e.target.closest('button'))return;const hit=this.pottery.hit(e.clientX,e.clientY);
@@ -32,10 +32,10 @@ export class Interactions {
     if(d.rotate){this.pottery.rotate(dx*.012);return;}
     if(this.stage===1&&d.grab){
       const {v,side,unitsPerPixel}=d.grab;
-      if(!d.axis&&Math.hypot(e.clientX-d.startX,e.clientY-d.startY)>4)d.axis=(v>.68||v<.18)&&Math.abs(e.clientY-d.startY)>Math.abs(e.clientX-d.startX)?'height':'width';
-      if(!d.axis)return;
-      if(d.axis==='height')this.pottery.model.height=clamp(this.pottery.model.height-dy*unitsPerPixel*(v>.68?1:-1),.65,1.45);
-      else sculptProfile(this.pottery.model,((side*.25-this.pottery.angle/(Math.PI*2))%1+1)%1,v,dx*unitsPerPixel*side*1.25);
+      const totalX=e.clientX-d.startX,totalY=e.clientY-d.startY;
+      if(!d.changed&&Math.hypot(totalX,totalY)<4)return;
+      if(d.grab.end)this.pottery.model.height=clamp(d.before.height-totalY*unitsPerPixel*d.grab.end,.65,1.45);
+      reshapeProfile(this.pottery.model,d.before,v,d.grab.end?0:totalX*unitsPerPixel*side,d.grab.end?0:-totalY*unitsPerPixel);
       d.changed=true;this.invalidate();if(!this.frame)this.frame=requestAnimationFrame(()=>{this.frame=null;this.pottery.refreshShape();});
     }else if(this.stage===7){const rect=this.surface.getBoundingClientRect();this.pottery.move(dx/rect.width*(this.pottery.camera.right-this.pottery.camera.left),-dy/rect.height*(this.pottery.camera.top-this.pottery.camera.bottom));d.changed=true;}
     else if(this.stage===2||this.stage===3){const samples=e.getCoalescedEvents?.()||[];for(const sample of samples)this.sample(sample);this.sample(e);}

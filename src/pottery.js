@@ -8,7 +8,7 @@ const makeCanvas=(w=1024,h=512)=>{const c=document.createElement('canvas');c.wid
 
 export class Pottery {
   constructor(container,model){
-    this.container=container;this.model=model;this.angle=0;this.stage=1;
+    this.container=container;this.model=model;this.angle=0;this.stage=1;this.tool='shape';
     this.renderer=new THREE.WebGLRenderer({alpha:true,antialias:true,powerPreference:'high-performance'});
     this.renderer.setPixelRatio(Math.min(devicePixelRatio,2));this.renderer.outputColorSpace=THREE.SRGBColorSpace;this.renderer.setClearColor(0,0);
     container.append(this.renderer.domElement);this.scene=new THREE.Scene();this.camera=new THREE.OrthographicCamera(-2,2,2,-2,.1,40);
@@ -23,6 +23,7 @@ export class Pottery {
     this.capMaterial=this.material.clone();this.capMaterial.alphaMap=null;this.capMaterial.map=this.plainColor;this.capMaterial.bumpMap=this.plainBump;this.capMaterial.side=THREE.DoubleSide;
     this.floorMaterial=new THREE.MeshBasicMaterial({color:0x3b291e,map:this.plainColor,side:THREE.DoubleSide});
     this.body=new THREE.Mesh(new THREE.BufferGeometry(),[this.material,this.capMaterial,this.floorMaterial]);this.inner=new THREE.Mesh(new THREE.BufferGeometry(),this.insideMaterial);this.pot.add(this.body,this.inner);
+    this.outline=new THREE.LineLoop(new THREE.BufferGeometry(),new THREE.LineBasicMaterial({color:0x785239,transparent:true,opacity:.8,depthTest:false}));this.outline.renderOrder=2;this.scene.add(this.outline);
     const shadow=makeCanvas(256,256),ctx=shadow.getContext('2d');let grad=ctx.createRadialGradient(128,128,4,128,128,126);grad.addColorStop(0,'rgba(80,53,27,.28)');grad.addColorStop(.5,'rgba(80,53,27,.14)');grad.addColorStop(1,'rgba(80,53,27,0)');ctx.fillStyle=grad;ctx.fillRect(0,0,256,256);
     this.shadow=new THREE.Mesh(new THREE.PlaneGeometry(3.2,2.6),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(shadow),transparent:true,depthWrite:false}));this.shadow.rotation.x=-Math.PI/2;this.scene.add(this.shadow);
     this.siru=this.makeSiru();this.scene.add(this.siru);this.siru.visible=false;
@@ -48,8 +49,20 @@ export class Pottery {
       else{ctx.strokeStyle=mark.tool==='carve'?'#353535':'#777';ctx.lineWidth=mark.tool==='carve'?7:22;ctx.stroke();if(mark.tool==='carve'){color.beginPath();pts.forEach(([u,v],i)=>i?color.lineTo((u+shift)*1024,(1-v)*512):color.moveTo((u+shift)*1024,(1-v)*512));color.lineCap='round';color.lineJoin='round';color.strokeStyle='#756657';color.lineWidth=5;color.stroke();}}
     }}this.maskTexture.needsUpdate=true;this.bumpTexture.needsUpdate=true;this.colorTexture.needsUpdate=true;
   }
-  refreshShape(){this.body.geometry.dispose();this.inner.geometry.dispose();this.body.geometry=this.geometry();this.inner.geometry=this.geometry(true);this.shadow.position.y=-this.model.height-.03;this.setFired(0);}
-  update(model=this.model){this.model=model;this.body.geometry.dispose();this.inner.geometry.dispose();this.body.geometry=this.geometry();this.inner.geometry=this.geometry(true);this.paint();this.setGuides(this.guideCount);this.setFired(model.fired?1:0);this.layout();}
+  refreshShape(){this.body.geometry.dispose();this.inner.geometry.dispose();this.body.geometry=this.geometry();this.inner.geometry=this.geometry(true);this.shadow.position.y=-this.model.height-.03;this.updateOutline();this.setFired(0);}
+  update(model=this.model){this.model=model;this.body.geometry.dispose();this.inner.geometry.dispose();this.body.geometry=this.geometry();this.inner.geometry=this.geometry(true);this.paint();this.setGuides(this.guideCount);this.updateOutline();this.setFired(model.fired?1:0);this.layout();}
+  get profileView(){return this.stage===1&&this.tool==='shape';}
+  setTool(tool){this.tool=tool;this.layout();}
+  updateOutline(){
+    const points=[];
+    for(const side of [1,-1]){
+      const col=side===1?20:60;
+      const body=Array.from({length:33},(_,row)=>new THREE.Vector3(side*shapedRadius(this.model,row,col),(row/ROWS*2-1)*this.model.height,0));
+      const top=Array.from({length:17},(_,i)=>{const p=topPoint(this.model,side*(1-i/16),0);return new THREE.Vector3(p[0],p[1]*this.model.height,0);});
+      const edge=[...body,...top];points.push(...(side===1?edge:edge.reverse()));
+    }
+    this.outline.geometry.dispose();this.outline.geometry=new THREE.BufferGeometry().setFromPoints(points);
+  }
   setGuides(count){
     this.guideCount=count;
     for(const line of [...this.guides.children]){line.geometry.dispose();line.material.dispose();this.guides.remove(line);}
@@ -65,19 +78,28 @@ export class Pottery {
   mount(container){if(container!==this.container){this.observer.unobserve(this.container);this.container=container;container.append(this.renderer.domElement);this.observer.observe(container);}this.resize();}
   layout(){
     this.guides.visible=this.stage===3;
-    this.pot.scale.setScalar(1);this.pot.position.set(0,0,0);this.pot.rotation.y=this.angle;this.siru.visible=this.stage===6||this.stage===7;this.siru.scale.setScalar(.65);this.siru.position.set(.8,-.35,0);
+    this.pot.scale.setScalar(1);this.pot.position.set(0,0,0);this.pot.rotation.y=this.profileView?0:this.angle;this.outline.visible=this.profileView;this.siru.visible=this.stage===6||this.stage===7;this.siru.scale.setScalar(.65);this.siru.position.set(.8,-.35,0);
     if(this.stage===6){this.pot.scale.setScalar(.65);this.pot.position.set(-.65,0,0);}
     if(this.stage===7){this.pot.scale.setScalar(.55);this.pot.position.set(this.model.assembled?.8:-.85,-.17+this.model.height*.55,0);}
     if(this.stage===8){this.pot.scale.setScalar(.7);this.pot.position.x=-.83;}
-    this.shadow.position.set(this.pot.position.x,this.pot.position.y-this.model.height*this.pot.scale.y-.03,0);this.shadow.scale.setScalar(this.pot.scale.x);this.shadow.visible=this.stage!==2;
+    this.shadow.position.set(this.pot.position.x,this.pot.position.y-this.model.height*this.pot.scale.y-.03,0);this.shadow.scale.setScalar(this.pot.scale.x);this.shadow.visible=this.stage!==2&&!this.profileView;
     this.resize();
   }
-  resize(){const rect=this.container.getBoundingClientRect();if(rect.width<1||rect.height<1)return;const w=rect.width,h=rect.height;this.renderer.setSize(w,h,false);let height=this.stage===2?2.7:3.1;const aspect=w/h;if(aspect<.95)height/=aspect;if(this.stage===6||this.stage===7||this.stage===8)height=Math.max(height,3.8/aspect);this.camera.left=-height*aspect/2;this.camera.right=height*aspect/2;this.camera.top=height/2;this.camera.bottom=-height/2;this.camera.position.set(0,this.stage===2?7:2.0,this.stage===2?.001:6);this.camera.lookAt(0,0,0);this.camera.updateProjectionMatrix();this.render();}
+  resize(){const rect=this.container.getBoundingClientRect();if(rect.width<1||rect.height<1)return;const w=rect.width,h=rect.height;this.renderer.setSize(w,h,false);let height=this.stage===2?2.7:3.1;const aspect=w/h;if(aspect<.95)height/=aspect;if(this.stage===6||this.stage===7||this.stage===8)height=Math.max(height,3.8/aspect);this.camera.left=-height*aspect/2;this.camera.right=height*aspect/2;this.camera.top=height/2;this.camera.bottom=-height/2;this.camera.position.set(0,this.stage===2?7:this.profileView?0:2.0,this.stage===2?.001:6);this.camera.lookAt(0,0,0);this.camera.updateProjectionMatrix();this.render();}
   render(){if(this.renderer&&this.camera)this.renderer.render(this.scene,this.camera);}
-  rotate(delta){this.angle+=delta;this.pot.rotation.y=this.angle;this.render();}
+  rotate(delta){if(this.profileView)return;this.angle+=delta;this.pot.rotation.y=this.angle;this.render();}
   hit(clientX,clientY){const r=this.renderer.domElement.getBoundingClientRect();this.ray.setFromCamera(new THREE.Vector2((clientX-r.left)/r.width*2-1,-(clientY-r.top)/r.height*2+1),this.camera);return this.ray.intersectObject(this.body,false).find(hit=>hit.face.materialIndex===0);}
   crownPoint(clientX,clientY){const r=this.renderer.domElement.getBoundingClientRect();this.ray.setFromCamera(new THREE.Vector2((clientX-r.left)/r.width*2-1,-(clientY-r.top)/r.height*2+1),this.camera);const point=this.ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0),-this.model.height),new THREE.Vector3());if(!point)return null;this.pot.worldToLocal(point);const a=Math.atan2(point.x,point.z),edge=topPoint(this.model,Math.sin(a),-Math.cos(a)),radius=Math.hypot(edge[0],edge[2]);return [point.x/radius,-point.z/radius];}
   shapeGrab(clientX,clientY){
+    if(this.profileView){
+      const rect=this.renderer.domElement.getBoundingClientRect(),unitsPerPixel=(this.camera.right-this.camera.left)/rect.width;
+      const x=(clientX-rect.left-rect.width/2)*unitsPerPixel,y=(rect.top+rect.height/2-clientY)*unitsPerPixel,side=x>=0?1:-1;
+      const v=clamp((y/this.model.height+1)/2,0,1),col=side===1?20:60;
+      const radius=v>.8?Math.abs(topPoint(this.model,side*Math.sqrt(Math.max(0,(1-y/this.model.height)/.4)),0)[0]):shapedRadius(this.model,Math.round(v*ROWS),col);
+      const end=Math.abs(x)<Math.max(.24,radius*.65)&&(Math.abs(y-this.model.height)<48*unitsPerPixel||Math.abs(y+this.model.height)<48*unitsPerPixel)?(y>0?1:-1):0;
+      if(end||Math.abs(Math.abs(x)-radius)<48*unitsPerPixel&&Math.abs(y)<this.model.height+20*unitsPerPixel)return {v:clamp(v,0,.8),side,unitsPerPixel,end};
+      return null;
+    }
     const rect=this.renderer.domElement.getBoundingClientRect();let closest=null,distance=48;
     const positions=this.body.geometry.attributes.position;
     for(let i=0;i<this.body.geometry.groups[0].count;i+=3){
