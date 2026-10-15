@@ -61,7 +61,8 @@ export class Interactions {
       else if(model.marks.length>=120)this.onMessage('표현이 많이 쌓였어요. 지우기로 조금 정리해 볼까요?');
       else{
         let points=unwrap(d.points),tool=this.tool;
-        if(tool==='carve'&&closedStroke(points))tool='hole';
+        const tap=d.screen.length&&Math.max(...d.screen.map(p=>Math.hypot(p[0]-d.screen[0][0],p[1]-d.screen[0][1])))<6;
+        if(tool==='carve'&&(tap||closedStroke(points))){tool='hole';if(tap)points=points.slice(0,1);}
         if(tool==='hole')points=openingLoop({tool,points})||[];
         else{points=points.filter((_,i)=>i%Math.max(1,Math.ceil(points.length/600))===0);if(points.length===1)points.push([points[0][0]+.002,points[0][1]]);}
         if(!points.length)this.onMessage('구멍의 테두리를 이어 그려 보세요.');

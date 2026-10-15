@@ -59,3 +59,15 @@ export function validateModel(value){
   return {...value,fired:!!value.fired,assembled:!!value.assembled};
 }
 export function createHistory(limit=24){const entries=[];return {get length(){return entries.length;},push(model){entries.push(structuredClone(model));if(entries.length>limit)entries.shift();},pop(){return entries.pop();},clear(){entries.length=0;}};}
+
+// Restore only the edited stage's fields; a body undo must keep later faces and openings.
+export function createWorkshopHistory(limit=24){
+  const fields={1:['height','offsets'],2:['crown'],3:['marks']};
+  const histories={1:createHistory(limit),2:createHistory(limit),3:createHistory(limit)};
+  return {
+    count:stage=>histories[stage]?.length||0,
+    push(stage,model){if(fields[stage])histories[stage].push(Object.fromEntries(fields[stage].map(key=>[key,model[key]])));},
+    pop(stage,model){const edit=histories[stage]?.pop();if(!edit)return;const restored={...model,...edit};invalidateProcess(restored);return restored;},
+    clear(){Object.values(histories).forEach(history=>history.clear());}
+  };
+}

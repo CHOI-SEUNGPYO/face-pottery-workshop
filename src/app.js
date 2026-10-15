@@ -1,5 +1,5 @@
 import { stages, sourceURL } from './content.js';
-import { freshModel,validateModel,createHistory,advanceIssue } from './model.js';
+import { freshModel,validateModel,createWorkshopHistory,advanceIssue } from './model.js';
 import { Pottery } from './pottery.js';
 import { Interactions } from './interactions.js';
 import { Excavation } from './excavation.js';
@@ -10,7 +10,7 @@ const storageKey='face-pottery-v1';
 let saved=null;
 try{saved=validateModel(JSON.parse(localStorage.getItem(storageKey)));}catch{}
 let model=saved||freshModel(),stage=0,tool='shape',pottery,interaction;
-const history=createHistory();
+const history=createWorkshopHistory();
 let fireTimer=null,fireStarted=0;
 const excavation=new Excavation($('#soil'),(persist=true)=>{updateProgress(model.dug,model.dug===100?'내 작품을 찾았어요!':`${model.dug}% 찾았어요`);if(persist)save();},()=>{toast('내 토기와 시루를 찾았어요!');save();});
 
@@ -34,7 +34,7 @@ function ensurePottery(){
   if(pottery)return true;
   try{
     pottery=new Pottery($('#scene'),model);
-    interaction=new Interactions(pottery,$('#stage-surface'),$('#drawing polyline'),before=>{model=pottery.model;history.push(before);save();renderTools();if(stage===7&&model.assembled)$('#action-hint').textContent='함께 놓아 봤어요. 이 배치는 추정한 모습이에요.';},toast);
+    interaction=new Interactions(pottery,$('#stage-surface'),$('#drawing polyline'),before=>{model=pottery.model;history.push(stage,before);save();renderTools();if(stage===7&&model.assembled)$('#action-hint').textContent='함께 놓아 봤어요. 이 배치는 추정한 모습이에요.';},toast);
     $('#stage-surface').addEventListener('render-lost',()=>{show($('#scene-error'),true);$('#scene-error').textContent='입체 화면 연결이 잠시 끊겼어요. 새로고침하면 저장된 작품을 이어갈 수 있어요.';});
     let endDrag=null;
     $('#end-scene').addEventListener('pointerdown',e=>{endDrag={id:e.pointerId,x:e.clientX};$('#end-scene').setPointerCapture(e.pointerId);});
@@ -54,19 +54,20 @@ function renderTools(){
     b.classList.toggle('active',id===tool);b.setAttribute('aria-pressed',String(id===tool));b.onclick=()=>selectTool(id);
     if(id==='fire')b.textContent=model.fired?'다시 보기':'과정 보기';$('#tools').append(b);
   }
-  if(stage<=3){const undo=document.createElement('button');undo.className='undo';undo.textContent='↶';undo.title='되돌리기';undo.setAttribute('aria-label','되돌리기');undo.disabled=history.length===0;undo.onclick=undoEdit;$('#tools').append(undo);}
+  if(stage<=3){const undo=document.createElement('button');undo.className='undo';undo.textContent='↶';undo.title='이 단계 되돌리기';undo.setAttribute('aria-label','이 단계 되돌리기');undo.disabled=history.count(stage)===0;undo.onclick=undoEdit;$('#tools').append(undo);}
 }
 function selectTool(id){
   const destinations={'edit-body':1,'edit-crown':2,'edit-face':3};if(destinations[id])return go(destinations[id]);
   if(id==='fire')return startFire();
   if(id==='brush'){excavation.assist();return;}
-  if(id==='move'){if(!model.assembled){history.push(model);model.assembled=true;pottery.update(model);save();$('#action-hint').textContent='함께 놓아 봤어요. 이 배치는 추정한 모습이에요.';toast('시루 위에 내 토기를 놓았어요!');}return;}
+  if(id==='move'){if(!model.assembled){model.assembled=true;pottery.update(model);save();$('#action-hint').textContent='함께 놓아 봤어요. 이 배치는 추정한 모습이에요.';toast('시루 위에 내 토기를 놓았어요!');}return;}
   tool=id;interaction?.set(stage,tool);renderTools();
-  const hints={rotate:'흙 위를 좌우로 끌어 다른 면을 살펴보세요.',carve:'선을 닫으면 안쪽이 뚫려요. 열린 선은 파인 홈이 돼요.',press:'콧등 양옆을 눌러 높낮이를 만들어 보세요.',hole:'작게 톡 누르거나, 구멍의 테두리를 둥글게 그려 보세요.',erase:'지우고 싶은 선이나 구멍의 가장자리를 문질러요.',crown:'넓은 흙 윗면에 원하는 구멍의 테두리를 이어 그려요.'};
+  const hints={rotate:'흙 위를 좌우로 끌어 다른 면을 살펴보세요.',carve:'톡 누르면 작은 구멍, 선을 닫으면 큰 구멍, 열린 선은 홈이 돼요.',press:'콧등 양옆을 눌러 높낮이를 만들어 보세요.',erase:'지우고 싶은 선이나 구멍의 가장자리를 문질러요.',crown:'넓은 흙 윗면에 원하는 구멍의 테두리를 이어 그려요.'};
   if(stage!==1)$('#action-hint').textContent=hints[id]||stages[stage].hint;
 }
 function undoEdit(){
-  const old=history.pop();if(!old)return;model=old;model.stage=stage;pottery.update(model);save();renderTools();toast('한 번 전으로 되돌렸어요.');
+  interaction?.cancel();if(pottery)model=pottery.model;
+  const old=history.pop(stage,model);if(!old)return;model=old;pottery.update(model);save();renderTools();toast('이 단계에서 한 작업을 되돌렸어요.');
 }
 function go(n){
   interaction?.cancel();if(pottery)model=pottery.model;
