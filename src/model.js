@@ -1,7 +1,7 @@
 export const ROWS = 40, COLS = 80;
 export const clamp = (x,a,b) => Math.max(a,Math.min(b,x));
 export const wrapDistance = (a,b) => Math.min(Math.abs(a-b),1-Math.abs(a-b));
-export function freshModel(){return {version:1,stage:1,height:1,offsets:Array((ROWS+1)*COLS).fill(0),marks:[],crown:[],fired:false,dug:0,brush:[],assembled:false};}
+export function freshModel(){return {version:1,stage:1,height:1.18,offsets:Array((ROWS+1)*COLS).fill(0),marks:[],crown:[],fired:false,dug:0,brush:[],assembled:false};}
 export function advanceIssue(stage,model){
   if(stage===2&&model.crown.length<3)return '정수리에 내 구멍을 하나 만들어 볼까요?';
   if(stage===5&&!model.fired)return '과정 보기 버튼으로 토기를 먼저 구워 보세요.';
@@ -11,7 +11,8 @@ export function advanceIssue(stage,model){
 }
 export function invalidateProcess(model){model.fired=false;model.dug=0;model.brush=[];model.assembled=false;}
 export function baseRadius(t){
-  const points=[[0,.54],[.08,.72],[.25,.98],[.48,1.08],[.68,1.0],[.83,.8],[.94,.48],[1,.48]];
+  if(t>=.9)return .55*Math.sqrt(Math.max(0,(1-t)/.1));
+  const points=[[0,.54],[.12,.51],[.3,.6],[.52,.83],[.65,.88],[.78,.8],[.9,.55],[1,.275]];
   for(let i=1;i<points.length;i++)if(t<=points[i][0]){
     const [a,x]=points[i-1],[b,y]=points[i],prev=points[Math.max(0,i-2)],next=points[Math.min(points.length-1,i+1)];
     const f=(t-a)/(b-a),m0=(y-prev[1])/(b-prev[0])*(b-a),m1=(next[1]-x)/(next[0]-a)*(b-a);
@@ -21,9 +22,10 @@ export function baseRadius(t){
 export function deform(model,u,v,amount,radius=.15){for(let row=2;row<ROWS-2;row++){const dy=row/ROWS-v;for(let col=0;col<COLS;col++){const dx=wrapDistance(col/COLS,u)*1.6;const d=(dx*dx+dy*dy)/(radius*radius);if(d<4){const i=row*COLS+col;model.offsets[i]=clamp(model.offsets[i]+amount*Math.exp(-d*2),-.38,.5);}}}}
 // Carry nearby shaping into the ends instead of leaving a fixed rim and foot.
 export function shapedRadius(model,row,col){
-  const centre=clamp(row,5,27);let offset=0;
-  for(let d=-2;d<=2;d++)offset+=model.offsets[(centre+d)*COLS+(col+COLS)%COLS]*(3-Math.abs(d))/9;
-  return Math.max(.18,baseRadius(row/ROWS)+offset);
+  const centre=clamp(row,5,34);let offset=0;
+  for(let d=-7;d<=7;d++)offset+=model.offsets[clamp(centre+d,0,ROWS)*COLS+(col+COLS)%COLS]*(8-Math.abs(d))/64;
+  const taper=row>34?baseRadius(row/ROWS)/baseRadius(.85):1;
+  return Math.max(.18*taper,baseRadius(row/ROWS)+offset*taper);
 }
 export function sculptProfile(model,u,v,amount){
   for(let row=2;row<32;row++){
@@ -38,7 +40,7 @@ export function reshapeProfile(model,before,v,outward,upward){
   const radii=Array.from({length:ROWS+1},(_,row)=>baseRadius(row/ROWS)+before.offsets.slice(row*COLS,(row+1)*COLS).reduce((sum,x)=>sum+x,0)/COLS);
   const shift=clamp(upward/(2*before.height),-.1,.1);
   for(let row=0;row<=ROWS;row++){
-    const t=row/ROWS,weight=Math.exp(-2*((t-v)/.17)**2),source=clamp(t-shift*weight,0,1)*ROWS;
+    const t=row/ROWS,weight=Math.exp(-2*((t-v)/.24)**2),source=clamp(t-shift*weight,0,1)*ROWS;
     const low=Math.floor(source),radius=radii[low]+(radii[Math.min(ROWS,low+1)]-radii[low])*(source-low);
     const offset=clamp(radius+outward*weight-baseRadius(t),-.38,.5);
     model.offsets.fill(offset,row*COLS,(row+1)*COLS);

@@ -7,10 +7,11 @@ import {Interactions} from '../src/interactions.js';
 test('local profile gestures keep circular rings, move a bulge vertically, and survive undo/save',()=>{
   const original=freshModel(),wide=freshModel();reshapeProfile(wide,original,.4,.28,0);
   assert.ok(shapedRadius(wide,16,0)-shapedRadius(original,16,0)>.2);
-  assert.ok(Math.abs(shapedRadius(wide,5,0)-shapedRadius(original,5,0))<.02);
+  assert.ok(Math.abs(shapedRadius(wide,5,0)-shapedRadius(original,5,0))<.04,'faraway clay moves much less than the grabbed area');
   for(let row=0;row<=40;row++)assert.equal(new Set(wide.offsets.slice(row*80,(row+1)*80)).size,1);
-  const moved=structuredClone(wide);reshapeProfile(moved,wide,.4,0,.15);
-  assert.ok(moved.offsets[19*80]>wide.offsets[19*80],'upward drag moves the fullness upward');
+  const moved=structuredClone(wide),shiftedBase=structuredClone(original);reshapeProfile(moved,wide,.4,0,.15);reshapeProfile(shiftedBase,original,.4,0,.15);
+  const centre=(m,base)=>{let sum=0,weighted=0;for(let row=0;row<=40;row++){const d=Math.max(0,m.offsets[row*80]-base.offsets[row*80]);sum+=d;weighted+=d*row;}return weighted/sum;};
+  assert.ok(centre(moved,shiftedBase)>centre(wide,original)+.7,'upward drag moves the added fullness upward');
   assert.ok(validateModel(JSON.parse(JSON.stringify(moved))));
   const history=createHistory();history.push(wide);history.push(moved);assert.deepEqual(history.pop(),moved);assert.deepEqual(history.pop(),wide);
   const legacy=freshModel();legacy.offsets[16*80+3]=.3;const before=structuredClone(legacy);reshapeProfile(legacy,before,.5,.1,0);
