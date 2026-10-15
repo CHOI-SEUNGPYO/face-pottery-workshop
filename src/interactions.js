@@ -25,7 +25,7 @@ export class Interactions {
   sample(e){
     const d=this.drag;if(!d)return;const r=this.surface.getBoundingClientRect();
     if(this.stage===2){const p=this.pottery.crownPoint(e.clientX,e.clientY);if(p&&(!d.points.length||Math.hypot(p[0]-d.points.at(-1)[0],p[1]-d.points.at(-1)[1])>.002)){d.points.push(p);d.screen.push([e.clientX-r.left,e.clientY-r.top]);}}
-    else if(this.stage===3&&!d.rotate){const h=this.pottery.hit(e.clientX,e.clientY,true);if(h&&h.uv.y>.05&&h.uv.y<.78){d.points.push([h.uv.x,h.uv.y]);d.screen.push([e.clientX-r.left,e.clientY-r.top]);}}
+    else if(this.stage===3&&!d.rotate){const h=this.pottery.hit(e.clientX,e.clientY,true);if(h&&h.uv.y>.05&&h.uv.y<.9){d.points.push([h.uv.x,h.uv.y]);d.screen.push([e.clientX-r.left,e.clientY-r.top]);}}
     if((this.stage===2||this.stage===3)&&!d.rotate){
       this.preview.setAttribute('points',d.screen.map(p=>p.join(',')).join(' '));
       const first=d.screen[0],last=d.screen.at(-1),closed=d.screen.length>5&&Math.hypot(first[0]-last[0],first[1]-last[1])<14;
