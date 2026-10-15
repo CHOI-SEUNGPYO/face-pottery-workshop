@@ -4,6 +4,17 @@ import {area,pointSegmentDistance} from './model.js';
 // The small raster is only used once, on release, to resolve crossings before triangulation.
 export function strokeContour(points){
   if(points.length<3)return [];
+  const clean=points.filter((p,i)=>!i||Math.hypot(p[0]-points[i-1][0],p[1]-points[i-1][1])>.0005).map(p=>p.slice());
+  if(clean.length>2&&Math.hypot(clean[0][0]-clean.at(-1)[0],clean[0][1]-clean.at(-1)[1])<.0005)clean.pop();
+  const cross=(a,b,c)=>(b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0]);
+  let crossed=false;
+  for(let i=0;i<clean.length&&!crossed;i++)for(let j=i+2;j<clean.length;j++){
+    if(i===0&&j===clean.length-1)continue;
+    const a=clean[i],b=clean[(i+1)%clean.length],c=clean[j],d=clean[(j+1)%clean.length];
+    if(cross(a,b,c)*cross(a,b,d)<0&&cross(c,d,a)*cross(c,d,b)<0){crossed=true;break;}
+  }
+  // Keep the child's actual contour. Only crossed paths need an exterior traced.
+  if(!crossed)return area(clean)<.008?[]:clean.filter((_,i)=>i%Math.max(1,Math.ceil(clean.length/600))===0);
   const size=192,filled=new Uint8Array(size*size);
   for(let row=0;row<size;row++){
     const y=(row+.5)/size*2-1,crossings=[];

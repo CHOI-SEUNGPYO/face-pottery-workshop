@@ -46,6 +46,9 @@ function ensurePottery(){
 }
 function renderTools(){
   $('#tools').replaceChildren();if(stage<1||stage>8)return;
+  show($('#rotate-controls'),[3,4,8].includes(stage)||(stage===1&&tool==='rotate'));
+  $('#stage-surface').classList.toggle('profile-view',stage===1&&tool==='shape');
+  if(stage===1){$('#instruction').textContent=tool==='rotate'?'돌려서 입체 모양을 살펴보세요':stages[1].instruction;$('#action-hint').textContent=tool==='rotate'?'좌우로 끌어 360° 살펴봐요. 다듬기를 누르면 정면으로 돌아와요.':stages[1].hint;}
   for(const [id,label]of stages[stage].tools){
     const b=document.createElement('button');b.textContent=label;b.dataset.tool=id;
     b.classList.toggle('active',id===tool);b.setAttribute('aria-pressed',String(id===tool));b.onclick=()=>selectTool(id);
@@ -59,8 +62,8 @@ function selectTool(id){
   if(id==='brush'){excavation.assist();return;}
   if(id==='move'){if(!model.assembled){history.push(model);model.assembled=true;pottery.update(model);save();$('#action-hint').textContent='함께 놓아 봤어요. 이 배치는 추정한 모습이에요.';toast('시루 위에 내 토기를 놓았어요!');}return;}
   tool=id;interaction?.set(stage,tool);renderTools();
-  const hints={rotate:'흙 위를 좌우로 끌어 다른 면을 살펴보세요.',carve:'눈과 입이 될 선을 그려 보세요.',press:'콧등 양옆을 눌러 높낮이를 만들어 보세요.',hole:'작게 톡 누르거나, 구멍의 테두리를 둥글게 그려 보세요.',erase:'지우고 싶은 선이나 구멍의 가장자리를 문질러요.',crown:'넓은 흙 윗면에 원하는 구멍의 테두리를 이어 그려요.'};
-  $('#action-hint').textContent=hints[id]||stages[stage].hint;
+  const hints={rotate:'흙 위를 좌우로 끌어 다른 면을 살펴보세요.',carve:'선을 닫으면 안쪽이 뚫려요. 열린 선은 파인 홈이 돼요.',press:'콧등 양옆을 눌러 높낮이를 만들어 보세요.',hole:'작게 톡 누르거나, 구멍의 테두리를 둥글게 그려 보세요.',erase:'지우고 싶은 선이나 구멍의 가장자리를 문질러요.',crown:'넓은 흙 윗면에 원하는 구멍의 테두리를 이어 그려요.'};
+  if(stage!==1)$('#action-hint').textContent=hints[id]||stages[stage].hint;
 }
 function undoEdit(){
   const old=history.pop();if(!old)return;model=old;model.stage=stage;pottery.update(model);save();renderTools();toast('한 번 전으로 되돌렸어요.');
@@ -96,7 +99,7 @@ $('#resume').onclick=()=>go(model.stage);$('#next').onclick=next;$('#previous').
 $('#view-again').onclick=()=>go(8);$('#finish').onclick=()=>go(0);
 $('#home').onclick=()=>dialog('처음으로 돌아갈까요?','<p>지금 만든 작품은 이어서 만들 수 있어요.</p>',[['계속 만들기',()=>$('#dialog').close()],['처음으로',()=>{$('#dialog').close();go(0);}]]);
 $('#dialog-close').onclick=()=>$('#dialog').close();
-$('#help').onclick=()=>dialog('손끝으로 만들어 봐요',`<p>${stages[stage].hint}</p><p>${stages[stage].tip.replace(/\n/g,' ')}</p><p>도구를 선택하고 흙 위를 천천히 움직여 보세요. 회전 버튼이나 키보드의 왼쪽·오른쪽 화살표로 다른 면을 살펴볼 수 있어요.</p>`);
+$('#help').onclick=()=>dialog('손끝으로 만들어 봐요',`<p>${stages[stage].hint}</p><p>${stages[stage].tip.replace(/\n/g,' ')}</p><p>${stage===1?'옆 윤곽을 좌우·상하로 옮겨 원하는 높이의 굵기를 바꿔요. 맨 위나 아래를 잡으면 전체 높이가 바뀌어요. 돌리기를 누르면 360도로 볼 수 있어요.':'도구를 선택하고 흙 위를 천천히 움직여 보세요. 회전 버튼이나 키보드의 왼쪽·오른쪽 화살표로 다른 면을 살펴볼 수 있어요.'}</p>`);
 document.querySelectorAll('[data-action="about"]').forEach(b=>b.onclick=about);
 document.querySelectorAll('[data-rotate]').forEach(b=>b.onclick=()=>pottery?.rotate(Number(b.dataset.rotate)));
 $('#guide-count').onchange=e=>pottery?.setGuides(Number(e.target.value));

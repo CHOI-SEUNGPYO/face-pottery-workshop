@@ -3,7 +3,7 @@
 <h1>실제 렌더러로 확인하는 조형 수정</h1><main>
 <section><h2>이어진 흙 몸체</h2><div id="whole"></div><p>고정된 원판 없이 윗면과 몸체가 이어집니다.</p></section>
 <section><h2>그린 별 모양 구멍</h2><div id="star"></div><p>테두리가 닫혀도 원으로 바꾸지 않습니다.</p></section>
-<section><h2>반복해서 누른 뒤</h2><div id="pressed"></div><p>납작하게 만들고 120번 눌러도 위·아래가 분리되지 않습니다.</p></section>
+<section><h2>안쪽까지 뚫린 얼굴 구멍</h2><div id="pressed"></div><p>닫힌 원의 안쪽은 비우고 테두리에 흙의 두께를 남깁니다.</p><button id="turn">돌려 보기</button></section>
 </main><script type="module">
 import {Pottery} from '../src/pottery.js';
 import {freshModel} from '../src/model.js';
@@ -11,6 +11,7 @@ import {strokeContour} from '../src/contour.js';
 const plain=new Pottery(document.querySelector('#whole'),freshModel());plain.setStage(1);
 const star=freshModel();star.crown=strokeContour(Array.from({length:10},(_,i)=>{const a=Math.PI/2+i*Math.PI/5,r=i%2?.33:.78;return [Math.cos(a)*r,Math.sin(a)*r];}));
 const hole=new Pottery(document.querySelector('#star'),star);hole.setStage(2);
-const pressed=structuredClone(star);pressed.height=.65;pressed.marks=Array.from({length:120},(_,i)=>({tool:'press',points:[[i%2?.25:.75,i%3?.79:.05]]}));
+const pressed=structuredClone(star);pressed.marks=[{tool:'carve',points:Array.from({length:65},(_,i)=>[Math.cos(i/64*Math.PI*2)*.055,.5+Math.sin(i/64*Math.PI*2)*.13])}];
 const stress=new Pottery(document.querySelector('#pressed'),pressed);stress.setStage(3);
+document.querySelector('#turn').onclick=()=>stress.rotate(.35);
 </script></html>
