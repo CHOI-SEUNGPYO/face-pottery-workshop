@@ -1,9 +1,10 @@
 import * as THREE from '../vendor/three.module.js';
 import {ROWS,COLS,shapedRadius,wrapDistance} from './model.js';
 import {SHOULDER_ROW,crownGeometry} from './crown.js';
-import {openingLoop,insideOpening} from './openings.js';
+import {openingLoop,insideOpening,raisedFootprint} from './openings.js';
 
 export const WALL_THICKNESS=.11;
+export const EAR_RISE=.18;
 
 export function bodyGeometry(model,inner=false){
   const pos=[],normals=[],uv=[],indices=[],dents=model.marks.filter(mark=>!openingLoop(mark));
@@ -44,25 +45,44 @@ export function bodyGeometry(model,inner=false){
   const merged=new THREE.BufferGeometry();merged.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));merged.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));merged.setAttribute('normal',new THREE.Float32BufferAttribute(normals,3));merged.addGroup(0,sideCount,0);merged.addGroup(sideCount,topCount,1);merged.addGroup(sideCount+topCount,COLS*3,2);plain.dispose();top.dispose();return merged;
 }
 
-export function openingWalls(model,inner,loops){
-  const positions=[],colors=[],uvs=[],grid=inner.attributes.position;
+export function openingWalls(model,inner,loops,raised=[]){
+  const positions=[],colors=[],uvs=[],indices=[],verticesByKey=new Map(),grid=inner.attributes.position;
+  const footprints=loops.map((loop,i)=>raised[i]?raisedFootprint(loop):loop);
   const surface=(u,v,depth)=>{
     const x=((u%1+1)%1)*COLS,y=Math.max(0,Math.min(SHOULDER_ROW-.00001,v*ROWS)),col=Math.floor(x),row=Math.floor(y),fx=x-col,fy=y-row,i=row*(COLS+1)+col;
     const a=new THREE.Vector3().fromBufferAttribute(grid,i),b=new THREE.Vector3().fromBufferAttribute(grid,i+1),c=new THREE.Vector3().fromBufferAttribute(grid,i+COLS+1),d=new THREE.Vector3().fromBufferAttribute(grid,i+COLS+2);
     const p=fx+fy<=1?a.multiplyScalar(1-fx-fy).addScaledVector(b,fx).addScaledVector(c,fy):b.multiplyScalar(1-fy).addScaledVector(c,1-fx).addScaledVector(d,fx+fy-1);
-    const radius=Math.hypot(p.x,p.z),scale=(radius+WALL_THICKNESS-depth)/radius;p.x*=scale;p.z*=scale;return p;
+    const radius=Math.hypot(p.x,p.z),scale=(radius+WALL_THICKNESS-depth)/Math.max(radius,.001);p.x*=scale;p.z*=scale;return p;
+  };
+  const quad=(vertices,coordinates,light=[1,1,1,1])=>{
+    for(const k of [0,1,2,0,2,3]){
+      const point=vertices[k].toArray(),key=[...point,...coordinates[k],light[k]].map(n=>Math.round(n*1e5)).join(',');
+      if(!verticesByKey.has(key)){verticesByKey.set(key,positions.length/3);positions.push(...point);colors.push(light[k],light[k],light[k]);uvs.push(...coordinates[k]);}
+      indices.push(verticesByKey.get(key));
+    }
   };
   for(let index=0;index<loops.length;index++){
-    const loop=loops[index],others=loops.filter((_,i)=>i!==index);
+    const loop=loops[index],foot=footprints[index],others=footprints.filter((_,i)=>i!==index);
     for(let i=0;i<loop.length;i++){
       const a=loop[i],b=loop[(i+1)%loop.length],steps=Math.max(1,Math.ceil(Math.hypot((b[0]-a[0])*6,(b[1]-a[1])*2)/.012));
       for(let j=0;j<steps;j++){
         const p=[a[0]+(b[0]-a[0])*j/steps,a[1]+(b[1]-a[1])*j/steps],q=[a[0]+(b[0]-a[0])*(j+1)/steps,a[1]+(b[1]-a[1])*(j+1)/steps];
         if(insideOpening((p[0]+q[0])/2,(p[1]+q[1])/2,others))continue;
-        const vertices=[surface(...p,0),surface(...q,0),surface(...q,WALL_THICKNESS),surface(...p,WALL_THICKNESS)];
-        for(const k of [0,1,2,0,2,3]){positions.push(...vertices[k].toArray());const light=k<2?1:.38;colors.push(light,light,light);uvs.push(k%2,k<2?1:0);}
+        if(raised[index]){
+          const fa=foot[i],fb=foot[(i+1)%foot.length],fp=fa.map((v,k)=>v+(fb[k]-v)*j/steps),fq=fa.map((v,k)=>v+(fb[k]-v)*(j+1)/steps);
+          const blend=(outer,inner,t)=>outer.map((v,k)=>v+(inner[k]-v)*t);
+          for(let ring=0;ring<12;ring++){
+            const t=ring/12,s=(ring+1)/12,pa=blend(fp,p,t),qa=blend(fq,q,t),pb=blend(fp,p,s),qb=blend(fq,q,s);
+            const rise=t=>-EAR_RISE*Math.sin(t*Math.PI/2)**2;
+            quad([surface(...pa,rise(t)),surface(...qa,rise(t)),surface(...qb,rise(s)),surface(...pb,rise(s))],[pa,qa,qb,pb]);
+          }
+          // Close the underside of the raised skirt as well as the visible tunnel.
+          quad([surface(...fp,WALL_THICKNESS),surface(...fq,WALL_THICKNESS),surface(...q,WALL_THICKNESS),surface(...p,WALL_THICKNESS)],[fp,fq,q,p],[.38,.38,.38,.38]);
+        }
+        const lift=raised[index]?-EAR_RISE:0;
+        quad([surface(...p,lift),surface(...q,lift),surface(...q,WALL_THICKNESS),surface(...p,WALL_THICKNESS)],[p,q,q,p],[1,1,.38,.38]);
       }
     }
   }
-  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));g.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));g.computeVertexNormals();return g;
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));g.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));g.setIndex(indices);g.computeVertexNormals();return g;
 }

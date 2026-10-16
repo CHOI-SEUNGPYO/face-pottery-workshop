@@ -9,14 +9,21 @@ export function closedStroke(points){
 }
 
 export function openingLoop(mark){
-  if(mark.tool!=='hole'&&!(mark.tool==='carve'&&closedStroke(mark.points)))return null;
+  if(!['hole','ear'].includes(mark.tool)&&!(mark.tool==='carve'&&closedStroke(mark.points)))return null;
   const points=unwrap(mark.points);if(!points.length)return null;
-  if(points.length<3){const [u,v]=points[0];return Array.from({length:32},(_,i)=>[u+Math.cos(i/32*Math.PI*2)*.012,v+Math.sin(i/32*Math.PI*2)*.03]);}
+  if(points.length<3){const [u,v]=points[0],w=mark.tool==='ear'?.024:.012,h=mark.tool==='ear'?.05:.03;return Array.from({length:32},(_,i)=>[u+Math.cos(i/32*Math.PI*2)*w,v+Math.sin(i/32*Math.PI*2)*h]);}
   const xs=points.map(p=>p[0]),ys=points.map(p=>p[1]),cx=(Math.min(...xs)+Math.max(...xs))/2,cy=(Math.min(...ys)+Math.max(...ys))/2;
   const scale=Math.max(Math.max(...xs)-Math.min(...xs),Math.max(...ys)-Math.min(...ys))/.9;
   if(!scale)return null;
   const loop=strokeContour(points.map(([u,v])=>[(u-cx)/scale,(v-cy)/scale]));
   return loop.length>=3?loop.map(([x,y])=>[x*scale+cx,y*scale+cy]):null;
+}
+
+export function raisedFootprint(loop){
+  const xs=loop.map(p=>p[0]),ys=loop.map(p=>p[1]),w=Math.max(...xs)-Math.min(...xs),h=Math.max(...ys)-Math.min(...ys);
+  const cx=(Math.max(...xs)+Math.min(...xs))/2,cy=(Math.max(...ys)+Math.min(...ys))/2;
+  // ponytail: a scaled contour is enough for oval ear openings; very concave artwork can fold this skirt.
+  return loop.map(([u,v])=>[cx+(u-cx)*(1+.035/Math.max(w,.001)),cy+(v-cy)*(1+.07/Math.max(h,.001))]);
 }
 
 export function insideLoop(u,v,loop){
