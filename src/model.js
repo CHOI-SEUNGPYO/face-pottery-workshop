@@ -42,7 +42,9 @@ export function reshapeProfile(model,before,v,outward,upward){
   for(let row=0;row<=ROWS;row++){
     const t=row/ROWS,weight=Math.exp(-2*((t-v)/.24)**2),source=clamp(t-shift*weight,0,1)*ROWS;
     const low=Math.floor(source),radius=radii[low]+(radii[Math.min(ROWS,low+1)]-radii[low])*(source-low);
-    const offset=clamp(radius+outward*weight-baseRadius(t),-.38,.5);
+    // Bound the clay's radius, not how far it is allowed to depart from the initial pot.
+    const tip=row>34?baseRadius(t)/baseRadius(.85):1;
+    const offset=clamp(radius+outward*weight,.18*tip,1.5)-baseRadius(t);
     model.offsets.fill(offset,row*COLS,(row+1)*COLS);
   }
 }
@@ -51,7 +53,7 @@ export function unwrap(points){if(!points.length)return [];const out=[points[0].
 export function pointSegmentDistance(p,a,b){const x=b[0]-a[0],y=b[1]-a[1];const t=clamp(((p[0]-a[0])*x+(p[1]-a[1])*y)/(x*x+y*y||1),0,1);return Math.hypot(p[0]-a[0]-t*x,p[1]-a[1]-t*y);}
 export function eraseAt(model,u,v){model.marks=model.marks.filter(m=>!m.points.some((p,i)=>[-1,0,1].some(k=>pointSegmentDistance([u+k,v],p,m.points[Math.min(i+1,m.points.length-1)])<.035)));}
 export function validateModel(value){
-  if(!value||value.version!==1||!Array.isArray(value.offsets)||value.offsets.length!==(ROWS+1)*COLS||!value.offsets.every(n=>Number.isFinite(n)&&n>=-.38&&n<=.5))return null;
+  if(!value||value.version!==1||!Array.isArray(value.offsets)||value.offsets.length!==(ROWS+1)*COLS||!value.offsets.every(n=>Number.isFinite(n)&&n>=-.9&&n<=1.5))return null;
   if(!Number.isFinite(value.height)||value.height<.65||value.height>1.45||!Number.isInteger(value.stage)||value.stage<1||value.stage>9)return null;
   const validPoints=(p,limit,range)=>Array.isArray(p)&&p.length<=limit&&p.every(a=>Array.isArray(a)&&a.length===2&&a.every(n=>Number.isFinite(n)&&Math.abs(n)<=range));
   if(!validPoints(value.crown,600,1)||!Array.isArray(value.marks)||value.marks.length>300||!value.marks.every(m=>['carve','press','hole','ear'].includes(m.tool)&&validPoints(m.points,1000,3)))return null;
