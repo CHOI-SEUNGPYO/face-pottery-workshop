@@ -4,6 +4,19 @@ import {freshModel,reshapeProfile,createHistory,validateModel,shapedRadius} from
 import {Pottery} from '../src/pottery.js';
 import {Interactions} from '../src/interactions.js';
 
+test('profile can leave the original silhouette without losing circular rings or saved artwork',()=>{
+  const initial=freshModel(),wide=freshModel(),narrow=freshModel();
+  reshapeProfile(wide,initial,.3,1,0);
+  reshapeProfile(narrow,initial,.65,-1,0);
+  assert.ok(wide.offsets[12*80]>.5,'can widen beyond the old base-relative limit');
+  assert.ok(narrow.offsets[26*80]<-.38,'can narrow the original belly beyond the old limit');
+  for(const model of [wide,narrow]){
+    for(let row=0;row<=40;row++)assert.equal(new Set(model.offsets.slice(row*80,(row+1)*80)).size,1);
+    assert.deepEqual(validateModel(JSON.parse(JSON.stringify(model))),model);
+    const history=createHistory();history.push(initial);history.push(model);assert.deepEqual(history.pop(),model);assert.deepEqual(history.pop(),initial);
+  }
+});
+
 test('local profile gestures keep circular rings, move a bulge vertically, and survive undo/save',()=>{
   const original=freshModel(),wide=freshModel();reshapeProfile(wide,original,.4,.28,0);
   assert.ok(shapedRadius(wide,16,0)-shapedRadius(original,16,0)>.2);
