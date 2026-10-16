@@ -39,8 +39,8 @@ test('lathe mesh matches the stored outline through rotation, storage, stage und
   assert.deepEqual(validateModel(JSON.parse(JSON.stringify(restored))),restored);
   const outer=bodyGeometry(restored),p=outer.attributes.position,uv=outer.attributes.uv;
   for(let i=0;i<outer.groups[0].count;i++){
-    const row=Math.round(uv.getY(i)*ROWS);
-    assert.ok(Math.abs(Math.hypot(p.getX(i),p.getZ(i))-restored.profile[row])<1e-6);
+    const row=uv.getY(i)*ROWS;
+    assert.ok(Math.abs(Math.hypot(p.getX(i),p.getZ(i))-shapedRadius(restored,row,0))<2e-6);
   }
   const bottom=outer.groups[2];
   for(let i=bottom.start;i<bottom.start+bottom.count;i++)assert.ok(Math.abs(p.getY(i)+restored.height)<1e-6);

@@ -1,4 +1,5 @@
 export const ROWS = 40, COLS = 80;
+export const SURFACE_ROWS = 120;
 export const clamp = (x,a,b) => Math.max(a,Math.min(b,x));
 export const wrapDistance = (a,b) => Math.min(Math.abs(a-b),1-Math.abs(a-b));
 export function freshModel(){return {version:1,stage:1,height:1.18,offsets:Array((ROWS+1)*COLS).fill(0),marks:[],crown:[],fired:false,dug:0,brush:[],assembled:false};}
@@ -22,13 +23,28 @@ export function baseRadius(t){
 export function deform(model,u,v,amount,radius=.15){for(let row=2;row<ROWS-2;row++){const dy=row/ROWS-v;for(let col=0;col<COLS;col++){const dx=wrapDistance(col/COLS,u)*1.6;const d=(dx*dx+dy*dy)/(radius*radius);if(d<4){const i=row*COLS+col;model.offsets[i]=clamp(model.offsets[i]+amount*Math.exp(-d*2),-.38,.5);}}}}
 // New edits store the visible radii themselves. Legacy offsets are read once as
 // a continuous radius curve, never blurred and then added back to a fixed cap.
-export function shapedRadius(model,row,col){
+function profileRadius(model,row,col){
   if(model.profile)return model.profile[row];
   if(row===ROWS)return 0;
   const sample=r=>r>ROWS?-sample(2*ROWS-r):r===ROWS?0:Math.max(.18,baseRadius(Math.max(0,r)/ROWS)+model.offsets[Math.max(0,r)*COLS+(col+COLS)%COLS]);
   let radius=0;
   for(let d=-7;d<=7;d++)radius+=sample(row+d)*(8-Math.abs(d))/64;
   return Math.max(0,radius);
+}
+export function shapedRadius(model,row,col){
+  row=clamp(row,0,ROWS);
+  // Round the closing end of the same meridian. Its width comes from the
+  // edited neck, never the original vessel. Squared radius gives a horizontal
+  // tangent at the pole instead of the old straight cone.
+  const start=ROWS-3;
+  if(row>start){
+    const radius=profileRadius(model,start,col),previous=profileRadius(model,start-1,col);
+    if(!radius)return 0;
+    const slope=clamp(6*(radius-previous)/radius,-1,0),t=(row-start)/3;
+    return radius*Math.sqrt(Math.max(0,(1-t)*(1+(1+slope)*t)));
+  }
+  const low=Math.floor(row),a=profileRadius(model,low,col),b=profileRadius(model,Math.min(ROWS,low+1),col);
+  return a+(b-a)*(row-low);
 }
 export function sculptProfile(model,u,v,amount){
   for(let row=2;row<32;row++){

@@ -1,6 +1,6 @@
 import * as THREE from '../vendor/three.module.js';
-import {ROWS,COLS,shapedRadius,wrapDistance} from './model.js';
-import {SHOULDER_ROW,crownGeometry} from './crown.js';
+import {ROWS,COLS,SURFACE_ROWS,shapedRadius,wrapDistance} from './model.js';
+import {crownGeometry} from './crown.js';
 import {openingLoop,insideOpening,raisedFootprint} from './openings.js';
 
 export const WALL_THICKNESS=.11;
@@ -10,13 +10,13 @@ export function bodyGeometry(model,inner=false){
   const pos=[],normals=[],uv=[],indices=[],dents=model.marks.filter(mark=>!openingLoop(mark));
   // Three.js r180 LatheGeometry (MIT): revolve one continuous meridian.
   // Reorder its grid for our existing opening-wall UV interpolation.
-  const profile=Array.from({length:ROWS+1},(_,row)=>new THREE.Vector2(shapedRadius(model,row,0),(row/ROWS*2-1)*model.height));
+  const profile=Array.from({length:SURFACE_ROWS+1},(_,row)=>new THREE.Vector2(shapedRadius(model,row/SURFACE_ROWS*ROWS,0),(row/SURFACE_ROWS*2-1)*model.height));
   const lathe=new THREE.LatheGeometry(profile,COLS),vertices=lathe.attributes.position;
-  const gridIndex=i=>(i%(ROWS+1))*(COLS+1)+Math.floor(i/(ROWS+1));
+  const gridIndex=i=>(i%(SURFACE_ROWS+1))*(COLS+1)+Math.floor(i/(SURFACE_ROWS+1));
   for(const i of lathe.index.array)indices.push(gridIndex(i));
-  for(let row=0;row<=SHOULDER_ROW;row++)for(let col=0;col<=COLS;col++){
-    const v=row/ROWS,u=col/COLS;
-    let radius=shapedRadius(model,row,col),indent=0;
+  for(let row=0;row<=SURFACE_ROWS;row++)for(let col=0;col<=COLS;col++){
+    const v=row/SURFACE_ROWS,u=col/COLS;
+    let radius=shapedRadius(model,v*ROWS,col),indent=0;
     for(const mark of dents){
       const spread=mark.tool==='press'?.065:.018;let nearest=1;
       for(let k=0;k<mark.points.length;k+=2){const p=mark.points[k],dx=wrapDistance(u,((p[0]%1)+1)%1)*1.55,dy=v-p[1];nearest=Math.min(nearest,dx*dx+dy*dy);}
@@ -26,15 +26,15 @@ export function bodyGeometry(model,inner=false){
     const joinFade=Math.max(0,Math.min(1,v/.12,(1-v)/.12));
     radius-=Math.min(.2,indent)*joinFade;
     radius=Math.max(0,radius-(inner?WALL_THICKNESS:0));
-    const source=col*(ROWS+1)+row,scale=profile[row].x?radius/profile[row].x:0;
+    const source=col*(SURFACE_ROWS+1)+row,scale=profile[row].x?radius/profile[row].x:0;
     pos.push(vertices.getX(source)*scale,vertices.getY(source),vertices.getZ(source)*scale);uv.push(u,v);
   }
   lathe.dispose();
   const side=new THREE.BufferGeometry();side.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));side.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));side.setIndex(indices);side.computeVertexNormals();
-  for(let row=0;row<=ROWS;row++){
-    const first=row*(COLS+1),last=first+COLS,n=row===ROWS?new THREE.Vector3(0,1,0):new THREE.Vector3().fromBufferAttribute(side.attributes.normal,first).add(new THREE.Vector3().fromBufferAttribute(side.attributes.normal,last)).normalize();
+  for(let row=0;row<=SURFACE_ROWS;row++){
+    const first=row*(COLS+1),last=first+COLS,n=row===SURFACE_ROWS?new THREE.Vector3(0,1,0):new THREE.Vector3().fromBufferAttribute(side.attributes.normal,first).add(new THREE.Vector3().fromBufferAttribute(side.attributes.normal,last)).normalize();
     side.attributes.normal.setXYZ(first,n.x,n.y,n.z);side.attributes.normal.setXYZ(last,n.x,n.y,n.z);
-    if(row===ROWS)for(let col=1;col<COLS;col++)side.attributes.normal.setXYZ(first+col,0,1,0);
+    if(row===SURFACE_ROWS)for(let col=1;col<COLS;col++)side.attributes.normal.setXYZ(first+col,0,1,0);
   }
   if(inner)return side;
   const plain=side.toNonIndexed();side.dispose();
@@ -56,7 +56,7 @@ export function openingWalls(model,inner,loops,raised=[]){
   const positions=[],colors=[],uvs=[],indices=[],verticesByKey=new Map(),grid=inner.attributes.position;
   const footprints=loops.map((loop,i)=>raised[i]?raisedFootprint(loop):loop);
   const surface=(u,v,depth)=>{
-    const x=((u%1+1)%1)*COLS,y=Math.max(0,Math.min(SHOULDER_ROW-.00001,v*ROWS)),col=Math.floor(x),row=Math.floor(y),fx=x-col,fy=y-row,i=row*(COLS+1)+col;
+    const x=((u%1+1)%1)*COLS,y=Math.max(0,Math.min(SURFACE_ROWS-.00001,v*SURFACE_ROWS)),col=Math.floor(x),row=Math.floor(y),fx=x-col,fy=y-row,i=row*(COLS+1)+col;
     const a=new THREE.Vector3().fromBufferAttribute(grid,i),b=new THREE.Vector3().fromBufferAttribute(grid,i+1),c=new THREE.Vector3().fromBufferAttribute(grid,i+COLS+1),d=new THREE.Vector3().fromBufferAttribute(grid,i+COLS+2);
     const p=fx+fy<=1?a.multiplyScalar(1-fx-fy).addScaledVector(b,fx).addScaledVector(c,fy):b.multiplyScalar(1-fy).addScaledVector(c,1-fx).addScaledVector(d,fx+fy-1);
     const radius=Math.hypot(p.x,p.z),scale=(radius+WALL_THICKNESS-depth)/Math.max(radius,.001);p.x*=scale;p.z*=scale;return p;
