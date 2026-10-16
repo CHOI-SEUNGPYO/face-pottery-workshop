@@ -8,8 +8,14 @@ export const EAR_RISE=.18;
 
 export function bodyGeometry(model,inner=false){
   const pos=[],normals=[],uv=[],indices=[],dents=model.marks.filter(mark=>!openingLoop(mark));
+  // Three.js r180 LatheGeometry (MIT): revolve one continuous meridian.
+  // Reorder its grid for our existing opening-wall UV interpolation.
+  const profile=Array.from({length:ROWS+1},(_,row)=>new THREE.Vector2(shapedRadius(model,row,0),(row/ROWS*2-1)*model.height));
+  const lathe=new THREE.LatheGeometry(profile,COLS),vertices=lathe.attributes.position;
+  const gridIndex=i=>(i%(ROWS+1))*(COLS+1)+Math.floor(i/(ROWS+1));
+  for(const i of lathe.index.array)indices.push(gridIndex(i));
   for(let row=0;row<=SHOULDER_ROW;row++)for(let col=0;col<=COLS;col++){
-    const v=row/ROWS,u=col/COLS,a=u*Math.PI*2;
+    const v=row/ROWS,u=col/COLS;
     let radius=shapedRadius(model,row,col),indent=0;
     for(const mark of dents){
       const spread=mark.tool==='press'?.065:.018;let nearest=1;
@@ -20,9 +26,10 @@ export function bodyGeometry(model,inner=false){
     const joinFade=Math.max(0,Math.min(1,v/.12,(1-v)/.12));
     radius-=Math.min(.2,indent)*joinFade;
     radius=Math.max(0,radius-(inner?WALL_THICKNESS:0));
-    pos.push(Math.sin(a)*radius,(v*2-1)*model.height,Math.cos(a)*radius);uv.push(u,v);
-    if(row<SHOULDER_ROW&&col<COLS){const i=row*(COLS+1)+col;indices.push(i,i+1,i+COLS+1,i+1,i+COLS+2,i+COLS+1);}
+    const source=col*(ROWS+1)+row,scale=profile[row].x?radius/profile[row].x:0;
+    pos.push(vertices.getX(source)*scale,vertices.getY(source),vertices.getZ(source)*scale);uv.push(u,v);
   }
+  lathe.dispose();
   const side=new THREE.BufferGeometry();side.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));side.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));side.setIndex(indices);side.computeVertexNormals();
   for(let row=0;row<=ROWS;row++){
     const first=row*(COLS+1),last=first+COLS,n=row===ROWS?new THREE.Vector3(0,1,0):new THREE.Vector3().fromBufferAttribute(side.attributes.normal,first).add(new THREE.Vector3().fromBufferAttribute(side.attributes.normal,last)).normalize();

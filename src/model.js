@@ -20,12 +20,15 @@ export function baseRadius(t){
   }return .48;
 }
 export function deform(model,u,v,amount,radius=.15){for(let row=2;row<ROWS-2;row++){const dy=row/ROWS-v;for(let col=0;col<COLS;col++){const dx=wrapDistance(col/COLS,u)*1.6;const d=(dx*dx+dy*dy)/(radius*radius);if(d<4){const i=row*COLS+col;model.offsets[i]=clamp(model.offsets[i]+amount*Math.exp(-d*2),-.38,.5);}}}}
-// Carry nearby shaping into the ends instead of leaving a fixed rim and foot.
+// New edits store the visible radii themselves. Legacy offsets are read once as
+// a continuous radius curve, never blurred and then added back to a fixed cap.
 export function shapedRadius(model,row,col){
-  const centre=clamp(row,5,34);let offset=0;
-  for(let d=-7;d<=7;d++)offset+=model.offsets[clamp(centre+d,0,ROWS)*COLS+(col+COLS)%COLS]*(8-Math.abs(d))/64;
-  const taper=row>34?baseRadius(row/ROWS)/baseRadius(.85):1;
-  return Math.max(.18*taper,baseRadius(row/ROWS)+offset*taper);
+  if(model.profile)return model.profile[row];
+  if(row===ROWS)return 0;
+  const sample=r=>r>ROWS?-sample(2*ROWS-r):r===ROWS?0:Math.max(.18,baseRadius(Math.max(0,r)/ROWS)+model.offsets[Math.max(0,r)*COLS+(col+COLS)%COLS]);
+  let radius=0;
+  for(let d=-7;d<=7;d++)radius+=sample(row+d)*(8-Math.abs(d))/64;
+  return Math.max(0,radius);
 }
 export function sculptProfile(model,u,v,amount){
   for(let row=2;row<32;row++){
@@ -37,14 +40,16 @@ export function sculptProfile(model,u,v,amount){
   }
 }
 export function reshapeProfile(model,before,v,outward,upward){
-  const radii=Array.from({length:ROWS+1},(_,row)=>baseRadius(row/ROWS)+before.offsets.slice(row*COLS,(row+1)*COLS).reduce((sum,x)=>sum+x,0)/COLS);
+  const radii=Array.from({length:ROWS+1},(_,row)=>before.profile?.[row]??Array.from({length:COLS},(_,col)=>shapedRadius(before,row,col)).reduce((sum,x)=>sum+x,0)/COLS);
   const shift=clamp(upward/(2*before.height),-.1,.1);
+  model.profile=[];
   for(let row=0;row<=ROWS;row++){
     const t=row/ROWS,weight=Math.exp(-2*((t-v)/.24)**2),source=clamp(t-shift*weight,0,1)*ROWS;
     const low=Math.floor(source),radius=radii[low]+(radii[Math.min(ROWS,low+1)]-radii[low])*(source-low);
-    // Bound the clay's radius, not how far it is allowed to depart from the initial pot.
-    const tip=row>34?baseRadius(t)/baseRadius(.85):1;
-    const offset=clamp(radius+outward*weight,.18*tip,1.5)-baseRadius(t);
+    // Only the pole closes at zero; there is no reserved head or foot section.
+    const next=row===ROWS?0:clamp(radius+outward*weight,.18*Math.min(1,(ROWS-row)/3),1.5);
+    model.profile.push(next);
+    const offset=next-baseRadius(t);
     model.offsets.fill(offset,row*COLS,(row+1)*COLS);
   }
 }
@@ -55,6 +60,7 @@ export function eraseAt(model,u,v){model.marks=model.marks.filter(m=>!m.points.s
 export function validateModel(value){
   if(!value||value.version!==1||!Array.isArray(value.offsets)||value.offsets.length!==(ROWS+1)*COLS||!value.offsets.every(n=>Number.isFinite(n)&&n>=-.9&&n<=1.5))return null;
   if(!Number.isFinite(value.height)||value.height<.65||value.height>1.45||!Number.isInteger(value.stage)||value.stage<1||value.stage>9)return null;
+  if(value.profile!==undefined&&(!Array.isArray(value.profile)||value.profile.length!==ROWS+1||!value.profile.every(n=>Number.isFinite(n)&&n>=0&&n<=1.5)||value.profile[ROWS]!==0))return null;
   const validPoints=(p,limit,range)=>Array.isArray(p)&&p.length<=limit&&p.every(a=>Array.isArray(a)&&a.length===2&&a.every(n=>Number.isFinite(n)&&Math.abs(n)<=range));
   if(!validPoints(value.crown,600,1)||!Array.isArray(value.marks)||value.marks.length>300||!value.marks.every(m=>['carve','press','hole','ear'].includes(m.tool)&&validPoints(m.points,1000,3)))return null;
   if(!validPoints(value.brush,6000,1)||!Number.isFinite(value.dug)||value.dug<0||value.dug>100)return null;
@@ -64,12 +70,12 @@ export function createHistory(limit=24){const entries=[];return {get length(){re
 
 // Restore only the edited stage's fields; a body undo must keep later faces and openings.
 export function createWorkshopHistory(limit=24){
-  const fields={1:['height','offsets'],2:['crown'],3:['marks']};
+  const fields={1:['height','offsets','profile'],2:['crown'],3:['marks']};
   const histories={1:createHistory(limit),2:createHistory(limit),3:createHistory(limit)};
   return {
     count:stage=>histories[stage]?.length||0,
     push(stage,model){if(fields[stage])histories[stage].push(Object.fromEntries(fields[stage].map(key=>[key,model[key]])));},
-    pop(stage,model){const edit=histories[stage]?.pop();if(!edit)return;const restored={...model,...edit};invalidateProcess(restored);return restored;},
+    pop(stage,model){const edit=histories[stage]?.pop();if(!edit)return;const restored={...model,...edit};if(restored.profile===undefined)delete restored.profile;invalidateProcess(restored);return restored;},
     clear(){Object.values(histories).forEach(history=>history.clear());}
   };
 }
