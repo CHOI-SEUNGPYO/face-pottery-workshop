@@ -63,8 +63,13 @@ node --test tests/*.test.mjs
 
 ## Git 흐름
 
+- 공개 게임: https://choi-seungpyo.github.io/face-pottery-workshop/
+- 저장소: https://github.com/CHOI-SEUNGPYO/face-pottery-workshop
+- `.github/workflows/pages.yml`에서 main·develop·PR의 기존 검사를 실행한다. 검사를 통과한 main만 GitHub Pages로 자동 배포한다. 필요하면 Actions의 ‘Run workflow’로 main을 다시 배포한다.
+- 배포 파일은 index.html, styles.css, src, vendor, assets, asset, font다. 로컬 실행 도구·테스트·기획 문서는 접속 페이지에 포함하지 않는다. 공개 사이트의 작품 저장은 해당 브라우저에 보관되며 localhost의 저장 작품과 별개다.
+
 - `main`: 확인한 실행 버전
 - `develop`: 기능 통합
 - `feature/*`: 단계별 구현 후 develop으로 병합
 - `release/*`: 전체 검증 후 main과 develop으로 병합, 버전 태그
-- 원격 저장소는 아직 연결하지 않았다. 로컬 작성자는 Codex다.
+- origin은 위 공개 저장소에 연결한다. 로컬 작성자는 Codex다.
