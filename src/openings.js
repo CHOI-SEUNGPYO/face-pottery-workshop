@@ -5,7 +5,9 @@ export function closedStroke(points){
   if(points.length<4)return false;
   const p=unwrap(points),xs=p.map(q=>q[0]),ys=p.map(q=>q[1]);
   const w=Math.max(...xs)-Math.min(...xs),h=Math.max(...ys)-Math.min(...ys);
-  return area(p)>.00015&&Math.hypot((p[0][0]-p.at(-1)[0])*3,p[0][1]-p.at(-1)[1])<Math.max(.012,Math.hypot(w*3,h)*.18);
+  // A child need not land on the first pixel. Keep the drawn boundary and
+  // bridge a small closing gap, including small eyes and UV-seam crossings.
+  return area(p)>.000015&&Math.hypot((p[0][0]-p.at(-1)[0])*3,p[0][1]-p.at(-1)[1])<Math.hypot(w*3,h)*.35;
 }
 
 export function openingLoop(mark){

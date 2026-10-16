@@ -28,7 +28,7 @@ export class Interactions {
     else if(this.stage===3&&!d.rotate){const h=this.pottery.hit(e.clientX,e.clientY,true);if(h&&h.uv.y>.05&&h.uv.y<.9){d.points.push([h.uv.x,h.uv.y]);d.screen.push([e.clientX-r.left,e.clientY-r.top]);}}
     if((this.stage===2||this.stage===3)&&!d.rotate){
       this.preview.setAttribute('points',d.screen.map(p=>p.join(',')).join(' '));
-      const first=d.screen[0],last=d.screen.at(-1),closed=d.screen.length>5&&Math.hypot(first[0]-last[0],first[1]-last[1])<14;
+      const first=d.screen[0],last=d.screen.at(-1),closed=this.stage===3?closedStroke(d.points):d.screen.length>5&&Math.hypot(first[0]-last[0],first[1]-last[1])<14;
       this.preview.setAttribute('fill',closed&&(this.stage===2||['carve','hole','ear'].includes(this.tool))?'#3e2a1b88':'none');
     }
   }
