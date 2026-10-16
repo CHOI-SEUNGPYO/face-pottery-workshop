@@ -1,5 +1,5 @@
 import * as THREE from '../vendor/three.module.js';
-import { ROWS,COLS,shapedRadius,clamp } from './model.js';
+import { ROWS,COLS,SURFACE_ROWS,shapedRadius,clamp } from './model.js';
 import {crownRadius,mouthOutline,mouthCut,insideMouth,SHOULDER_ROW} from './crown.js';
 import {bodyGeometry,openingWalls} from './body.js';
 import {openingLoop,insideOpening,insideLoop,raisedFootprint} from './openings.js';
@@ -75,7 +75,7 @@ export class Pottery {
     const points=[],outer=mouthOutline(this.model),radius=crownRadius(this.model),bottom=this.crownUniforms.mouthBottom.value;
     for(const side of [1,-1]){
       const col=side===1?20:60;
-      const edge=Array.from({length:ROWS+1},(_,row)=>new THREE.Vector3(side*shapedRadius(this.model,row,col),(row/ROWS*2-1)*this.model.height,0));
+      const edge=Array.from({length:SURFACE_ROWS+1},(_,row)=>new THREE.Vector3(side*shapedRadius(this.model,row/SURFACE_ROWS*ROWS,col),(row/SURFACE_ROWS*2-1)*this.model.height,0));
       for(let i=1;i<edge.length;i++){
         const middle=edge[i].clone().add(edge[i-1]).multiplyScalar(.5);
         if(!outer.length||middle.y<=bottom||!insideLoop(middle.x/radius,0,outer))points.push(edge[i-1],edge[i]);
@@ -115,7 +115,7 @@ export class Pottery {
       const rect=this.renderer.domElement.getBoundingClientRect(),unitsPerPixel=(this.camera.right-this.camera.left)/rect.width;
       const x=(clientX-rect.left-rect.width/2)*unitsPerPixel,y=(rect.top+rect.height/2-clientY)*unitsPerPixel,side=x>=0?1:-1;
       const v=clamp((y/this.model.height+1)/2,0,1),col=side===1?20:60;
-      const radius=shapedRadius(this.model,Math.round(v*ROWS),col);
+      const radius=shapedRadius(this.model,v*ROWS,col);
       const end=Math.abs(x)<Math.max(.06,radius*.35)&&(Math.abs(y-this.model.height)<48*unitsPerPixel||Math.abs(y+this.model.height)<48*unitsPerPixel)?(y>0?1:-1):0;
       if(end||Math.abs(Math.abs(x)-radius)<48*unitsPerPixel&&Math.abs(y)<this.model.height+20*unitsPerPixel)return {v:clamp(v,0,.97),side,unitsPerPixel,end};
       return null;
