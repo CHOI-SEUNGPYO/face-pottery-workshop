@@ -116,7 +116,7 @@ export class Pottery {
       const x=(clientX-rect.left-rect.width/2)*unitsPerPixel,y=(rect.top+rect.height/2-clientY)*unitsPerPixel,side=x>=0?1:-1;
       const v=clamp((y/this.model.height+1)/2,0,1),col=side===1?20:60;
       const radius=shapedRadius(this.model,Math.round(v*ROWS),col);
-      const end=Math.abs(x)<Math.max(.24,radius*.65)&&(Math.abs(y-this.model.height)<48*unitsPerPixel||Math.abs(y+this.model.height)<48*unitsPerPixel)?(y>0?1:-1):0;
+      const end=Math.abs(x)<Math.max(.06,radius*.35)&&(Math.abs(y-this.model.height)<48*unitsPerPixel||Math.abs(y+this.model.height)<48*unitsPerPixel)?(y>0?1:-1):0;
       if(end||Math.abs(Math.abs(x)-radius)<48*unitsPerPixel&&Math.abs(y)<this.model.height+20*unitsPerPixel)return {v:clamp(v,0,.97),side,unitsPerPixel,end};
       return null;
     }
