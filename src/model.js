@@ -54,8 +54,20 @@ export function validateModel(value){
   if(!value||value.version!==1||!Array.isArray(value.offsets)||value.offsets.length!==(ROWS+1)*COLS||!value.offsets.every(n=>Number.isFinite(n)&&n>=-.38&&n<=.5))return null;
   if(!Number.isFinite(value.height)||value.height<.65||value.height>1.45||!Number.isInteger(value.stage)||value.stage<1||value.stage>9)return null;
   const validPoints=(p,limit,range)=>Array.isArray(p)&&p.length<=limit&&p.every(a=>Array.isArray(a)&&a.length===2&&a.every(n=>Number.isFinite(n)&&Math.abs(n)<=range));
-  if(!validPoints(value.crown,600,1)||!Array.isArray(value.marks)||value.marks.length>300||!value.marks.every(m=>['carve','press','hole'].includes(m.tool)&&validPoints(m.points,1000,3)))return null;
+  if(!validPoints(value.crown,600,1)||!Array.isArray(value.marks)||value.marks.length>300||!value.marks.every(m=>['carve','press','hole','ear'].includes(m.tool)&&validPoints(m.points,1000,3)))return null;
   if(!validPoints(value.brush,6000,1)||!Number.isFinite(value.dug)||value.dug<0||value.dug>100)return null;
   return {...value,fired:!!value.fired,assembled:!!value.assembled};
 }
 export function createHistory(limit=24){const entries=[];return {get length(){return entries.length;},push(model){entries.push(structuredClone(model));if(entries.length>limit)entries.shift();},pop(){return entries.pop();},clear(){entries.length=0;}};}
+
+// Restore only the edited stage's fields; a body undo must keep later faces and openings.
+export function createWorkshopHistory(limit=24){
+  const fields={1:['height','offsets'],2:['crown'],3:['marks']};
+  const histories={1:createHistory(limit),2:createHistory(limit),3:createHistory(limit)};
+  return {
+    count:stage=>histories[stage]?.length||0,
+    push(stage,model){if(fields[stage])histories[stage].push(Object.fromEntries(fields[stage].map(key=>[key,model[key]])));},
+    pop(stage,model){const edit=histories[stage]?.pop();if(!edit)return;const restored={...model,...edit};invalidateProcess(restored);return restored;},
+    clear(){Object.values(histories).forEach(history=>history.clear());}
+  };
+}

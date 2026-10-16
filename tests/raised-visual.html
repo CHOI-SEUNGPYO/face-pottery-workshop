@@ -1,0 +1,16 @@
+<!doctype html><html lang="ko"><meta charset="utf-8"><title>일반 파기와 밀어 뚫기 비교</title>
+<style>*{box-sizing:border-box}body{margin:0;background:#f7f1e5;color:#594235;font:18px sans-serif}h1{font-size:25px;margin:24px}main{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;padding:0 20px}section{min-width:0;border:1px solid #dfceb8;border-radius:24px;text-align:center}h2{font-size:20px}section>div{height:420px}p{padding:0 18px;line-height:1.6;font-size:15px}canvas{display:block;width:100%;height:100%}</style>
+<h1>눈·입은 파고, 귀 같은 옆 구멍은 밀어 뚫어요</h1><main>
+<section><h2>파기 · 눈과 입</h2><div id="normal"></div><p>일반 구멍에는 바깥으로 나온 테두리가 없습니다.</p></section>
+<section><h2>밀어 뚫기 · 옆 구멍</h2><div id="raised"></div><p>구멍 둘레의 흙이 몸체에서 둥글게 솟아납니다.</p></section>
+<section><h2>돌려서 살펴보기</h2><div id="side"></div><p>튀어나온 둘레와 안쪽으로 이어진 구멍을 확인해요.</p><button id="turn">돌려 보기</button></section>
+</main><script type="module">
+import {Pottery} from '../src/pottery.js';import {freshModel} from '../src/model.js';
+const model=freshModel();model.crown=Array.from({length:64},(_,i)=>[Math.cos(i/64*Math.PI*2)*.25,Math.sin(i/64*Math.PI*2)*.25]);
+model.marks=[-.075,.075].map(u=>({tool:'hole',points:Array.from({length:40},(_,i)=>[u+Math.cos(i/40*Math.PI*2)*.032,.8+Math.sin(i/40*Math.PI*2)*.025])}));model.marks.push({tool:'hole',points:Array.from({length:40},(_,i)=>[Math.cos(i/40*Math.PI*2)*.045,.68+Math.sin(i/40*Math.PI*2)*.02])});
+const normal=new Pottery(document.querySelector('#normal'),model);normal.setStage(3);
+const raised=structuredClone(model);raised.marks.push(...[-.22,.22].map(u=>({tool:'ear',points:[[u,.78]]})));
+const front=new Pottery(document.querySelector('#raised'),raised);front.setStage(3);
+const side=new Pottery(document.querySelector('#side'),raised);side.setStage(3);side.rotate(-.95);
+document.querySelector('#turn').onclick=()=>side.rotate(.35);
+</script></html>
