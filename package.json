@@ -1,6 +1,6 @@
 {
   "name": "face-pottery-workshop",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "private": true,
   "type": "module",
   "scripts": { "start": "node server.mjs", "test": "node --test tests/*.test.mjs" }
