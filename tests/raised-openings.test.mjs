@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from '../vendor/three.module.js';
-import {freshModel,validateModel,eraseAt,createWorkshopHistory} from '../src/model.js';
+import {freshModel,validateModel,eraseAt,createWorkshopHistory,shapedRadius,ROWS} from '../src/model.js';
 import {openingLoop,raisedFootprint,insideOpening} from '../src/openings.js';
 import {bodyGeometry,openingWalls,EAR_RISE} from '../src/body.js';
 import {Interactions} from '../src/interactions.js';
@@ -39,5 +39,29 @@ test('raised openings extend outward, retain an open tunnel and wrap around the 
   assert.equal(ray.intersectObject(mesh).length,0,'the projected centre must stay open');
   const atEdge=new THREE.Raycaster(new THREE.Vector3(.19,(.65*2-1)*model.height,3),new THREE.Vector3(0,0,-1));
   assert.ok(atEdge.intersectObject(mesh).length>0,'the lifted skirt must have a real surface');
+  inner.dispose();ordinary.dispose();raised.dispose();mesh.material.dispose();
+});
+
+test('raised mouth lifts upward with the shoulder while its skirt remains attached to the body',()=>{
+  const model=draw('ear',[[0,.78]]),loop=openingLoop(model.marks[0]),inner=bodyGeometry(model,true);
+  const ordinary=openingWalls(model,inner,[loop]),raised=openingWalls(model,inner,[loop],[true]);
+  const heights=g=>{
+    const result=new Map(),p=g.attributes.position,uv=g.attributes.uv;
+    for(let i=0;i<p.count;i++){
+      const key=[uv.getX(i),uv.getY(i)].map(n=>n.toFixed(5)).join(',');
+      result.set(key,Math.max(result.get(key)??-Infinity,p.getY(i)));
+    }
+    return result;
+  };
+  const baseline=heights(ordinary),lifted=heights(raised);
+  for(const [key,y] of baseline)assert.ok(lifted.get(key)>y+.05,'mouth must tilt upward rather than project horizontally');
+  const wall=raised.attributes.position;
+  assert.ok([...wall.array].every(Number.isFinite));
+  const row=.78*ROWS,tilt=Math.max(.35,Math.min(.9,(shapedRadius(model,row-1,0)-shapedRadius(model,row+1,0))/(4*model.height/ROWS)));
+  const centre=new THREE.Vector3(0,(.78*2-1)*model.height,shapedRadius(model,row,0));
+  const direction=new THREE.Vector3(0,-tilt,-1).normalize();
+  const ray=new THREE.Raycaster(centre.clone().addScaledVector(direction,-3),direction);
+  const mesh=new THREE.Mesh(raised,new THREE.MeshBasicMaterial({side:THREE.DoubleSide}));mesh.updateMatrixWorld();
+  assert.equal(ray.intersectObject(mesh).length,0,'raised centre must remain a tunnel');
   inner.dispose();ordinary.dispose();raised.dispose();mesh.material.dispose();
 });

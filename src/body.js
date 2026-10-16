@@ -59,7 +59,15 @@ export function openingWalls(model,inner,loops,raised=[]){
     const x=((u%1+1)%1)*COLS,y=Math.max(0,Math.min(SURFACE_ROWS-.00001,v*SURFACE_ROWS)),col=Math.floor(x),row=Math.floor(y),fx=x-col,fy=y-row,i=row*(COLS+1)+col;
     const a=new THREE.Vector3().fromBufferAttribute(grid,i),b=new THREE.Vector3().fromBufferAttribute(grid,i+1),c=new THREE.Vector3().fromBufferAttribute(grid,i+COLS+1),d=new THREE.Vector3().fromBufferAttribute(grid,i+COLS+2);
     const p=fx+fy<=1?a.multiplyScalar(1-fx-fy).addScaledVector(b,fx).addScaledVector(c,fy):b.multiplyScalar(1-fy).addScaledVector(c,1-fx).addScaledVector(d,fx+fy-1);
-    const radius=Math.hypot(p.x,p.z),scale=(radius+WALL_THICKNESS-depth)/Math.max(radius,.001);p.x*=scale;p.z*=scale;return p;
+    const radius=Math.hypot(p.x,p.z),scale=(radius+WALL_THICKNESS-depth)/Math.max(radius,.001);p.x*=scale;p.z*=scale;
+    if(depth<0){
+      // Lift the mouth along the shoulder's outward/upward direction. Both
+      // the skirt and its tunnel share this displacement and stay connected.
+      const row=Math.max(1,Math.min(ROWS-1,v*ROWS)),col=u*COLS|0;
+      const slope=(shapedRadius(model,row-1,col)-shapedRadius(model,row+1,col))/(4*model.height/ROWS);
+      p.y+=-depth*Math.max(.35,Math.min(.9,slope));
+    }
+    return p;
   };
   const quad=(vertices,coordinates,light=[1,1,1,1])=>{
     for(const k of [0,1,2,0,2,3]){
