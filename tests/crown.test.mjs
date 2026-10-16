@@ -63,7 +63,7 @@ test('one continuous body reaches the tip and the base stays closed after pressi
     assert.ok([...p.array].every(Number.isFinite));
     for(let i=0;i<mesh.groups[0].count;i++){
       if(uv.getY(i)===1)assert.ok(Math.hypot(p.getX(i),p.getZ(i))<1e-6,'the body itself closes at the top');
-      if(uv.getY(i)===0)assert.ok(Math.abs(Math.hypot(p.getX(i),p.getZ(i))-.54)<1e-6,'bottom must not shrink away from its closure');
+      if(uv.getY(i)===0)assert.ok(Math.abs(Math.hypot(p.getX(i),p.getZ(i))-shapedRadius(model,0,Math.round(uv.getX(i)*80)%80))<1e-6,'bottom must follow the edited profile rather than a fixed disc');
     }
     assert.equal(mesh.groups[1].count,0,'there is no separate head when no opening has been drawn');
     assert.ok([...mesh.attributes.normal.array].every(Number.isFinite));
