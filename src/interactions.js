@@ -29,7 +29,7 @@ export class Interactions {
     if((this.stage===2||this.stage===3)&&!d.rotate){
       this.preview.setAttribute('points',d.screen.map(p=>p.join(',')).join(' '));
       const first=d.screen[0],last=d.screen.at(-1),closed=d.screen.length>5&&Math.hypot(first[0]-last[0],first[1]-last[1])<14;
-      this.preview.setAttribute('fill',closed&&(this.stage===2||['carve','hole'].includes(this.tool))?'#3e2a1b88':'none');
+      this.preview.setAttribute('fill',closed&&(this.stage===2||['carve','hole','ear'].includes(this.tool))?'#3e2a1b88':'none');
     }
   }
   move(e){
@@ -63,10 +63,10 @@ export class Interactions {
         let points=unwrap(d.points),tool=this.tool;
         const tap=d.screen.length&&Math.max(...d.screen.map(p=>Math.hypot(p[0]-d.screen[0][0],p[1]-d.screen[0][1])))<6;
         if(tool==='carve'&&(tap||closedStroke(points))){tool='hole';if(tap)points=points.slice(0,1);}
-        if(tool==='hole')points=openingLoop({tool,points})||[];
+        if(['hole','ear'].includes(tool)){if(tap)points=points.slice(0,1);points=openingLoop({tool,points})||[];}
         else{points=points.filter((_,i)=>i%Math.max(1,Math.ceil(points.length/600))===0);if(points.length===1)points.push([points[0][0]+.002,points[0][1]]);}
         if(!points.length)this.onMessage('구멍의 테두리를 이어 그려 보세요.');
-        else{model.marks.push({tool,points});d.changed=true;if(tool==='hole')this.onMessage('테두리 안쪽이 뚫렸어요. 돌려서 안쪽도 살펴봐요!');}
+        else{model.marks.push({tool,points});d.changed=true;if(tool==='hole')this.onMessage('테두리 안쪽이 뚫렸어요. 돌려서 안쪽도 살펴봐요!');if(tool==='ear')this.onMessage('구멍 둘레가 바깥으로 올라왔어요. 돌려서 살펴봐요!');}
       }
       if(d.changed)this.invalidate();
     }

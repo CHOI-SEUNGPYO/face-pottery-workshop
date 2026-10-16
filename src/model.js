@@ -54,7 +54,7 @@ export function validateModel(value){
   if(!value||value.version!==1||!Array.isArray(value.offsets)||value.offsets.length!==(ROWS+1)*COLS||!value.offsets.every(n=>Number.isFinite(n)&&n>=-.38&&n<=.5))return null;
   if(!Number.isFinite(value.height)||value.height<.65||value.height>1.45||!Number.isInteger(value.stage)||value.stage<1||value.stage>9)return null;
   const validPoints=(p,limit,range)=>Array.isArray(p)&&p.length<=limit&&p.every(a=>Array.isArray(a)&&a.length===2&&a.every(n=>Number.isFinite(n)&&Math.abs(n)<=range));
-  if(!validPoints(value.crown,600,1)||!Array.isArray(value.marks)||value.marks.length>300||!value.marks.every(m=>['carve','press','hole'].includes(m.tool)&&validPoints(m.points,1000,3)))return null;
+  if(!validPoints(value.crown,600,1)||!Array.isArray(value.marks)||value.marks.length>300||!value.marks.every(m=>['carve','press','hole','ear'].includes(m.tool)&&validPoints(m.points,1000,3)))return null;
   if(!validPoints(value.brush,6000,1)||!Number.isFinite(value.dug)||value.dug<0||value.dug>100)return null;
   return {...value,fired:!!value.fired,assembled:!!value.assembled};
 }

@@ -62,7 +62,7 @@ function selectTool(id){
   if(id==='brush'){excavation.assist();return;}
   if(id==='move'){if(!model.assembled){model.assembled=true;pottery.update(model);save();$('#action-hint').textContent='함께 놓아 봤어요. 이 배치는 추정한 모습이에요.';toast('시루 위에 내 토기를 놓았어요!');}return;}
   tool=id;interaction?.set(stage,tool);renderTools();
-  const hints={rotate:'흙 위를 좌우로 끌어 다른 면을 살펴보세요.',carve:'톡 누르면 작은 구멍, 선을 닫으면 큰 구멍, 열린 선은 홈이 돼요.',press:'콧등 양옆을 눌러 높낮이를 만들어 보세요.',erase:'지우고 싶은 선이나 구멍의 가장자리를 문질러요.',crown:'넓은 흙 윗면에 원하는 구멍의 테두리를 이어 그려요.'};
+  const hints={rotate:'흙 위를 좌우로 끌어 다른 면을 살펴보세요.',carve:'톡 누르면 작은 구멍, 선을 닫으면 큰 구멍, 열린 선은 홈이 돼요.',ear:'귀 같은 옆 구멍을 만들어요. 톡 누르거나 테두리를 그리면 둘레가 바깥으로 올라와요.',press:'콧등 양옆을 눌러 높낮이를 만들어 보세요.',erase:'지우고 싶은 선이나 구멍의 가장자리를 문질러요.',crown:'넓은 흙 윗면에 원하는 구멍의 테두리를 이어 그려요.'};
   if(stage!==1)$('#action-hint').textContent=hints[id]||stages[stage].hint;
 }
 function undoEdit(){

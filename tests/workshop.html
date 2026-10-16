@@ -1,0 +1,10 @@
+<!doctype html><html lang="ko"><meta charset="utf-8"><title>단계별 되돌리기 검사 준비</title>
+<h1>검사 전용 작품</h1><p>4175 검사 서버에서 정수리 구멍이 있는 새 작품을 준비합니다. 실제 전시 주소의 작품은 사용하지 않습니다.</p><button id="start">검사 작품 열기</button>
+<script type="module">
+import {freshModel} from '../src/model.js';
+document.querySelector('#start').onclick=()=>{
+  if(location.port!=='4175'){document.querySelector('p').textContent='4175 검사 서버에서만 실행할 수 있습니다.';return;}
+  const model=freshModel();model.crown=Array.from({length:64},(_,i)=>[Math.cos(i/64*Math.PI*2)*.25,Math.sin(i/64*Math.PI*2)*.25]);
+  localStorage.setItem('face-pottery-v1',JSON.stringify(model));location.href='/';
+};
+</script></html>

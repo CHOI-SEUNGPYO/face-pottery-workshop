@@ -2,7 +2,7 @@ import * as THREE from '../vendor/three.module.js';
 import { ROWS,COLS,shapedRadius,clamp } from './model.js';
 import {crownRadius,mouthOutline,mouthCut,insideMouth,SHOULDER_ROW} from './crown.js';
 import {bodyGeometry,openingWalls} from './body.js';
-import {openingLoop,insideOpening,insideLoop} from './openings.js';
+import {openingLoop,insideOpening,insideLoop,raisedFootprint} from './openings.js';
 
 const TAU=Math.PI*2;
 const makeCanvas=(w=1024,h=512)=>{const c=document.createElement('canvas');c.width=w;c.height=h;return c;};
@@ -61,12 +61,12 @@ export class Pottery {
     if(outer.length){crown.beginPath();outer.forEach(([x,y],i)=>i?crown.lineTo((x+1)*512,(y+1)*512):crown.moveTo((x+1)*512,(y+1)*512));crown.closePath();crown.fillStyle='black';crown.fill();}
     this.crownTexture.needsUpdate=true;this.crownUniforms.mouthRadius.value=radius;this.crownUniforms.mouthBottom.value=outer.length?bottom:10;
     const mask=this.mask.getContext('2d'),bump=this.bump.getContext('2d'),color=this.colorMap.getContext('2d');mask.fillStyle='white';mask.fillRect(0,0,1024,512);bump.drawImage(this.baseBump,0,0);color.drawImage(this.baseColor,0,0);
-    for(const mark of this.model.marks){const loop=openingLoop(mark);for(const shift of [-1,0,1]){const ctx=loop?mask:bump;const pts=loop||mark.points;if(!pts.length)continue;ctx.beginPath();pts.forEach(([u,v],i)=>{const x=(u+shift)*1024,y=(1-v)*512;i?ctx.lineTo(x,y):ctx.moveTo(x,y);});ctx.lineCap='round';ctx.lineJoin='round';
+    for(const mark of this.model.marks){const loop=openingLoop(mark);for(const shift of [-1,0,1]){const ctx=loop?mask:bump;const pts=loop?(mark.tool==='ear'?raisedFootprint(loop):loop):mark.points;if(!pts.length)continue;ctx.beginPath();pts.forEach(([u,v],i)=>{const x=(u+shift)*1024,y=(1-v)*512;i?ctx.lineTo(x,y):ctx.moveTo(x,y);});ctx.lineCap='round';ctx.lineJoin='round';
       if(loop){ctx.fillStyle='#000';ctx.closePath();ctx.fill();}
       else{ctx.strokeStyle=mark.tool==='carve'?'#353535':'#777';ctx.lineWidth=mark.tool==='carve'?7:22;ctx.stroke();if(mark.tool==='carve'){color.beginPath();pts.forEach(([u,v],i)=>i?color.lineTo((u+shift)*1024,(1-v)*512):color.moveTo((u+shift)*1024,(1-v)*512));color.lineCap='round';color.lineJoin='round';color.strokeStyle='#756657';color.lineWidth=5;color.stroke();}}
     }}this.maskTexture.needsUpdate=true;this.bumpTexture.needsUpdate=true;this.colorTexture.needsUpdate=true;
   }
-  updateOpenings(){this.openings=this.model.marks.map(openingLoop).filter(Boolean);this.rims.geometry.dispose();this.rims.geometry=openingWalls(this.model,this.inner.geometry,this.openings);}
+  updateOpenings(){const marks=this.model.marks.filter(mark=>openingLoop(mark));this.openings=marks.map(openingLoop);this.rims.geometry.dispose();this.rims.geometry=openingWalls(this.model,this.inner.geometry,this.openings,marks.map(mark=>mark.tool==='ear'));}
   refreshShape(){this.body.geometry.dispose();this.inner.geometry.dispose();this.body.geometry=this.geometry();this.inner.geometry=this.geometry(true);this.updateOpenings();this.paint();this.shadow.position.y=-this.model.height-.03;this.updateOutline();this.setFired(0);}
   update(model=this.model){this.model=model;this.body.geometry.dispose();this.inner.geometry.dispose();this.body.geometry=this.geometry();this.inner.geometry=this.geometry(true);this.updateOpenings();this.paint();this.setGuides(this.guideCount);this.updateOutline();this.setFired(model.fired?1:0);this.layout();}
   get profileView(){return this.stage===1&&this.tool==='shape';}
