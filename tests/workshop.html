@@ -1,8 +1,12 @@
 <!doctype html><html lang="ko"><meta charset="utf-8"><title>단계별 되돌리기 검사 준비</title>
-<h1>검사 전용 작품</h1><p>4175 검사 서버에서만 검사 작품을 준비합니다. 실제 전시 주소의 작품은 사용하지 않습니다.</p><button id="start">정수리 구멍 검사 작품</button><button id="fold">접힌 윤곽 검사 작품</button>
+<h1>검사 전용 작품</h1><p>4175 검사 서버에서만 검사 작품을 준비합니다. 실제 전시 주소의 작품은 사용하지 않습니다.</p><button id="start">정수리 구멍 검사 작품</button><button id="fold">접힌 윤곽 검사 작품</button><button id="press">상단 누르기 검사 작품</button>
 <script type="module">
 import {freshModel} from '../src/model.js';
-import {foldedModel} from './folded-fixture.js';
+import {foldedModel,tallNeckModel} from './folded-fixture.js';
+document.querySelector('#press').onclick=()=>{
+  if(location.port!=='4175')return;
+  localStorage.setItem('face-pottery-v1',JSON.stringify(tallNeckModel()));location.href='/';
+};
 document.querySelector('#fold').onclick=()=>{
   if(location.port!=='4175')return;
   localStorage.setItem('face-pottery-v1',JSON.stringify(foldedModel()));location.href='/';

@@ -1,5 +1,5 @@
 import * as THREE from '../vendor/three.module.js';
-import {ROWS,COLS,SURFACE_ROWS,shapedRadius,wrapDistance} from './model.js';
+import {ROWS,COLS,SURFACE_ROWS,shapedRadius,profileY,wrapDistance} from './model.js';
 import {crownGeometry} from './crown.js';
 import {openingLoop,insideOpening,raisedFootprint} from './openings.js';
 
@@ -10,7 +10,7 @@ export function bodyGeometry(model,inner=false){
   const pos=[],normals=[],uv=[],indices=[],dents=model.marks.filter(mark=>!openingLoop(mark));
   // Three.js r180 LatheGeometry (MIT): revolve one continuous meridian.
   // Reorder its grid for our existing opening-wall UV interpolation.
-  const profile=Array.from({length:SURFACE_ROWS+1},(_,row)=>new THREE.Vector2(shapedRadius(model,row/SURFACE_ROWS*ROWS,0),(row/SURFACE_ROWS*2-1)*model.height));
+  const profile=Array.from({length:SURFACE_ROWS+1},(_,row)=>new THREE.Vector2(shapedRadius(model,row/SURFACE_ROWS*ROWS,0),profileY(model,row/SURFACE_ROWS)));
   const lathe=new THREE.LatheGeometry(profile,COLS),vertices=lathe.attributes.position;
   const gridIndex=i=>(i%(SURFACE_ROWS+1))*(COLS+1)+Math.floor(i/(SURFACE_ROWS+1));
   for(const i of lathe.index.array)indices.push(gridIndex(i));
@@ -46,7 +46,8 @@ export function bodyGeometry(model,inner=false){
   // Close the bottom with the same boundary vertices, never with a fixed disc.
   for(let col=0;col<COLS;col++){
     const a=col/COLS*Math.PI*2,b=(col+1)/COLS*Math.PI*2,ra=shapedRadius(model,0,col),rb=shapedRadius(model,0,col+1);
-    pos.push(0,-model.height,0,Math.sin(b)*rb,-model.height,Math.cos(b)*rb,Math.sin(a)*ra,-model.height,Math.cos(a)*ra);
+    const bottom=profileY(model,0);
+    pos.push(0,bottom,0,Math.sin(b)*rb,bottom,Math.cos(b)*rb,Math.sin(a)*ra,bottom,Math.cos(a)*ra);
     normals.push(0,-1,0,0,-1,0,0,-1,0);uv.push(.5,.5,(Math.sin(b)+1)/2,(Math.cos(b)+1)/2,(Math.sin(a)+1)/2,(Math.cos(a)+1)/2);
   }
   const merged=new THREE.BufferGeometry();merged.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));merged.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));merged.setAttribute('normal',new THREE.Float32BufferAttribute(normals,3));merged.addGroup(0,sideCount,0);merged.addGroup(sideCount,topCount,1);merged.addGroup(sideCount+topCount,COLS*3,2);plain.dispose();top.dispose();return merged;
@@ -64,7 +65,7 @@ export function openingWalls(model,inner,loops,raised=[]){
       // Lift the mouth along the shoulder's outward/upward direction. Both
       // the skirt and its tunnel share this displacement and stay connected.
       const row=Math.max(1,Math.min(ROWS-1,v*ROWS)),col=u*COLS|0;
-      const slope=(shapedRadius(model,row-1,col)-shapedRadius(model,row+1,col))/(4*model.height/ROWS);
+      const slope=(shapedRadius(model,row-1,col)-shapedRadius(model,row+1,col))/(profileY(model,(row+1)/ROWS)-profileY(model,(row-1)/ROWS));
       p.y+=-depth*Math.max(.35,Math.min(.9,slope));
     }
     return p;
