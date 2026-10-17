@@ -1,0 +1,26 @@
+<!doctype html><html lang="ko"><meta charset="utf-8"><title>흙 조작 · 질감 확인</title>
+<style>*{box-sizing:border-box}body{margin:0;background:#f5f0e5;color:#594235;font:17px sans-serif}h1{font-size:25px;margin:22px}main{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;padding:0 20px}section{min-width:0;border:1px solid #d9c6ae;border-radius:20px;text-align:center}h2{font-size:20px}section>div{height:440px}p{font-size:15px;line-height:1.6;padding:0 15px}canvas{width:100%;height:100%;display:block}button{font:inherit;padding:12px 20px;border:1px solid #9c7b5b;border-radius:24px;background:#fff8ed;color:inherit;margin:20px}output{display:block;margin:0 22px 20px}footer{padding:0 22px;font-size:14px}</style>
+<h1>아래에서 늘린 뒤, 위쪽만 다시 다듬기</h1><main>
+<section><h2>1. 시작한 흙</h2><div id="start"></div><p>영상처럼 가늘어진 윤곽에서 시작</p></section>
+<section><h2>2. 아래를 잡아 위·옆으로</h2><div id="pulled"></div><p>잡은 부근을 위로 늘리고 옆으로 펼침</p></section>
+<section><h2>3. 위쪽만 다시 줄이기</h2><div id="pinched"></div><p>아래에서 만든 덩어리의 굵기는 유지<br>표면 입자가 세로로 늘어나지 않음</p></section>
+</main><button id="turn">돌려 보기</button><button id="measure">실제 화면 90프레임 측정</button><output id="result">측정 전</output><footer>테스트용 화면 · 실제 조작과 같은 계산 및 렌더러 사용</footer>
+<script type="module">
+import {Pottery} from '../src/pottery.js';import {freshModel,reshapeProfile,sampledProfile,ROWS} from '../src/model.js';
+const start=freshModel();start.profile=Array.from({length:ROWS+1},(_,i)=>i===ROWS?0:i<3?.65-(i*.19):.19);
+const pulled=structuredClone(start);reshapeProfile(pulled,start,.35,.36,.65);
+const pinched=structuredClone(pulled);reshapeProfile(pinched,pulled,.86,-.14,-.18);
+const pots=[['start',start],['pulled',pulled],['pinched',pinched]].map(([id,m])=>new Pottery(document.getElementById(id),m));
+for(const p of pots){p.stage=1;p.tool='shape';p.layout();}
+document.getElementById('turn').onclick=()=>{for(const p of pots){p.setTool('rotate');p.rotate(.5);}};
+document.getElementById('measure').onclick=async()=>{
+ const p=pots[2],source={...pinched,profile:sampledProfile(pinched)},times=[],intervals=[];let last;
+ for(let i=0;i<90;i++){
+  const tick=await new Promise(requestAnimationFrame);if(last)intervals.push(tick-last);last=tick;
+  const t=performance.now();reshapeProfile(p.model,source,.55,Math.sin(i*.08)*.08,Math.sin(i*.08)*.04);p.refreshShape();times.push(performance.now()-t);
+ }
+ const stats=a=>{a.sort((x,y)=>x-y);return [a[Math.floor(a.length/2)],a[Math.floor(a.length*.95)]].map(n=>n.toFixed(1)).join(' / ')};
+ document.getElementById('result').textContent=`실제 계산+화면 갱신 중앙값 / 95%: ${stats(times)} ms · 프레임 간격: ${stats(intervals)} ms`;
+ p.model=structuredClone(pinched);p.update();
+};
+</script></html>

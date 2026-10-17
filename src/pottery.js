@@ -1,8 +1,10 @@
 import * as THREE from '../vendor/three.module.js';
 import { ROWS,COLS,SURFACE_ROWS,shapedRadius,profileY,clamp } from './model.js';
 import {crownRadius,mouthOutline,mouthCut,insideMouth,SHOULDER_ROW} from './crown.js';
-import {bodyGeometry,openingWalls} from './body.js';
+import {bodyGeometry,refreshBodyGeometry,openingWalls} from './body.js';
 import {openingLoop,insideOpening,insideLoop,raisedFootprint} from './openings.js';
+
+import {claySurface} from './clay.js';
 
 const TAU=Math.PI*2;
 const makeCanvas=(w=1024,h=512)=>{const c=document.createElement('canvas');c.width=w;c.height=h;return c;};
@@ -27,14 +29,8 @@ export class Pottery {
     this.rimMaterial=this.capMaterial.clone();this.rimMaterial.vertexColors=true;this.rims=new THREE.Mesh(new THREE.BufferGeometry(),this.rimMaterial);this.pot.add(this.rims);this.openings=[];
     this.crownMask=makeCanvas(1024,1024);this.crownTexture=new THREE.CanvasTexture(this.crownMask);
     this.crownUniforms={mouthMask:{value:this.crownTexture},mouthRadius:{value:1},mouthBottom:{value:10}};
-    for(const material of [this.material,this.insideMaterial]){
-      material.onBeforeCompile=shader=>{
-        Object.assign(shader.uniforms,this.crownUniforms);
-        shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 potteryPosition;').replace('#include <begin_vertex>','#include <begin_vertex>\npotteryPosition=position;');
-        shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 potteryPosition; uniform sampler2D mouthMask; uniform float mouthRadius; uniform float mouthBottom;').replace('#include <alphatest_fragment>','#include <alphatest_fragment>\nif(potteryPosition.y>mouthBottom && texture2D(mouthMask,vec2(potteryPosition.x,potteryPosition.z)/(2.0*mouthRadius)+0.5).g<0.5) discard;');
-      };
-      material.customProgramCacheKey=()=> 'pottery-open-mouth-v1';
-    }
+    for(const material of [this.material,this.insideMaterial])claySurface(material,this.crownUniforms);
+    for(const material of [this.capMaterial,this.rimMaterial])claySurface(material);
     this.outline=new THREE.LineSegments(new THREE.BufferGeometry(),new THREE.LineBasicMaterial({color:0x785239,transparent:true,opacity:.8,depthTest:false}));this.outline.renderOrder=2;this.scene.add(this.outline);
     const shadow=makeCanvas(256,256),ctx=shadow.getContext('2d');let grad=ctx.createRadialGradient(128,128,4,128,128,126);grad.addColorStop(0,'rgba(80,53,27,.28)');grad.addColorStop(.5,'rgba(80,53,27,.14)');grad.addColorStop(1,'rgba(80,53,27,0)');ctx.fillStyle=grad;ctx.fillRect(0,0,256,256);
     this.shadow=new THREE.Mesh(new THREE.PlaneGeometry(3.2,2.6),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(shadow),transparent:true,depthWrite:false}));this.shadow.rotation.x=-Math.PI/2;this.scene.add(this.shadow);
@@ -44,22 +40,26 @@ export class Pottery {
     this.update(model);this.resize();
   }
   noise(){
-    let seed=7717;const random=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
-    const ctx=this.baseBump.getContext('2d'),img=ctx.createImageData(1024,512),rgb=this.colorMap.getContext('2d'),col=rgb.createImageData(1024,512);
-    for(let y=0;y<512;y++)for(let x=0;x<1024;x++){const i=(y*1024+x)*4;const grain=random();const wave=Math.sin(x*.037+Math.sin(y*.025)*3)*.025+Math.sin(y*.086+x*.006)*.02;const n=clamp(135+grain*58+wave*160,0,255);for(let k=0;k<3;k++){img.data[i+k]=n;col.data[i+k]=clamp(217+wave*42+(grain-.5)*32,0,255);}img.data[i+3]=col.data[i+3]=255;}ctx.putImageData(img,0,0);rgb.putImageData(col,0,0);
+    // Flat maps hold only marks; the clay grain is evaluated in physical space.
+    const bump=this.baseBump.getContext('2d'),color=this.colorMap.getContext('2d');
+    bump.fillStyle='#808080';bump.fillRect(0,0,1024,512);
+    color.fillStyle='#ffffff';color.fillRect(0,0,1024,512);
   }
   makeSiru(){
     const g=new THREE.Group(),points=[new THREE.Vector2(.76,-1.2),new THREE.Vector2(.73,-1.14),new THREE.Vector2(.55,-.3),new THREE.Vector2(.45,.25),new THREE.Vector2(.38,.25),new THREE.Vector2(.48,-.3),new THREE.Vector2(.66,-1.14),new THREE.Vector2(.69,-1.2),new THREE.Vector2(.76,-1.2)];
-    const mat=new THREE.MeshStandardMaterial({color:0x9d8a72,map:this.plainColor,bumpMap:this.plainBump,bumpScale:.035,roughness:1,side:THREE.DoubleSide});g.add(new THREE.Mesh(new THREE.LatheGeometry(points,64),mat));
+    const mat=new THREE.MeshStandardMaterial({color:0x9d8a72,map:this.plainColor,bumpMap:this.plainBump,bumpScale:.035,roughness:1,side:THREE.DoubleSide});claySurface(mat);g.add(new THREE.Mesh(new THREE.LatheGeometry(points,64),mat));
     for(const sign of [-1,1]){const path=new THREE.CatmullRomCurve3([new THREE.Vector3(sign*.62,-.43,0),new THREE.Vector3(sign*.86,-.37,0),new THREE.Vector3(sign*.99,-.16,0)]);const geom=new THREE.TubeGeometry(path,14,.11,10,false);const pos=geom.attributes.position;for(let i=0;i<pos.count;i++){const t=Math.floor(i/11)/14,center=path.getPointAt(t);const taper=1-t*.96;const v=new THREE.Vector3().fromBufferAttribute(pos,i).sub(center).multiplyScalar(taper).add(center);pos.setXYZ(i,v.x,v.y,v.z);}geom.computeVertexNormals();g.add(new THREE.Mesh(geom,mat));}return g;
   }
   geometry(inner=false){return bodyGeometry(this.model,inner);}
-  paint(){
-    this.mouth=mouthCut(this.model);
+  paintMouth(cut=mouthCut(this.model)){
+    this.mouth=cut;
     const crown=this.crownMask.getContext('2d'),{outline:outer,radius,bottom}=this.mouth;
     crown.fillStyle='white';crown.fillRect(0,0,1024,1024);
     if(outer.length){crown.beginPath();outer.forEach(([x,y],i)=>i?crown.lineTo((x+1)*512,(y+1)*512):crown.moveTo((x+1)*512,(y+1)*512));crown.closePath();crown.fillStyle='black';crown.fill();}
     this.crownTexture.needsUpdate=true;this.crownUniforms.mouthRadius.value=radius;this.crownUniforms.mouthBottom.value=outer.length?bottom:10;
+  }
+  paint(){
+    this.paintMouth();
     const mask=this.mask.getContext('2d'),bump=this.bump.getContext('2d'),color=this.colorMap.getContext('2d');mask.fillStyle='white';mask.fillRect(0,0,1024,512);bump.drawImage(this.baseBump,0,0);color.drawImage(this.baseColor,0,0);
     for(const mark of this.model.marks){const loop=openingLoop(mark);for(const shift of [-1,0,1]){const ctx=loop?mask:bump;const pts=loop?(mark.tool==='ear'?raisedFootprint(loop):loop):mark.points;if(!pts.length)continue;ctx.beginPath();pts.forEach(([u,v],i)=>{const x=(u+shift)*1024,y=(1-v)*512;i?ctx.lineTo(x,y):ctx.moveTo(x,y);});ctx.lineCap='round';ctx.lineJoin='round';
       if(loop){ctx.fillStyle='#000';ctx.closePath();ctx.fill();}
@@ -67,7 +67,18 @@ export class Pottery {
     }}this.maskTexture.needsUpdate=true;this.bumpTexture.needsUpdate=true;this.colorTexture.needsUpdate=true;
   }
   updateOpenings(){const marks=this.model.marks.filter(mark=>openingLoop(mark));this.openings=marks.map(openingLoop);this.rims.geometry.dispose();this.rims.geometry=openingWalls(this.model,this.inner.geometry,this.openings,marks.map(mark=>mark.tool==='ear'));}
-  refreshShape(){this.body.geometry.dispose();this.inner.geometry.dispose();this.body.geometry=this.geometry();this.inner.geometry=this.geometry(true);this.updateOpenings();this.paint();this.shadow.position.y=profileY(this.model,0)-.03;this.updateOutline();this.setFired(0);}
+  refreshShape(){
+    const fast=refreshBodyGeometry(this.model,this.body.geometry);
+    if(fast){refreshBodyGeometry(this.model,this.inner.geometry,true);if(this.openings.length)this.updateOpenings();}
+    else{
+      this.body.geometry.dispose();this.inner.geometry.dispose();this.body.geometry=this.geometry();this.inner.geometry=this.geometry(true);this.updateOpenings();
+    }
+    // The child's UV marks did not change. Update only the mouth's physical bounds.
+    const cut=mouthCut(this.model);
+    if(cut.outline.length&&cut.radius!==this.crownUniforms.mouthRadius.value)this.paintMouth(cut);
+    else{this.mouth=cut;this.crownUniforms.mouthRadius.value=cut.radius;this.crownUniforms.mouthBottom.value=cut.outline.length?cut.bottom:10;}
+    this.shadow.position.y=profileY(this.model,0)-.03;this.updateOutline();this.setFired(0);
+  }
   update(model=this.model){this.model=model;this.body.geometry.dispose();this.inner.geometry.dispose();this.body.geometry=this.geometry();this.inner.geometry=this.geometry(true);this.updateOpenings();this.paint();this.setGuides(this.guideCount);this.updateOutline();this.setFired(model.fired?1:0);this.layout();}
   get profileView(){return this.stage===1&&this.tool==='shape';}
   setTool(tool){this.tool=tool;this.layout();}
@@ -93,8 +104,8 @@ export class Pottery {
     }
     this.guides.visible=this.stage===3;this.render();
   }
-  setFired(t){const wet=new THREE.Color(0xbe7c52),dry=new THREE.Color(0x82715b);this.material.color.copy(wet).lerp(dry,t);this.capMaterial.color.copy(this.material.color);this.rimMaterial.color.copy(this.material.color);this.material.roughness=.84+t*.16;this.insideMaterial.color.set(0x4b3325).lerp(new THREE.Color(0x332c23),t);this.render();}
-  setStage(stage){this.stage=stage;this.layout();}
+  setFired(t){const wet=new THREE.Color(0xad805f),dry=new THREE.Color(0x82715b);this.material.color.copy(wet).lerp(dry,t);this.capMaterial.color.copy(this.material.color);this.rimMaterial.color.copy(this.material.color);this.capMaterial.roughness=this.rimMaterial.roughness=.76+t*.24;this.material.roughness=.76+t*.24;this.insideMaterial.color.set(0x4b3325).lerp(new THREE.Color(0x332c23),t);this.render();}
+  setStage(stage){this.stage=stage;if(stage===3&&this.guideCount)this.setGuides(this.guideCount);this.layout();}
   mount(container){if(container!==this.container){this.observer.unobserve(this.container);this.container=container;container.append(this.renderer.domElement);this.observer.observe(container);}this.resize();}
   layout(){
     this.guides.visible=this.stage===3;
