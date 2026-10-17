@@ -60,35 +60,45 @@ export function sculptProfile(model,u,v,amount){
     }
   }
 }
-export function reshapeProfile(model,before,v,outward,upward){
+export function profileY(model,v){
+  if(!model.profileLevels)return (v*2-1)*model.height;
+  const row=clamp(v,0,1)*ROWS,low=Math.floor(row),a=model.profileLevels[low],b=model.profileLevels[Math.min(ROWS,low+1)];
+  return a+(b-a)*(row-low);
+}
+export function reshapeProfile(model,before,v,outward,upward,end=0){
   const radii=Array.from({length:ROWS+1},(_,row)=>before.profile?.[row]??Array.from({length:COLS},(_,col)=>shapedRadius(before,row,col)).reduce((sum,x)=>sum+x,0)/COLS);
-  const centre=clamp(v,1/ROWS,1-1/ROWS),reach=clamp(.24/(2*before.height),.08,.15);
-  const shift=clamp(upward/(2*before.height),-.45*centre,.45*(1-centre));
-  const left=Math.min(centre,reach+Math.max(0,-shift)*2),right=Math.min(1-centre,reach+Math.max(0,shift)*2);
-  const weight=t=>{const q=(t-centre)/(t<centre?left:right);return Math.abs(q)>=1?0:(1-q*q)**3;};
-  const contact=t=>{const q=(t-v)/reach;return Math.abs(q)>=1?0:(1-q*q)**3;};
+  const levels=Array.from({length:ROWS+1},(_,row)=>profileY(before,row/ROWS)),bottom=levels[0],top=levels[ROWS],held=profileY(before,v);
+  const reach=.24,contact=t=>{const q=(profileY(before,t)-held)/reach;return Math.abs(q)>=1?0:(1-q*q)**3;};
+  model.height=before.height;
+  if(before.profileLevels)model.profileLevels=before.profileLevels.slice();else delete model.profileLevels;
+  if(upward){
+    // Store the material's actual heights. The old fixed-height resampling
+    // left the pole behind and stopped a stroke at 45% of its starting height.
+    const upper=end===1||v>=.975||v>=.7&&upward<0,lower=end===-1||v<=.025;
+    const gap=Math.min(.08,(held-bottom)/2,(top-held)/2);
+    const target=upper?clamp(held+upward,Math.min(held,bottom+.22),held+1.45-top):lower?clamp(held+upward,held-1.45-bottom,Math.max(held,top-.22)):clamp(held+upward,bottom+gap,top-gap);
+    const delta=target-held,lo=Math.max(bottom,Math.min(held,target)-reach),hi=Math.min(top,Math.max(held,target)+reach);
+    model.profileLevels=levels.map(y=>{
+      if(y<=lo)return lower?y+delta:y;
+      if(y>=hi)return upper?y+delta:y;
+      if(y<=held)return lower?y+delta:lo+(y-lo)*(target-lo)/(held-lo);
+      return upper?y+delta:target+(y-held)*(hi-target)/(hi-held);
+    });
+    model.height=(model.profileLevels[ROWS]-model.profileLevels[0])/2;
+  }
   model.profile=[];const contactWeights=[];
   for(let row=0;row<=ROWS;row++){
-    const t=row/ROWS;
-    // Move the contacted material forward, then invert that monotone map.
-    // Subtracting a local shift at the destination used to fold the source
-    // coordinates over each other and replace neighbouring parts of the pot.
-    let source=t;
-    if(shift&&weight(t)){
-      let low=Math.max(0,t-Math.max(0,shift)),high=Math.min(1,t-Math.min(0,shift));
-      for(let i=0;i<24;i++){const mid=(low+high)/2;if(mid+shift*weight(mid)<t)low=mid;else high=mid;}
-      source=(low+high)/2;
-    }
-    const influence=contact(source);source*=ROWS;
-    const low=Math.floor(source),radius=radii[low]+(radii[Math.min(ROWS,low+1)]-radii[low])*(source-low);
+    const influence=contact(row/ROWS),radius=radii[row];
     // Only the pole closes at zero; there is no reserved head or foot section.
     const next=row===ROWS?0:clamp(radius+outward*influence,.18*Math.min(1,(ROWS-row)/3),1.5);
     model.profile.push(next);
-    contactWeights.push(Math.max(influence,shift?weight(t):0));
+    const a=Math.max(0,row-1)/ROWS,b=Math.min(ROWS,row+1)/ROWS;
+    const compression=upward?clamp(1-(profileY(model,b)-profileY(model,a))/(profileY(before,b)-profileY(before,a)),0,1):0;
+    contactWeights.push(Math.max(influence,compression));
   }
   // Relax creases only in the touched patch. A zero-motion re-grab must leave
   // the saved profile intact, and untouched rows are never faired globally.
-  const pressure=Math.min(1,Math.hypot(outward,upward)/.12),heldRow=Math.min(ROWS-3,Math.round((v+shift*weight(v))*ROWS));
+  const pressure=Math.min(1,Math.hypot(outward,upward)/.12),heldRow=Math.min(ROWS-3,Math.round(v*ROWS));
   for(let pass=0;pass<8&&pressure;pass++){
     const previous=model.profile.slice();
     for(let row=1;row<ROWS;row++){
@@ -108,7 +118,8 @@ export function pointSegmentDistance(p,a,b){const x=b[0]-a[0],y=b[1]-a[1];const 
 export function eraseAt(model,u,v){model.marks=model.marks.filter(m=>!m.points.some((p,i)=>[-1,0,1].some(k=>pointSegmentDistance([u+k,v],p,m.points[Math.min(i+1,m.points.length-1)])<.035)));}
 export function validateModel(value){
   if(!value||value.version!==1||!Array.isArray(value.offsets)||value.offsets.length!==(ROWS+1)*COLS||!value.offsets.every(n=>Number.isFinite(n)&&n>=-.9&&n<=1.5))return null;
-  if(!Number.isFinite(value.height)||value.height<.65||value.height>1.45||!Number.isInteger(value.stage)||value.stage<1||value.stage>9)return null;
+  if(!Number.isFinite(value.height)||value.height<.109999||value.height>1.450001||!Number.isInteger(value.stage)||value.stage<1||value.stage>9)return null;
+  if(value.profileLevels!==undefined&&(!Array.isArray(value.profileLevels)||value.profileLevels.length!==ROWS+1||!value.profileLevels.every((y,i)=>Number.isFinite(y)&&y>=-1.450001&&y<=1.450001&&(!i||y>value.profileLevels[i-1]))||Math.abs(value.profileLevels[ROWS]-value.profileLevels[0]-2*value.height)>1e-6))return null;
   if(value.profile!==undefined&&(!Array.isArray(value.profile)||value.profile.length!==ROWS+1||!value.profile.every(n=>Number.isFinite(n)&&n>=0&&n<=1.5)||value.profile[ROWS]!==0))return null;
   const validPoints=(p,limit,range)=>Array.isArray(p)&&p.length<=limit&&p.every(a=>Array.isArray(a)&&a.length===2&&a.every(n=>Number.isFinite(n)&&Math.abs(n)<=range));
   if(!validPoints(value.crown,600,1)||!Array.isArray(value.marks)||value.marks.length>300||!value.marks.every(m=>['carve','press','hole','ear'].includes(m.tool)&&validPoints(m.points,1000,3)))return null;
@@ -119,12 +130,12 @@ export function createHistory(limit=24){const entries=[];return {get length(){re
 
 // Restore only the edited stage's fields; a body undo must keep later faces and openings.
 export function createWorkshopHistory(limit=24){
-  const fields={1:['height','offsets','profile'],2:['crown'],3:['marks']};
+  const fields={1:['height','offsets','profile','profileLevels'],2:['crown'],3:['marks']};
   const histories={1:createHistory(limit),2:createHistory(limit),3:createHistory(limit)};
   return {
     count:stage=>histories[stage]?.length||0,
     push(stage,model){if(fields[stage])histories[stage].push(Object.fromEntries(fields[stage].map(key=>[key,model[key]])));},
-    pop(stage,model){const edit=histories[stage]?.pop();if(!edit)return;const restored={...model,...edit};if(restored.profile===undefined)delete restored.profile;invalidateProcess(restored);return restored;},
+    pop(stage,model){const edit=histories[stage]?.pop();if(!edit)return;const restored={...model,...edit};if(restored.profile===undefined)delete restored.profile;if(restored.profileLevels===undefined)delete restored.profileLevels;invalidateProcess(restored);return restored;},
     clear(){Object.values(histories).forEach(history=>history.clear());}
   };
 }

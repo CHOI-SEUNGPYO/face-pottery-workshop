@@ -1,4 +1,4 @@
-import {clamp,reshapeProfile,unwrap,eraseAt,invalidateProcess} from './model.js';
+import {reshapeProfile,profileY,unwrap,eraseAt,invalidateProcess} from './model.js';
 import {strokeContour} from './contour.js';
 import {closedStroke,openingLoop} from './openings.js';
 
@@ -39,8 +39,9 @@ export class Interactions {
       const {v,side,unitsPerPixel}=d.grab;
       const totalX=e.clientX-d.startX,totalY=e.clientY-d.startY;
       if(!d.changed&&Math.hypot(totalX,totalY)<4)return;
-      if(d.grab.end)this.pottery.model.height=clamp(d.before.height-totalY*unitsPerPixel*d.grab.end,.65,1.45);
-      reshapeProfile(this.pottery.model,d.before,v,d.grab.end?0:totalX*unitsPerPixel*side,d.grab.end?0:-totalY*unitsPerPixel);
+      reshapeProfile(this.pottery.model,d.before,v,d.grab.end?0:totalX*unitsPerPixel*side,-totalY*unitsPerPixel,d.grab.end||0);
+      const actual=profileY(this.pottery.model,v),requested=profileY(d.before,v)-totalY*unitsPerPixel;
+      if(!d.boundMessage&&actual-requested>2*unitsPerPixel&&actual<profileY(this.pottery.model,0)+.221){d.boundMessage=true;this.onMessage('바닥에 가까워졌어요. 옆으로 펼쳐 볼까요?');}
       d.changed=true;this.invalidate();if(!this.frame)this.frame=requestAnimationFrame(()=>{this.frame=null;this.pottery.refreshShape();});
     }else if(this.stage===7){const rect=this.surface.getBoundingClientRect();this.pottery.move(dx/rect.width*(this.pottery.camera.right-this.pottery.camera.left),-dy/rect.height*(this.pottery.camera.top-this.pottery.camera.bottom));d.changed=true;}
     else if(this.stage===2||this.stage===3){const samples=e.getCoalescedEvents?.()||[];for(const sample of samples)this.sample(sample);this.sample(e);}

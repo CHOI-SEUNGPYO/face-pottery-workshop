@@ -1,5 +1,5 @@
 import * as THREE from '../vendor/three.module.js';
-import { ROWS,COLS,SURFACE_ROWS,shapedRadius,clamp } from './model.js';
+import { ROWS,COLS,SURFACE_ROWS,shapedRadius,profileY,clamp } from './model.js';
 import {crownRadius,mouthOutline,mouthCut,insideMouth,SHOULDER_ROW} from './crown.js';
 import {bodyGeometry,openingWalls} from './body.js';
 import {openingLoop,insideOpening,insideLoop,raisedFootprint} from './openings.js';
@@ -67,7 +67,7 @@ export class Pottery {
     }}this.maskTexture.needsUpdate=true;this.bumpTexture.needsUpdate=true;this.colorTexture.needsUpdate=true;
   }
   updateOpenings(){const marks=this.model.marks.filter(mark=>openingLoop(mark));this.openings=marks.map(openingLoop);this.rims.geometry.dispose();this.rims.geometry=openingWalls(this.model,this.inner.geometry,this.openings,marks.map(mark=>mark.tool==='ear'));}
-  refreshShape(){this.body.geometry.dispose();this.inner.geometry.dispose();this.body.geometry=this.geometry();this.inner.geometry=this.geometry(true);this.updateOpenings();this.paint();this.shadow.position.y=-this.model.height-.03;this.updateOutline();this.setFired(0);}
+  refreshShape(){this.body.geometry.dispose();this.inner.geometry.dispose();this.body.geometry=this.geometry();this.inner.geometry=this.geometry(true);this.updateOpenings();this.paint();this.shadow.position.y=profileY(this.model,0)-.03;this.updateOutline();this.setFired(0);}
   update(model=this.model){this.model=model;this.body.geometry.dispose();this.inner.geometry.dispose();this.body.geometry=this.geometry();this.inner.geometry=this.geometry(true);this.updateOpenings();this.paint();this.setGuides(this.guideCount);this.updateOutline();this.setFired(model.fired?1:0);this.layout();}
   get profileView(){return this.stage===1&&this.tool==='shape';}
   setTool(tool){this.tool=tool;this.layout();}
@@ -75,7 +75,7 @@ export class Pottery {
     const points=[],outer=mouthOutline(this.model),radius=crownRadius(this.model),bottom=this.crownUniforms.mouthBottom.value;
     for(const side of [1,-1]){
       const col=side===1?20:60;
-      const edge=Array.from({length:SURFACE_ROWS+1},(_,row)=>new THREE.Vector3(side*shapedRadius(this.model,row/SURFACE_ROWS*ROWS,col),(row/SURFACE_ROWS*2-1)*this.model.height,0));
+      const edge=Array.from({length:SURFACE_ROWS+1},(_,row)=>new THREE.Vector3(side*shapedRadius(this.model,row/SURFACE_ROWS*ROWS,col),profileY(this.model,row/SURFACE_ROWS),0));
       for(let i=1;i<edge.length;i++){
         const middle=edge[i].clone().add(edge[i-1]).multiplyScalar(.5);
         if(!outer.length||middle.y<=bottom||!insideLoop(middle.x/radius,0,outer))points.push(edge[i-1],edge[i]);
@@ -88,7 +88,7 @@ export class Pottery {
     for(const line of [...this.guides.children]){line.geometry.dispose();line.material.dispose();this.guides.remove(line);}
     for(let i=0;i<count;i++){
       const col=Math.round((i+.5)/count*COLS),a=col/COLS*TAU,points=[];
-      for(let row=3;row<SHOULDER_ROW;row++){const v=row/ROWS,r=shapedRadius(this.model,row,col)+.025;points.push(new THREE.Vector3(Math.sin(a)*r,(v*2-1)*this.model.height,Math.cos(a)*r));}
+      for(let row=3;row<SHOULDER_ROW;row++){const v=row/ROWS,r=shapedRadius(this.model,row,col)+.025;points.push(new THREE.Vector3(Math.sin(a)*r,profileY(this.model,v),Math.cos(a)*r));}
       const line=new THREE.Line(new THREE.BufferGeometry().setFromPoints(points),new THREE.LineDashedMaterial({color:0xffe4ab,dashSize:.07,gapSize:.05,transparent:true,opacity:.85}));line.computeLineDistances();this.guides.add(line);
     }
     this.guides.visible=this.stage===3;this.render();
@@ -100,27 +100,28 @@ export class Pottery {
     this.guides.visible=this.stage===3;
     this.pot.scale.setScalar(1);this.pot.position.set(0,0,0);this.pot.rotation.y=this.profileView?0:this.angle;this.outline.visible=this.profileView;this.siru.visible=this.stage===6||this.stage===7;this.siru.scale.setScalar(.65);this.siru.position.set(.8,-.35,0);
     if(this.stage===6){this.pot.scale.setScalar(.65);this.pot.position.set(-.65,0,0);}
-    if(this.stage===7){this.pot.scale.setScalar(.55);this.pot.position.set(this.model.assembled?.8:-.85,-.17+this.model.height*.55,0);}
+    if(this.stage===7){this.pot.scale.setScalar(.55);this.pot.position.set(this.model.assembled?.8:-.85,-.17-profileY(this.model,0)*.55,0);}
     if(this.stage===8){this.pot.scale.setScalar(.7);this.pot.position.x=-.83;}
-    this.shadow.position.set(this.pot.position.x,this.pot.position.y-this.model.height*this.pot.scale.y-.03,0);this.shadow.scale.setScalar(this.pot.scale.x);this.shadow.visible=this.stage!==2&&!this.profileView;
+    this.shadow.position.set(this.pot.position.x,this.pot.position.y+profileY(this.model,0)*this.pot.scale.y-.03,0);this.shadow.scale.setScalar(this.pot.scale.x);this.shadow.visible=this.stage!==2&&!this.profileView;
     this.resize();
   }
   resize(){const rect=this.container.getBoundingClientRect();if(rect.width<1||rect.height<1)return;const w=rect.width,h=rect.height;this.renderer.setSize(w,h,false);let height=this.stage===2?2.7:3.1;const aspect=w/h;if(aspect<.95)height/=aspect;if(this.stage===6||this.stage===7||this.stage===8)height=Math.max(height,3.8/aspect);this.camera.left=-height*aspect/2;this.camera.right=height*aspect/2;this.camera.top=height/2;this.camera.bottom=-height/2;this.camera.position.set(0,this.stage===2?7:this.profileView?0:2.0,this.stage===2?.001:6);this.camera.lookAt(0,0,0);this.camera.updateProjectionMatrix();this.render();}
   render(){if(this.renderer&&this.camera)this.renderer.render(this.scene,this.camera);}
   rotate(delta){if(this.profileView)return;this.angle+=delta;this.pot.rotation.y=this.angle;this.render();}
   hit(clientX,clientY,includeOpenings=false){const r=this.renderer.domElement.getBoundingClientRect();this.ray.setFromCamera(new THREE.Vector2((clientX-r.left)/r.width*2-1,-(clientY-r.top)/r.height*2+1),this.camera);return this.ray.intersectObject(this.body,false).find(hit=>hit.face.materialIndex===0&&!insideMouth(this.body.worldToLocal(hit.point.clone()),this.mouth)&&(includeOpenings||!insideOpening(hit.uv.x,hit.uv.y,this.openings)));}
-  crownPoint(clientX,clientY){const r=this.renderer.domElement.getBoundingClientRect();this.ray.setFromCamera(new THREE.Vector2((clientX-r.left)/r.width*2-1,-(clientY-r.top)/r.height*2+1),this.camera);const point=this.ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0),-this.model.height),new THREE.Vector3());if(!point)return null;this.pot.worldToLocal(point);const radius=crownRadius(this.model);return [point.x/radius,-point.z/radius];}
+  crownPoint(clientX,clientY){const r=this.renderer.domElement.getBoundingClientRect();this.ray.setFromCamera(new THREE.Vector2((clientX-r.left)/r.width*2-1,-(clientY-r.top)/r.height*2+1),this.camera);const point=this.ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0),-profileY(this.model,1)),new THREE.Vector3());if(!point)return null;this.pot.worldToLocal(point);const radius=crownRadius(this.model);return [point.x/radius,-point.z/radius];}
   shapeGrab(clientX,clientY){
     if(this.profileView){
       const rect=this.renderer.domElement.getBoundingClientRect(),unitsPerPixel=(this.camera.right-this.camera.left)/rect.width;
       const x=(clientX-rect.left-rect.width/2)*unitsPerPixel,y=(rect.top+rect.height/2-clientY)*unitsPerPixel,side=x>=0?1:-1;
       const col=side===1?20:60;
-      const end=Math.abs(x)<12*unitsPerPixel&&(Math.abs(y-this.model.height)<24*unitsPerPixel||Math.abs(y+this.model.height)<24*unitsPerPixel)?(y>0?1:-1):0;
-      if(end)return {v:y>0?.97:0,side,unitsPerPixel,end};
+      const topDistance=Math.abs(y-profileY(this.model,1)),bottomDistance=Math.abs(y-profileY(this.model,0));
+      const end=Math.abs(x)<12*unitsPerPixel&&Math.min(topDistance,bottomDistance)<24*unitsPerPixel?(topDistance<bottomDistance?1:-1):0;
+      if(end)return {v:end===1?1:0,side,unitsPerPixel,end};
       let closest=null,distance=48*unitsPerPixel;
       for(let row=1;row<=SURFACE_ROWS;row++){
         const va=(row-1)/SURFACE_ROWS,vb=row/SURFACE_ROWS;
-        const ax=shapedRadius(this.model,va*ROWS,col),ay=(va*2-1)*this.model.height,bx=shapedRadius(this.model,vb*ROWS,col),by=(vb*2-1)*this.model.height;
+        const ax=shapedRadius(this.model,va*ROWS,col),ay=profileY(this.model,va),bx=shapedRadius(this.model,vb*ROWS,col),by=profileY(this.model,vb);
         const dx=bx-ax,dy=by-ay,t=clamp(((Math.abs(x)-ax)*dx+(y-ay)*dy)/(dx*dx+dy*dy||1),0,1);
         const d=Math.hypot(Math.abs(x)-ax-dx*t,y-ay-dy*t);
         if(d<distance){distance=d;closest=va+(vb-va)*t;}
@@ -137,10 +138,10 @@ export class Pottery {
     }
     const hit=this.hit(clientX,clientY);if(hit)closest={u:hit.uv.x,v:hit.uv.y};
     // The whole shoulder is a generous handle for changing height.
-    const top=new THREE.Vector3(0,this.model.height,0).project(this.camera),topY=rect.top+(1-top.y)*rect.height/2;
+    const top=new THREE.Vector3(0,profileY(this.model,1),0).project(this.camera),topY=rect.top+(1-top.y)*rect.height/2;
     if(!closest&&Math.abs(clientX-(rect.left+rect.width/2))<rect.height*.3&&Math.abs(clientY-topY)<45)closest={u:0,v:.85};
     return closest?{...closest,side:clientX>=rect.left+rect.width/2?1:-1,unitsPerPixel:(this.camera.right-this.camera.left)/rect.width}:null;
   }
   move(dx,dy){this.pot.position.x+=dx;this.pot.position.y+=dy;this.render();}
-  tryAssemble(){const yes=Math.abs(this.pot.position.x-.8)<.52&&Math.abs(this.pot.position.y-(-.17+this.model.height*.55))<.55;if(yes){this.model.assembled=true;}this.layout();return yes;}
+  tryAssemble(){const yes=Math.abs(this.pot.position.x-.8)<.52&&Math.abs(this.pot.position.y-(-.17-profileY(this.model,0)*.55))<.55;if(yes){this.model.assembled=true;}this.layout();return yes;}
 }
