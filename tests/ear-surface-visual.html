@@ -1,0 +1,9 @@
+<!doctype html><html lang="ko"><meta charset="utf-8"><title>밀어 뚫기 수정 확인</title><style>*{box-sizing:border-box}body{margin:0;background:#f4efe4;color:#5b4434;font:17px sans-serif}h1{font-size:24px;margin:20px}main{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;padding:0 20px}section{min-width:0;border:1px solid #d0bea5;border-radius:20px;text-align:center}h2{font-size:20px}section>div{height:440px}p{font-size:15px;line-height:1.6;padding:0 15px}canvas{width:100%;height:100%;display:block}button{margin:20px;padding:14px 20px;font:inherit;border:1px solid #9f805e;background:#fff9ee;color:inherit;border-radius:24px}</style>
+<h1>접힌 토기에서도 구멍 테두리가 표면을 따라 이어지도록</h1><main><section><h2>문제 형태 재현</h2><div id="before"></div><p>가늘고 접힌 윤곽을 그대로 사용<br>형태 보정 없이 구멍 수정만 확인</p></section><section><h2>같은 표면의 밀어 뚫기</h2><div id="after"></div><p>오목한 구멍과 둥근 구멍을 만들기<br>몸체를 가로지르는 긴 삼각형 없이 연결</p></section></main><button id="turn">다른 방향 보기</button><button id="play">실제 게임에서 밀어 뚫기</button>
+<script type="module">
+import {Pottery} from '../src/pottery.js';import {flaredFixture,concaveEar} from './regression-fixtures.js';
+const raw=flaredFixture(),cut=structuredClone(raw);cut.marks=[concaveEar(0,.18),{tool:'ear',points:[[0,.6]]}];
+const pots=[['before',raw],['after',cut]].map(([id,m])=>new Pottery(document.getElementById(id),m));for(const p of pots){p.stage=4;p.layout();}
+document.getElementById('turn').onclick=()=>pots.forEach(p=>p.rotate(.5));
+document.getElementById('play').onclick=()=>{if(location.port==='4175'){const play=structuredClone(raw);play.stage=3;play.crown=[[0,.2],[.2,0],[0,-.2],[-.2,0]];localStorage.setItem('face-pottery-v1',JSON.stringify(play));location.href='/';}};
+</script></html>
