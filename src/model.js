@@ -63,48 +63,87 @@ export function sculptProfile(model,u,v,amount){
 export function profileY(model,v){
   if(!model.profileLevels)return (v*2-1)*model.height;
   const row=clamp(v,0,1)*ROWS,low=Math.floor(row),a=model.profileLevels[low],b=model.profileLevels[Math.min(ROWS,low+1)];
-  return a+(b-a)*(row-low);
+  const previous=model.profileLevels[Math.max(0,low-1)],next=model.profileLevels[Math.min(ROWS,low+2)],t=row-low;
+  const tangent=(x,y)=>x*y>0?2*x*y/(x+y):0;
+  const m0=low?tangent(a-previous,b-a):b-a,m1=low<ROWS-1?tangent(b-a,next-b):b-a;
+  return (2*t**3-3*t*t+1)*a+(t**3-2*t*t+t)*m0+(-2*t**3+3*t*t)*b+(t**3-t*t)*m1;
 }
-export function reshapeProfile(model,before,v,outward,upward,end=0){
-  const radii=Array.from({length:ROWS+1},(_,row)=>before.profile?.[row]??Array.from({length:COLS},(_,col)=>shapedRadius(before,row,col)).reduce((sum,x)=>sum+x,0)/COLS);
+export function sampledProfile(model){
+  return model.profile??Array.from({length:ROWS+1},(_,row)=>Array.from({length:COLS},(_,col)=>shapedRadius(model,row,col)).reduce((sum,x)=>sum+x,0)/COLS);
+}
+export function reshapeProfile(model,before,v,outward,upward){
+  const radii=sampledProfile(before);
   const levels=Array.from({length:ROWS+1},(_,row)=>profileY(before,row/ROWS)),bottom=levels[0],top=levels[ROWS],held=profileY(before,v);
   const reach=.24,contact=t=>{const q=(profileY(before,t)-held)/reach;return Math.abs(q)>=1?0:(1-q*q)**3;};
   model.height=before.height;
   if(before.profileLevels)model.profileLevels=before.profileLevels.slice();else delete model.profileLevels;
+  let influence=levels.map((_,row)=>contact(row/ROWS));
   if(upward){
-    // Store the material's actual heights. The old fixed-height resampling
-    // left the pole behind and stopped a stroke at 45% of its starting height.
-    const upper=end===1||v>=.975||v>=.7&&upward<0,lower=end===-1||v<=.025;
+    // Advect both coordinates through the same moving fingertip field. Moving
+    // heights broadly but widths narrowly created a shelf on diagonal drags.
+    const upper=top-held<.42,lower=held-bottom<.06;
     const gap=Math.min(.08,(held-bottom)/2,(top-held)/2);
     const target=upper?clamp(held+upward,Math.min(held,bottom+.22),held+1.45-top):lower?clamp(held+upward,held-1.45-bottom,Math.max(held,top-.22)):clamp(held+upward,bottom+gap,top-gap);
-    const delta=target-held,lo=Math.max(bottom,Math.min(held,target)-reach),hi=Math.min(top,Math.max(held,target)+reach);
-    model.profileLevels=levels.map(y=>{
-      if(y<=lo)return lower?y+delta:y;
-      if(y>=hi)return upper?y+delta:y;
-      if(y<=held)return lower?y+delta:lo+(y-lo)*(target-lo)/(held-lo);
-      return upper?y+delta:target+(y-held)*(hi-target)/(hi-held);
-    });
-    model.height=(model.profileLevels[ROWS]-model.profileLevels[0])/2;
+    const delta=target-held;
+    if(delta){
+      const margin=Math.max(.004,Math.min(reach,lower?reach:Math.min(held,target)-bottom,upper?reach:top-Math.max(held,target)));
+      const steps=Math.ceil(Math.abs(delta)/(margin/8)),step=delta/steps;
+      const force=(y,hand)=>{
+        if(y>=hand&&upper||y<=hand&&lower)return 1;
+        const span=y<hand?Math.min(reach,hand-bottom):Math.min(reach,top-hand),q=(y-hand)/Math.max(span,.000001);
+        return Math.abs(q)<1?(1-q*q)**3:0;
+      };
+      model.profileLevels=levels.map(y=>{
+        for(let i=0;i<steps;i++){
+          const hand=held+i*step,k1=force(y,hand),k2=force(y+step*k1/2,hand+step/2),k3=force(y+step*k2/2,hand+step/2),k4=force(y+step*k3,hand+step);
+          y+=step*(k1+2*k2+2*k3+k4)/6;
+        }
+        return y;
+      });
+      influence=levels.map((y,i)=>clamp((model.profileLevels[i]-y)/delta,0,1));
+      model.height=(model.profileLevels[ROWS]-model.profileLevels[0])/2;
+    }
   }
   model.profile=[];const contactWeights=[];
   for(let row=0;row<=ROWS;row++){
-    const influence=contact(row/ROWS),radius=radii[row];
-    // Only the pole closes at zero; there is no reserved head or foot section.
-    const next=row===ROWS?0:clamp(radius+outward*influence,.18*Math.min(1,(ROWS-row)/3),1.5);
-    model.profile.push(next);
-    const a=Math.max(0,row-1)/ROWS,b=Math.min(ROWS,row+1)/ROWS;
-    const compression=upward?clamp(1-(profileY(model,b)-profileY(model,a))/(profileY(before,b)-profileY(before,a)),0,1):0;
-    contactWeights.push(Math.max(influence,compression));
+    const weight=influence[row],radius=radii[row];
+    const next=row===ROWS?0:clamp(radius+outward*weight,.18*Math.min(1,(ROWS-row)/3),1.5);
+    model.profile.push(next);contactWeights.push(weight);
+  }
+  if(upward){
+    const touchY=profileY(model,v),touchRadius=shapedRadius(before,v*ROWS,0)+outward;
+    for(let row=1;row<ROWS;row++){
+      const a=(row-1)/ROWS,b=(row+1)/ROWS;
+      const compression=clamp(1-(profileY(model,b)-profileY(model,a))/(profileY(before,b)-profileY(before,a)),0,1);
+      const distance=Math.hypot(profileY(model,row/ROWS)-touchY,model.profile[row]-touchRadius)/reach;
+      // Fair a crease formed directly under the hand, not every compressed
+      // ring along the stroke. Distant lower fullness must retain its width.
+      const local=distance<1?(1-distance*distance)**3:0;
+      contactWeights[row]=Math.max(contactWeights[row],compression*local);
+    }
   }
   // Relax creases only in the touched patch. A zero-motion re-grab must leave
   // the saved profile intact, and untouched rows are never faired globally.
   const pressure=Math.min(1,Math.hypot(outward,upward)/.12),heldRow=Math.min(ROWS-3,Math.round(v*ROWS));
+  const editedLevels=model.profile.map((_,row)=>profileY(model,row/ROWS));
+  const atHeight=(radii,y)=>{
+    if(y<=editedLevels[0])return radii[0];if(y>=editedLevels[ROWS])return radii[ROWS];
+    let lo=0,hi=ROWS;while(hi-lo>1){const mid=(hi+lo)>>1;if(editedLevels[mid]<=y)lo=mid;else hi=mid;}
+    return radii[lo]+(radii[hi]-radii[lo])*(y-editedLevels[lo])/(editedLevels[hi]-editedLevels[lo]);
+  };
   for(let pass=0;pass<8&&pressure;pass++){
     const previous=model.profile.slice();
     for(let row=1;row<ROWS;row++){
       if(row===heldRow)continue;
       const blend=.7*pressure*Math.sqrt(contactWeights[row]);
-      model.profile[row]=clamp(previous[row]+((previous[row-1]+previous[row+1])/2-previous[row])*blend,.18*Math.min(1,(ROWS-row)/3),1.5);
+      if(!blend)continue;
+      // Use millimetres of clay, not ring indices: after stretching, adjacent
+      // material rings may be very far apart or stacked into a tiny crease.
+      let total=0,weight=0;
+      for(let sample=-4;sample<=4;sample++){
+        const w=(1-(sample/5)**2)**3;total+=atHeight(previous,editedLevels[row]+sample*.03)*w;weight+=w;
+      }
+      model.profile[row]=clamp(previous[row]+(total/weight-previous[row])*blend,.18*Math.min(1,(ROWS-row)/3),1.5);
     }
   }
   for(let row=0;row<=ROWS;row++){

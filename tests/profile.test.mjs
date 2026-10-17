@@ -45,7 +45,7 @@ test('real profile pointer gesture is symmetric and cancelling restores the star
   const raf=globalThis.requestAnimationFrame,caf=globalThis.cancelAnimationFrame;globalThis.requestAnimationFrame=()=>1;globalThis.cancelAnimationFrame=()=>{};
   try{
     const original=freshModel();let commits=0;
-    const pottery={model:structuredClone(original),hit:()=>null,shapeGrab:()=>({v:.4,side:1,unitsPerPixel:.01,end:0}),update(){},render(){}};
+    const pottery={model:structuredClone(original),hit:()=>null,shapeGrab:()=>({v:.4,side:1,unitsPerPixel:.01,end:0}),update(){},refreshShape(){},render(){}};
     const surface={addEventListener(){},getBoundingClientRect:()=>({left:0,top:0}),setPointerCapture(){},focus(){},classList:{toggle(){},remove(){}}};
     const interaction=new Interactions(pottery,surface,{setAttribute(){}},()=>commits++,()=>{});
     const event=(x,y)=>({button:0,pointerId:1,clientX:x,clientY:y,target:{closest:()=>null},preventDefault(){}});

@@ -100,7 +100,7 @@ $('#resume').onclick=()=>go(model.stage);$('#next').onclick=next;$('#previous').
 $('#view-again').onclick=()=>go(8);$('#finish').onclick=()=>go(0);
 $('#home').onclick=()=>dialog('처음으로 돌아갈까요?','<p>지금 만든 작품은 이어서 만들 수 있어요.</p>',[['계속 만들기',()=>$('#dialog').close()],['처음으로',()=>{$('#dialog').close();go(0);}]]);
 $('#dialog-close').onclick=()=>$('#dialog').close();
-$('#help').onclick=()=>dialog('손끝으로 만들어 봐요',`<p>${stages[stage].hint}</p><p>${stages[stage].tip.replace(/\n/g,' ')}</p><p>${stage===1?'옆 윤곽을 좌우·상하로 옮겨 원하는 높이의 굵기를 바꿔요. 맨 위나 아래를 잡으면 전체 높이가 바뀌어요. 돌리기를 누르면 360도로 볼 수 있어요.':'도구를 선택하고 흙 위를 천천히 움직여 보세요. 회전 버튼이나 키보드의 왼쪽·오른쪽 화살표로 다른 면을 살펴볼 수 있어요.'}</p>`);
+$('#help').onclick=()=>dialog('손끝으로 만들어 봐요',`<p>${stages[stage].hint}</p><p>${stages[stage].tip.replace(/\n/g,' ')}</p><p>${stage===1?'윤곽을 잡고 원하는 방향으로 천천히 밀고 당겨요. 잡은 곳 주변이 함께 움직여요. 돌리기를 누르면 360도로 볼 수 있어요.':'도구를 선택하고 흙 위를 천천히 움직여 보세요. 회전 버튼이나 키보드의 왼쪽·오른쪽 화살표로 다른 면을 살펴볼 수 있어요.'}</p>`);
 document.querySelectorAll('[data-action="about"]').forEach(b=>b.onclick=about);
 document.querySelectorAll('[data-rotate]').forEach(b=>b.onclick=()=>pottery?.rotate(Number(b.dataset.rotate)));
 $('#guide-count').onchange=e=>pottery?.setGuides(Number(e.target.value));

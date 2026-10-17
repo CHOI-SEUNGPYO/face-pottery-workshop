@@ -53,12 +53,12 @@ test('pressed material heights survive stage undo and storage and all body surfa
 });
 
 test('the real top-handle pointer follows the complete downward gesture and cancellation restores the artwork',()=>{
-  const raf=globalThis.requestAnimationFrame,caf=globalThis.cancelAnimationFrame;globalThis.requestAnimationFrame=()=>1;globalThis.cancelAnimationFrame=()=>{};
+  const raf=globalThis.requestAnimationFrame,caf=globalThis.cancelAnimationFrame;let pending;globalThis.requestAnimationFrame=fn=>{pending=fn;return 1;};globalThis.cancelAnimationFrame=()=>{};
   try{
-    const before=freshModel(),pottery={model:structuredClone(before),hit:()=>null,shapeGrab:()=>({v:1,side:1,unitsPerPixel:.01,end:1}),update(){},render(){}};
+    const before=freshModel(),pottery={model:structuredClone(before),hit:()=>null,shapeGrab:()=>({v:1,side:1,unitsPerPixel:.01,end:1}),update(){},refreshShape(){},render(){}};
     const surface={addEventListener(){},getBoundingClientRect:()=>({left:0,top:0}),setPointerCapture(){},focus(){},classList:{toggle(){},remove(){}}};
     const input=new Interactions(pottery,surface,{setAttribute(){}},()=>{},()=>{}),e=y=>({button:0,pointerId:1,clientX:100,clientY:y,target:{closest:()=>null},preventDefault(){}});
-    input.down(e(100));input.move(e(220));const first=profileY(pottery.model,1);input.move(e(290));
+    input.down(e(100));input.move(e(220));pending();const first=profileY(pottery.model,1);input.move(e(290));pending();
     assert.ok(Math.abs(profileY(pottery.model,1)-first+.7)<1e-8);assert.equal(profileY(pottery.model,0),profileY(before,0));
     input.cancel();assert.deepEqual(pottery.model,before);
   }finally{globalThis.requestAnimationFrame=raf;globalThis.cancelAnimationFrame=caf;}
