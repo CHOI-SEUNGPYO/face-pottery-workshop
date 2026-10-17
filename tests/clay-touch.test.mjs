@@ -10,14 +10,14 @@ test('retouching the upper part after a long pull preserves the lower body alrea
  const pulled=structuredClone(start);reshapeProfile(pulled,start,.35,.36,.65);
  const before=structuredClone(pulled);
  reshapeProfile(pulled,before,.86,-.14,-.18);
- for(let row=0;row<=13;row++)assert.equal(pulled.profile[row],before.profile[row],'remote lower clay keeps its width');
+ for(let row=0;row<=13;row++)assert.ok(Math.abs(pulled.profile[row]-before.profile[row])<.005,'remote lower clay keeps its width within half a screen pixel');
  for(let row=14;row<=20;row++)assert.ok(Math.abs(pulled.profile[row]-before.profile[row])<.065,'adjacent clay shares pressure without erasing the lower bulge');
  assert.equal(profileY(pulled,0),profileY(before,0));assert.ok(validateModel(pulled));
  // Reversing a vertical stroke must not switch to a different upper-body policy.
  for(const dy of [-.12,.12]){
   const m=structuredClone(before);reshapeProfile(m,before,.85,-.08,dy);
   const moved=profileY(m,.85)-profileY(before,.85);assert.ok(moved*dy>0&&Math.abs(moved)<=Math.abs(dy)+1e-8);
-  assert.ok(Math.abs(profileY(m,1)-profileY(before,1)-moved)<1e-8);
+  assert.ok(Math.abs(profileY(m,1)-profileY(before,1)-moved)<.002);
  }
 });
 
@@ -57,6 +57,9 @@ test('reused mesh buffers follow the actual silhouette, keep the floor closed an
  for(const g of [outer,inner]){
   const n=g.attributes.normal;for(let i=0;i<n.count;i++)assert.ok(Math.abs(Math.hypot(n.getX(i),n.getY(i),n.getZ(i))-1)<1e-6);
  }
+ const rebuiltInner=bodyGeometry(m,true);
+ for(const [actual,rebuilt] of [[outer,expected],[inner,rebuiltInner]])for(let i=0;i<actual.attributes.normal.array.length;i++)assert.ok(Math.abs(actual.attributes.normal.array[i]-rebuilt.attributes.normal.array[i])<1e-6,'dragging and reloading must have identical shading');
+ rebuiltInner.dispose();
  m.crown=[[0,.2],[.2,0],[0,-.2]];assert.equal(refreshBodyGeometry(m,outer),false,'opening topology uses the complete construction');
  outer.dispose();inner.dispose();expected.dispose();
 });

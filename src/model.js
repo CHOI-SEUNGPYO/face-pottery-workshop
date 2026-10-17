@@ -1,4 +1,4 @@
-import {redistributeClay} from './clay-material.js';
+import {sculptFlow} from './sculpt-flow.js';
 export const ROWS = 40, COLS = 80;
 export const SURFACE_ROWS = 120;
 export const clamp = (x,a,b) => Math.max(a,Math.min(b,x));
@@ -82,65 +82,9 @@ export function reshapeProfile(model,before,v,outward,upward){
   if(!outward&&!upward){
     for(const key of ['height','offsets','profile','profileLevels']){if(before[key]===undefined)delete model[key];else model[key]=Array.isArray(before[key])?before[key].slice():before[key];}return;
   }
-  const radii=sampledProfile(before);
-  const levels=Array.from({length:ROWS+1},(_,row)=>profileY(before,row/ROWS)),bottom=levels[0],top=levels[ROWS],held=profileY(before,v);
-  const reach=.24,contact=t=>{const q=(profileY(before,t)-held)/reach;return Math.abs(q)>=1?0:(1-q*q)**3;};
-  model.height=before.height;
-  if(before.profileLevels)model.profileLevels=before.profileLevels.slice();else delete model.profileLevels;
-  let influence=levels.map((_,row)=>contact(row/ROWS));
-  if(upward){
-    // Advect both coordinates through the same moving fingertip field. Moving
-    // heights broadly but widths narrowly created a shelf on diagonal drags.
-    const upper=top-held<.42,lower=held-bottom<.06;
-    const gap=Math.min(.08,(held-bottom)/2,(top-held)/2);
-    const target=upper?clamp(held+upward,Math.min(held,bottom+.22),held+1.45-top):lower?clamp(held+upward,held-1.45-bottom,Math.max(held,top-.22)):clamp(held+upward,bottom+gap,top-gap);
-    const delta=target-held;
-    if(delta){
-      const margin=Math.max(.004,Math.min(reach,lower?reach:Math.min(held,target)-bottom,upper?reach:top-Math.max(held,target)));
-      const steps=Math.ceil(Math.abs(delta)/(margin/8)),step=delta/steps;
-      const force=(y,hand)=>{
-        if(y>=hand&&upper||y<=hand&&lower)return 1;
-        const span=y<hand?Math.min(reach,hand-bottom):Math.min(reach,top-hand),q=(y-hand)/Math.max(span,.000001);
-        return Math.abs(q)<1?(1-q*q)**3:0;
-      };
-      model.profileLevels=levels.map(y=>{
-        for(let i=0;i<steps;i++){
-          const hand=held+i*step,k1=force(y,hand),k2=force(y+step*k1/2,hand+step/2),k3=force(y+step*k2/2,hand+step/2),k4=force(y+step*k3,hand+step);
-          y+=step*(k1+2*k2+2*k3+k4)/6;
-        }
-        return y;
-      });
-      // A downward palm on the very top transmits compression through the
-      // supported body. Keeping every lower ring fixed made a mushroom cap.
-      if(delta<0&&top-held<.15){
-        const spread=(1-(top-held)/.15)**2*Math.min(1,-delta/.12),scale=(top-bottom+delta)/(top-bottom);
-        model.profileLevels=model.profileLevels.map((y,i)=>y+(bottom+(levels[i]-bottom)*scale-y)*spread);
-      }
-      influence=levels.map((y,i)=>clamp((model.profileLevels[i]-y)/delta,0,1));
-      model.height=(model.profileLevels[ROWS]-model.profileLevels[0])/2;
-    }
-  }
-  model.profile=[];
-  for(let row=0;row<=ROWS;row++){
-    const weight=influence[row],radius=radii[row];
-    const next=row===ROWS?0:clamp(radius+outward*weight,.18*Math.min(1,(ROWS-row)/3),1.5);
-    model.profile.push(next);
-  }
-  const pressure=Math.min(1,Math.hypot(outward,upward)/.24),editedLevels=model.profile.map((_,row)=>profileY(model,row/ROWS));
-  const contactY=profileY(model,v);
-  let supported=redistributeClay(radii,levels,model.profile,editedLevels,pressure,contactY);
-  if(!supported){
-    // When there is no room left for the material, resist continuously during
-    // the gesture. Do not collapse or re-template the work after release.
-    const requested=model.profile.slice();let lo=0,hi=1,best=radii.slice(),bestY=levels;
-    for(let step=0;step<18;step++){
-      const f=(lo+hi)/2,y=levels.map((v,i)=>v+(editedLevels[i]-v)*f),r=radii.map((v,i)=>v+(requested[i]-v)*f);
-      const result=redistributeClay(radii,levels,r,y,pressure*f,held+(contactY-held)*f);
-      if(result){lo=f;best=result;bestY=y;}else hi=f;
-    }
-    supported=best;model.profileLevels=bestY;model.height=(bestY[ROWS]-bestY[0])/2;
-  }
-  model.profile=supported;
+  const radii=sampledProfile(before),levels=radii.map((_,row)=>profileY(before,row/ROWS));
+  const next=sculptFlow(radii,levels,shapedRadius(before,v*ROWS,0),profileY(before,v),outward,upward);
+  model.profile=next.radii;model.profileLevels=next.levels;model.height=(next.levels[ROWS]-next.levels[0])/2;
   for(let row=0;row<=ROWS;row++){
     const offset=model.profile[row]-baseRadius(row/ROWS);
     model.offsets.fill(offset,row*COLS,(row+1)*COLS);

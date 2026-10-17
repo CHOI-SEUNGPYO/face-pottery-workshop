@@ -76,13 +76,10 @@ export function bodyGeometry(model,inner=false){
     pos.push(vertices.getX(source)*scale,vertices.getY(source),vertices.getZ(source)*scale);uv.push(u,v);
   }
   lathe.dispose();
-  const side=new THREE.BufferGeometry();side.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));side.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));side.setIndex(indices);side.computeVertexNormals();
-  for(let row=0;row<=SURFACE_ROWS;row++){
-    const first=row*(COLS+1),last=first+COLS,n=row===SURFACE_ROWS?new THREE.Vector3(0,1,0):new THREE.Vector3().fromBufferAttribute(side.attributes.normal,first).add(new THREE.Vector3().fromBufferAttribute(side.attributes.normal,last)).normalize();
-    side.attributes.normal.setXYZ(first,n.x,n.y,n.z);side.attributes.normal.setXYZ(last,n.x,n.y,n.z);
-    if(row===SURFACE_ROWS)for(let col=1;col<COLS;col++)side.attributes.normal.setXYZ(first+col,0,1,0);
-  }
-  if(inner){side.userData.sculpt=sculptCache(cuts,outside);return side;}
+  const side=new THREE.BufferGeometry();side.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));side.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));side.setAttribute('normal',new THREE.Float32BufferAttribute(new Float32Array(pos.length),3));side.setIndex(indices);
+  // Use the same surface tangents on creation, dragging, undo and reload.
+  // Switching between triangle-weighted and meridian normals left a seam.
+  if(inner){side.userData.sculpt=sculptCache(cuts,outside);refreshBodyGeometry(model,side,true);return side;}
   const plain=side.toNonIndexed();side.dispose();
   const append=(target,source)=>{for(const value of source)target.push(value);};
   pos.length=0;uv.length=0;append(pos,plain.attributes.position.array);append(uv,plain.attributes.uv.array);append(normals,plain.attributes.normal.array);
@@ -96,7 +93,7 @@ export function bodyGeometry(model,inner=false){
     pos.push(0,bottom,0,Math.sin(b)*rb,bottom,Math.cos(b)*rb,Math.sin(a)*ra,bottom,Math.cos(a)*ra);
     normals.push(0,-1,0,0,-1,0,0,-1,0);uv.push(.5,.5,(Math.sin(b)+1)/2,(Math.cos(b)+1)/2,(Math.sin(a)+1)/2,(Math.cos(a)+1)/2);
   }
-  const merged=new THREE.BufferGeometry();merged.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));merged.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));merged.setAttribute('normal',new THREE.Float32BufferAttribute(normals,3));merged.addGroup(0,sideCount,0);merged.addGroup(sideCount,topCount,1);merged.addGroup(sideCount+topCount,COLS*3,2);merged.userData.sculpt=sculptCache(cuts,outside);plain.dispose();top.dispose();return merged;
+  const merged=new THREE.BufferGeometry();merged.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));merged.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));merged.setAttribute('normal',new THREE.Float32BufferAttribute(normals,3));merged.addGroup(0,sideCount,0);merged.addGroup(sideCount,topCount,1);merged.addGroup(sideCount+topCount,COLS*3,2);merged.userData.sculpt=sculptCache(cuts,outside);plain.dispose();top.dispose();refreshBodyGeometry(model,merged);return merged;
 }
 
 export function openingWalls(model,inner,loops,raised=[]){

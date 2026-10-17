@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {freshModel,reshapeProfile,shapedRadius,ROWS,SURFACE_ROWS,COLS} from '../src/model.js';
+import {freshModel,reshapeProfile,shapedRadius,profileY,ROWS,SURFACE_ROWS,COLS} from '../src/model.js';
 import {bodyGeometry} from '../src/body.js';
 import {topPoint,crownRadius} from '../src/crown.js';
 
@@ -25,7 +25,7 @@ test('top openings and inside surface use the rounded surface at fractional prof
   for(const row of [112,115,118,119]){
     const radius=shapedRadius(model,row/SURFACE_ROWS*ROWS,0);
     const point=topPoint(model,0,-radius/crownRadius(model));
-    assert.ok(Math.abs(point[1]-(row/SURFACE_ROWS*2-1))<1e-8,'opening lip must meet rounded body');
+    assert.ok(Math.abs(point[1]*model.height-profileY(model,row/SURFACE_ROWS))<1e-8,'opening lip must meet the actual asymmetric body height');
     assert.ok(Math.abs(Math.hypot(p.getX(row*(COLS+1)),p.getZ(row*(COLS+1)))-Math.max(0,radius-.11))<1e-6);
   }
   inner.dispose();

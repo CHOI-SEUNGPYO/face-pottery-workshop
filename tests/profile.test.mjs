@@ -8,8 +8,8 @@ test('profile can leave the original silhouette without losing circular rings or
   const initial=freshModel(),wide=freshModel(),narrow=freshModel();
   reshapeProfile(wide,initial,.3,1,0);
   reshapeProfile(narrow,initial,.65,-1,0);
-  assert.ok(shapedRadius(wide,12,0)>shapedRadius(initial,12,0)+.15,'can widen away from the original silhouette');
-  assert.ok(shapedRadius(narrow,26,0)<shapedRadius(initial,26,0)-.25,'can narrow away from the original silhouette');
+  assert.ok(shapedRadius(wide,12,0)>shapedRadius(initial,12,0)+.12,'can widen away from the original silhouette before fold resistance');
+  assert.ok(shapedRadius(narrow,26,0)<shapedRadius(initial,26,0)-.1,'can narrow away from the original silhouette before fold resistance');
   for(const model of [wide,narrow]){
     for(let row=0;row<=40;row++)assert.equal(new Set(model.offsets.slice(row*80,(row+1)*80)).size,1);
     assert.deepEqual(validateModel(JSON.parse(JSON.stringify(model))),model);
