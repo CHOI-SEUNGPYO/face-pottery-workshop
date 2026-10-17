@@ -77,36 +77,38 @@ export function reshapeProfile(model,before,v,outward,upward){
   const reach=.24,contact=t=>{const q=(profileY(before,t)-held)/reach;return Math.abs(q)>=1?0:(1-q*q)**3;};
   model.height=before.height;
   if(before.profileLevels)model.profileLevels=before.profileLevels.slice();else delete model.profileLevels;
+  let influence=levels.map((_,row)=>contact(row/ROWS));
   if(upward){
-    // Store the material's actual heights. The old fixed-height resampling
-    // left the pole behind and stopped a stroke at 45% of its starting height.
-    // The free edge joins a nearby touch in either direction. Never choose a
-    // different deformation rule just because a hand reverses its direction.
+    // Advect both coordinates through the same moving fingertip field. Moving
+    // heights broadly but widths narrowly created a shelf on diagonal drags.
     const upper=top-held<.42,lower=held-bottom<.06;
     const gap=Math.min(.08,(held-bottom)/2,(top-held)/2);
     const target=upper?clamp(held+upward,Math.min(held,bottom+.22),held+1.45-top):lower?clamp(held+upward,held-1.45-bottom,Math.max(held,top-.22)):clamp(held+upward,bottom+gap,top-gap);
-    const delta=target-held,lo=Math.max(bottom,Math.min(held,target)-reach),hi=Math.min(top,Math.max(held,target)+reach);
-    const left=(target-lo)/(held-lo||1),right=(hi-target)/(hi-held||1);
-    const middle=upper||lower?1:2*left*right/(left+right);
-    const curve=(y,a,b,x,z,m,n)=>{const t=(y-a)/(b-a);return (2*t**3-3*t*t+1)*x+(t**3-2*t*t+t)*(b-a)*m+(-2*t**3+3*t*t)*z+(t**3-t*t)*(b-a)*n;};
-    model.profileLevels=levels.map(y=>{
-      if(y<=lo)return lower?y+delta:y;
-      if(y>=hi)return upper?y+delta:y;
-      if(y<=held)return lower?y+delta:lo+(y-lo)*(target-lo)/(held-lo);
-      return upper?y+delta:curve(y,held,hi,target,hi,Math.min(middle,3*right),Math.min(1,3*right));
-    });
-    // Match the derivative at the grabbed point instead of leaving a linear
-    // height ramp that turns a soft shoulder into a shelf.
-    model.profileLevels=levels.map((y,i)=>y>lo&&y<held&&!lower?curve(y,lo,held,lo,target,Math.min(1,3*left),Math.min(middle,3*left)):model.profileLevels[i]);
-    model.height=(model.profileLevels[ROWS]-model.profileLevels[0])/2;
+    const delta=target-held;
+    if(delta){
+      const margin=Math.max(.004,Math.min(reach,lower?reach:Math.min(held,target)-bottom,upper?reach:top-Math.max(held,target)));
+      const steps=Math.ceil(Math.abs(delta)/(margin/8)),step=delta/steps;
+      const force=(y,hand)=>{
+        if(y>=hand&&upper||y<=hand&&lower)return 1;
+        const span=y<hand?Math.min(reach,hand-bottom):Math.min(reach,top-hand),q=(y-hand)/Math.max(span,.000001);
+        return Math.abs(q)<1?(1-q*q)**3:0;
+      };
+      model.profileLevels=levels.map(y=>{
+        for(let i=0;i<steps;i++){
+          const hand=held+i*step,k1=force(y,hand),k2=force(y+step*k1/2,hand+step/2),k3=force(y+step*k2/2,hand+step/2),k4=force(y+step*k3,hand+step);
+          y+=step*(k1+2*k2+2*k3+k4)/6;
+        }
+        return y;
+      });
+      influence=levels.map((y,i)=>clamp((model.profileLevels[i]-y)/delta,0,1));
+      model.height=(model.profileLevels[ROWS]-model.profileLevels[0])/2;
+    }
   }
   model.profile=[];const contactWeights=[];
   for(let row=0;row<=ROWS;row++){
-    const influence=contact(row/ROWS),radius=radii[row];
-    // Only the pole closes at zero; there is no reserved head or foot section.
-    const next=row===ROWS?0:clamp(radius+outward*influence,.18*Math.min(1,(ROWS-row)/3),1.5);
-    model.profile.push(next);
-    contactWeights.push(influence);
+    const weight=influence[row],radius=radii[row];
+    const next=row===ROWS?0:clamp(radius+outward*weight,.18*Math.min(1,(ROWS-row)/3),1.5);
+    model.profile.push(next);contactWeights.push(weight);
   }
   if(upward){
     const touchY=profileY(model,v),touchRadius=shapedRadius(before,v*ROWS,0)+outward;
