@@ -1,4 +1,4 @@
-import {reshapeProfile,profileY,unwrap,eraseAt,invalidateProcess} from './model.js';
+import {reshapeProfile,sampledProfile,profileY,unwrap,eraseAt,invalidateProcess} from './model.js';
 import {strokeContour} from './contour.js';
 import {closedStroke,openingLoop} from './openings.js';
 
@@ -18,6 +18,7 @@ export class Interactions {
     if(this.stage===2&&(!crown||Math.hypot(...crown)>.98))return;
     if(!rotate&&!hit&&!crown&&!grab)return;
     this.drag={id:e.pointerId,x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY,hit,grab,points:[],screen:[],before:structuredClone(this.pottery.model),changed:false,rotate};
+    if(grab)this.drag.shapeBefore={...this.drag.before,profile:sampledProfile(this.drag.before)};
     this.surface.classList.toggle('is-sculpting',!!grab);
     this.surface.setPointerCapture(e.pointerId);this.surface.focus({preventScroll:true});
     this.sample(e);e.preventDefault();
@@ -36,21 +37,29 @@ export class Interactions {
     const d=this.drag;if(!d||e.pointerId!==d.id)return;const dx=e.clientX-d.x,dy=e.clientY-d.y;d.x=e.clientX;d.y=e.clientY;
     if(d.rotate){this.pottery.rotate(dx*.012);return;}
     if(this.stage===1&&d.grab){
-      const {v,side,unitsPerPixel}=d.grab;
-      const totalX=e.clientX-d.startX,totalY=e.clientY-d.startY;
-      if(!d.changed&&Math.hypot(totalX,totalY)<4)return;
-      reshapeProfile(this.pottery.model,d.before,v,d.grab.end?0:totalX*unitsPerPixel*side,-totalY*unitsPerPixel,d.grab.end||0);
-      const actual=profileY(this.pottery.model,v),requested=profileY(d.before,v)-totalY*unitsPerPixel;
-      if(!d.boundMessage&&actual-requested>2*unitsPerPixel&&actual<profileY(this.pottery.model,0)+.221){d.boundMessage=true;this.onMessage('바닥에 가까워졌어요. 옆으로 펼쳐 볼까요?');}
-      d.changed=true;this.invalidate();if(!this.frame)this.frame=requestAnimationFrame(()=>{this.frame=null;this.pottery.refreshShape();});
+      d.pending=[e.clientX,e.clientY];
+      if(!this.frame)this.frame=requestAnimationFrame(()=>{this.frame=null;this.sculpt();});
     }else if(this.stage===7){const rect=this.surface.getBoundingClientRect();this.pottery.move(dx/rect.width*(this.pottery.camera.right-this.pottery.camera.left),-dy/rect.height*(this.pottery.camera.top-this.pottery.camera.bottom));d.changed=true;}
     else if(this.stage===2||this.stage===3){const samples=e.getCoalescedEvents?.()||[];for(const sample of samples)this.sample(sample);this.sample(e);}
     e.preventDefault();
+  }
+  sculpt(){
+    const d=this.drag;if(!d?.pending)return;
+    const [x,y]=d.pending;d.pending=null;
+    const {v,side,unitsPerPixel}=d.grab,totalX=x-d.startX,totalY=y-d.startY;
+    if(!d.changed&&Math.hypot(totalX,totalY)<1)return;
+    // One vector for every touch, including the top. Diagonal strokes do not
+    // silently lose their width component at a separate height handle.
+    reshapeProfile(this.pottery.model,d.shapeBefore,v,totalX*unitsPerPixel*side,-totalY*unitsPerPixel);
+    const actual=profileY(this.pottery.model,v),requested=profileY(d.before,v)-totalY*unitsPerPixel;
+    if(!d.boundMessage&&actual-requested>2*unitsPerPixel&&actual<profileY(this.pottery.model,0)+.221){d.boundMessage=true;this.onMessage('바닥에 가까워졌어요. 옆으로 펼쳐 볼까요?');}
+    d.changed=true;this.invalidate();this.pottery.refreshShape();
   }
   invalidate(){invalidateProcess(this.pottery.model);}
   up(e){
     const d=this.drag;if(!d||e.pointerId!==d.id)return;const model=this.pottery.model;
     if(this.frame){cancelAnimationFrame(this.frame);this.frame=null;}
+    if(this.stage===1&&d.grab&&!d.rotate){d.pending=[e.clientX,e.clientY];this.sculpt();}
     if(!d.rotate&&(this.stage===2||this.stage===3))this.sample(e);
     if(this.stage===2&&d.points.length){
       const outside=d.points.some(p=>Math.hypot(...p)>.98),points=outside?[]:strokeContour(d.points);
@@ -73,7 +82,7 @@ export class Interactions {
     }
     if(this.stage===7&&d.changed){d.changed=this.pottery.tryAssemble();this.onMessage(d.changed?'두 토기를 함께 놓아 봤어요!':'시루 바로 위로 조금 더 옮겨 보세요.');}
     this.preview.setAttribute('points','');this.drag=null;this.surface.classList.remove('is-sculpting');
-    if(d.changed){this.pottery.update();this.onCommit(d.before);}else this.pottery.render();
+    if(d.changed){if(this.stage!==1)this.pottery.update();this.onCommit(d.before);}else this.pottery.render();
   }
   cancel(){if(this.frame){cancelAnimationFrame(this.frame);this.frame=null;}if(!this.drag)return;this.pottery.model=this.drag.before;this.pottery.update();this.drag=null;this.preview.setAttribute('points','');this.surface.classList.remove('is-sculpting');}
 }
