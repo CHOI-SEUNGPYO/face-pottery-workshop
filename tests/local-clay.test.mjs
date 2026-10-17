@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {reshapeProfile,shapedRadius,validateModel,createWorkshopHistory,ROWS,COLS} from '../src/model.js';
+import {reshapeProfile,shapedRadius,profileY,validateModel,createWorkshopHistory,ROWS,COLS} from '../src/model.js';
 import {Pottery} from '../src/pottery.js';
 import {foldedModel} from './folded-fixture.js';
 
@@ -24,11 +24,12 @@ test('vertical stretching transports a fold locally without reversing the materi
   const before=foldedModel(),after=structuredClone(before);reshapeProfile(after,before,.125,0,.18);
   for(let row=16;row<=ROWS;row++)assert.equal(after.profile[row],before.profile[row]);
   assert.equal(after.profile[0],before.profile[0]);
-  assert.ok(after.profile[8]<before.profile[8]-.08,'the pinched part must move up rather than replacing the upper body');
+  assert.ok(Math.abs(profileY(after,.125)-profileY(before,.125)-.18)<1e-8,'the pinched material must move with the hand');
+  assert.equal(profileY(after,.6),profileY(before,.6),'the distant upper body must not move');
   for(const upward of [-20,-.4,.4,20]){
     const ordered=foldedModel();ordered.profile=Array.from({length:ROWS+1},(_,i)=>i===ROWS?0:.3+i*.02);
     const moved=structuredClone(ordered);reshapeProfile(moved,ordered,.5,0,upward);
-    for(let row=1;row<37;row++)assert.ok(moved.profile[row]>=moved.profile[row-1]-1e-8,'material rows must not fold back over their neighbours');
+    for(let row=1;row<=ROWS;row++)assert.ok(moved.profileLevels[row]>moved.profileLevels[row-1],'material heights must not fold back over their neighbours');
     assert.equal(moved.profile[0],ordered.profile[0]);assert.equal(moved.profile[ROWS],0);assert.ok(validateModel(moved));
   }
 });

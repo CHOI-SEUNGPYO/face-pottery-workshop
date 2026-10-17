@@ -1,5 +1,5 @@
 import * as THREE from '../vendor/three.module.js';
-import {shapedRadius,COLS,ROWS,SURFACE_ROWS} from './model.js';
+import {shapedRadius,profileY,COLS,ROWS,SURFACE_ROWS} from './model.js';
 import {insideLoop} from './openings.js';
 
 // The complete vertical profile closes at the top. There is no separate head cap.
@@ -11,10 +11,10 @@ export function crownRadius(model){
 }
 export function topPoint(model,x,y,depth=0,radius=crownRadius(model)){
   const distance=Math.hypot(x,y)*radius,u=(Math.atan2(x,-y)/(Math.PI*2)+1)%1,c=u*COLS,i=Math.floor(c),f=c-i;
-  let previous=0,height=1;
+  let previous=0,height=profileY(model,1)/model.height;
   for(let row=SURFACE_ROWS-1;row>=0;row--){
     const sample=row/SURFACE_ROWS*ROWS,r=shapedRadius(model,sample,i)*(1-f)+shapedRadius(model,sample,(i+1)%COLS)*f;
-    if(r>=distance){height=((row+1-(distance-previous)/(r-previous||1))/SURFACE_ROWS*2-1);break;}
+    if(r>=distance){const f=(distance-previous)/(r-previous||1),a=profileY(model,(row+1)/SURFACE_ROWS),b=profileY(model,row/SURFACE_ROWS);height=(a+(b-a)*f)/model.height;break;}
     previous=r;
   }
   return [x*radius,height-depth,-y*radius];

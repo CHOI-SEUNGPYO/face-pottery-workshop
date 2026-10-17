@@ -1,0 +1,12 @@
+<!doctype html><html lang="ko"><meta charset="utf-8"><title>연속 누르기 확인</title>
+<style>*{box-sizing:border-box}body{margin:0;background:#f6f0e4;color:#594235;font:17px sans-serif}h1{margin:24px;font-size:25px}main{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;padding:0 20px}section{min-width:0;border:1px solid #d9c6ae;border-radius:20px;text-align:center}h2{font-size:20px}section>div{height:430px}p{font-size:15px;padding:0 18px;line-height:1.6}canvas{display:block;width:100%;height:100%}</style>
+<h1>위에서 아래로 계속 눌러도 손을 따라 내려옵니다</h1><main>
+<section><h2>누르기 전</h2><div id="before"></div><p>긴 목과 접힌 몸체를 재현했습니다.<br>바닥은 같은 높이에 있습니다.</p></section>
+<section><h2>아래로 누르는 중</h2><div id="mid"></div><p>꼭대기가 함께 내려옵니다.<br>윗부분만 남아 길어지지 않습니다.</p></section>
+<section><h2>같은 동작으로 더 누르기</h2><div id="after"></div><p>예전 최소 높이를 지나도 내려옵니다.<br>바닥을 두고 낮아집니다.</p></section>
+</main><script type="module">
+import {Pottery} from '../src/pottery.js';import {reshapeProfile} from '../src/model.js';import {tallNeckModel} from './folded-fixture.js';
+const before=tallNeckModel();new Pottery(document.querySelector('#before'),before);
+const mid=structuredClone(before);reshapeProfile(mid,before,1,0,-.8,1);new Pottery(document.querySelector('#mid'),mid);
+const after=structuredClone(before);reshapeProfile(after,before,1,0,-1.65,1);new Pottery(document.querySelector('#after'),after);
+</script></html>
