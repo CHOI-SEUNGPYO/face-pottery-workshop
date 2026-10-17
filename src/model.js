@@ -1,3 +1,4 @@
+import {redistributeClay} from './clay-material.js';
 export const ROWS = 40, COLS = 80;
 export const SURFACE_ROWS = 120;
 export const clamp = (x,a,b) => Math.max(a,Math.min(b,x));
@@ -33,6 +34,12 @@ function profileRadius(model,row,col){
 }
 export function shapedRadius(model,row,col){
   row=clamp(row,0,ROWS);
+  if(model.profile){
+    const i=Math.min(ROWS-1,Math.floor(row)),y=profileY(model,row/ROWS),at=j=>profileY(model,clamp(j,0,ROWS)/ROWS),a=model.profile[i]**2,b=model.profile[i+1]**2;
+    const span=at(i+1)-at(i),t=clamp((y-at(i))/span,0,1),slope=(x,z)=>x*z>0?2*x*z/(x+z):0;
+    const d=(b-a)/span,prev=i?(a-model.profile[i-1]**2)/(at(i)-at(i-1)):d,next=i<ROWS-1?(model.profile[i+2]**2-b)/(at(i+2)-at(i+1)):d;
+    return Math.sqrt(clamp((2*t**3-3*t*t+1)*a+(t**3-2*t*t+t)*slope(prev,d)*span+(-2*t**3+3*t*t)*b+(t**3-t*t)*slope(d,next)*span,Math.min(a,b),Math.max(a,b)));
+  }
   // Round the closing end of the same meridian. Its width comes from the
   // edited neck, never the original vessel. Squared radius gives a horizontal
   // tangent at the pole instead of the old straight cone.
@@ -72,6 +79,9 @@ export function sampledProfile(model){
   return model.profile??Array.from({length:ROWS+1},(_,row)=>Array.from({length:COLS},(_,col)=>shapedRadius(model,row,col)).reduce((sum,x)=>sum+x,0)/COLS);
 }
 export function reshapeProfile(model,before,v,outward,upward){
+  if(!outward&&!upward){
+    for(const key of ['height','offsets','profile','profileLevels']){if(before[key]===undefined)delete model[key];else model[key]=Array.isArray(before[key])?before[key].slice():before[key];}return;
+  }
   const radii=sampledProfile(before);
   const levels=Array.from({length:ROWS+1},(_,row)=>profileY(before,row/ROWS)),bottom=levels[0],top=levels[ROWS],held=profileY(before,v);
   const reach=.24,contact=t=>{const q=(profileY(before,t)-held)/reach;return Math.abs(q)>=1?0:(1-q*q)**3;};
@@ -100,52 +110,37 @@ export function reshapeProfile(model,before,v,outward,upward){
         }
         return y;
       });
+      // A downward palm on the very top transmits compression through the
+      // supported body. Keeping every lower ring fixed made a mushroom cap.
+      if(delta<0&&top-held<.15){
+        const spread=(1-(top-held)/.15)**2*Math.min(1,-delta/.12),scale=(top-bottom+delta)/(top-bottom);
+        model.profileLevels=model.profileLevels.map((y,i)=>y+(bottom+(levels[i]-bottom)*scale-y)*spread);
+      }
       influence=levels.map((y,i)=>clamp((model.profileLevels[i]-y)/delta,0,1));
       model.height=(model.profileLevels[ROWS]-model.profileLevels[0])/2;
     }
   }
-  model.profile=[];const contactWeights=[];
+  model.profile=[];
   for(let row=0;row<=ROWS;row++){
     const weight=influence[row],radius=radii[row];
     const next=row===ROWS?0:clamp(radius+outward*weight,.18*Math.min(1,(ROWS-row)/3),1.5);
-    model.profile.push(next);contactWeights.push(weight);
+    model.profile.push(next);
   }
-  if(upward){
-    const touchY=profileY(model,v),touchRadius=shapedRadius(before,v*ROWS,0)+outward;
-    for(let row=1;row<ROWS;row++){
-      const a=(row-1)/ROWS,b=(row+1)/ROWS;
-      const compression=clamp(1-(profileY(model,b)-profileY(model,a))/(profileY(before,b)-profileY(before,a)),0,1);
-      const distance=Math.hypot(profileY(model,row/ROWS)-touchY,model.profile[row]-touchRadius)/reach;
-      // Fair a crease formed directly under the hand, not every compressed
-      // ring along the stroke. Distant lower fullness must retain its width.
-      const local=distance<1?(1-distance*distance)**3:0;
-      contactWeights[row]=Math.max(contactWeights[row],compression*local);
+  const pressure=Math.min(1,Math.hypot(outward,upward)/.24),editedLevels=model.profile.map((_,row)=>profileY(model,row/ROWS));
+  const contactY=profileY(model,v);
+  let supported=redistributeClay(radii,levels,model.profile,editedLevels,pressure,contactY);
+  if(!supported){
+    // When there is no room left for the material, resist continuously during
+    // the gesture. Do not collapse or re-template the work after release.
+    const requested=model.profile.slice();let lo=0,hi=1,best=radii.slice(),bestY=levels;
+    for(let step=0;step<18;step++){
+      const f=(lo+hi)/2,y=levels.map((v,i)=>v+(editedLevels[i]-v)*f),r=radii.map((v,i)=>v+(requested[i]-v)*f);
+      const result=redistributeClay(radii,levels,r,y,pressure*f,held+(contactY-held)*f);
+      if(result){lo=f;best=result;bestY=y;}else hi=f;
     }
+    supported=best;model.profileLevels=bestY;model.height=(bestY[ROWS]-bestY[0])/2;
   }
-  // Relax creases only in the touched patch. A zero-motion re-grab must leave
-  // the saved profile intact, and untouched rows are never faired globally.
-  const pressure=Math.min(1,Math.hypot(outward,upward)/.12),heldRow=Math.min(ROWS-3,Math.round(v*ROWS));
-  const editedLevels=model.profile.map((_,row)=>profileY(model,row/ROWS));
-  const atHeight=(radii,y)=>{
-    if(y<=editedLevels[0])return radii[0];if(y>=editedLevels[ROWS])return radii[ROWS];
-    let lo=0,hi=ROWS;while(hi-lo>1){const mid=(hi+lo)>>1;if(editedLevels[mid]<=y)lo=mid;else hi=mid;}
-    return radii[lo]+(radii[hi]-radii[lo])*(y-editedLevels[lo])/(editedLevels[hi]-editedLevels[lo]);
-  };
-  for(let pass=0;pass<8&&pressure;pass++){
-    const previous=model.profile.slice();
-    for(let row=1;row<ROWS;row++){
-      if(row===heldRow)continue;
-      const blend=.7*pressure*Math.sqrt(contactWeights[row]);
-      if(!blend)continue;
-      // Use millimetres of clay, not ring indices: after stretching, adjacent
-      // material rings may be very far apart or stacked into a tiny crease.
-      let total=0,weight=0;
-      for(let sample=-4;sample<=4;sample++){
-        const w=(1-(sample/5)**2)**3;total+=atHeight(previous,editedLevels[row]+sample*.03)*w;weight+=w;
-      }
-      model.profile[row]=clamp(previous[row]+(total/weight-previous[row])*blend,.18*Math.min(1,(ROWS-row)/3),1.5);
-    }
-  }
+  model.profile=supported;
   for(let row=0;row<=ROWS;row++){
     const offset=model.profile[row]-baseRadius(row/ROWS);
     model.offsets.fill(offset,row*COLS,(row+1)*COLS);

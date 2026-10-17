@@ -61,12 +61,12 @@ export class Pottery {
   paint(){
     this.paintMouth();
     const mask=this.mask.getContext('2d'),bump=this.bump.getContext('2d'),color=this.colorMap.getContext('2d');mask.fillStyle='white';mask.fillRect(0,0,1024,512);bump.drawImage(this.baseBump,0,0);color.drawImage(this.baseColor,0,0);
-    for(const mark of this.model.marks){const loop=openingLoop(mark);for(const shift of [-1,0,1]){const ctx=loop?mask:bump;const pts=loop?(mark.tool==='ear'?raisedFootprint(loop):loop):mark.points;if(!pts.length)continue;ctx.beginPath();pts.forEach(([u,v],i)=>{const x=(u+shift)*1024,y=(1-v)*512;i?ctx.lineTo(x,y):ctx.moveTo(x,y);});ctx.lineCap='round';ctx.lineJoin='round';
+    for(const mark of this.model.marks){const loop=openingLoop(mark,this.model);for(const shift of [-1,0,1]){const ctx=loop?mask:bump;const pts=loop?(mark.tool==='ear'?raisedFootprint(loop,this.model):loop):mark.points;if(!pts.length)continue;ctx.beginPath();pts.forEach(([u,v],i)=>{const x=(u+shift)*1024,y=(1-v)*512;i?ctx.lineTo(x,y):ctx.moveTo(x,y);});ctx.lineCap='round';ctx.lineJoin='round';
       if(loop){ctx.fillStyle='#000';ctx.closePath();ctx.fill();}
       else{ctx.strokeStyle=mark.tool==='carve'?'#353535':'#777';ctx.lineWidth=mark.tool==='carve'?7:22;ctx.stroke();if(mark.tool==='carve'){color.beginPath();pts.forEach(([u,v],i)=>i?color.lineTo((u+shift)*1024,(1-v)*512):color.moveTo((u+shift)*1024,(1-v)*512));color.lineCap='round';color.lineJoin='round';color.strokeStyle='#756657';color.lineWidth=5;color.stroke();}}
     }}this.maskTexture.needsUpdate=true;this.bumpTexture.needsUpdate=true;this.colorTexture.needsUpdate=true;
   }
-  updateOpenings(){const marks=this.model.marks.filter(mark=>openingLoop(mark));this.openings=marks.map(openingLoop);this.rims.geometry.dispose();this.rims.geometry=openingWalls(this.model,this.inner.geometry,this.openings,marks.map(mark=>mark.tool==='ear'));}
+  updateOpenings(){const marks=this.model.marks.filter(mark=>openingLoop(mark,this.model));this.openings=marks.map(mark=>openingLoop(mark,this.model));this.rims.geometry.dispose();this.rims.geometry=openingWalls(this.model,this.inner.geometry,this.openings,marks.map(mark=>mark.tool==='ear'));}
   refreshShape(){
     const fast=refreshBodyGeometry(this.model,this.body.geometry);
     if(fast){refreshBodyGeometry(this.model,this.inner.geometry,true);if(this.openings.length)this.updateOpenings();}

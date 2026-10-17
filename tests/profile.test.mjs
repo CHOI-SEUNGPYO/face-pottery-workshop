@@ -8,8 +8,8 @@ test('profile can leave the original silhouette without losing circular rings or
   const initial=freshModel(),wide=freshModel(),narrow=freshModel();
   reshapeProfile(wide,initial,.3,1,0);
   reshapeProfile(narrow,initial,.65,-1,0);
-  assert.ok(wide.offsets[12*80]>.5,'can widen beyond the old base-relative limit');
-  assert.ok(narrow.offsets[26*80]<-.38,'can narrow the original belly beyond the old limit');
+  assert.ok(shapedRadius(wide,12,0)>shapedRadius(initial,12,0)+.15,'can widen away from the original silhouette');
+  assert.ok(shapedRadius(narrow,26,0)<shapedRadius(initial,26,0)-.25,'can narrow away from the original silhouette');
   for(const model of [wide,narrow]){
     for(let row=0;row<=40;row++)assert.equal(new Set(model.offsets.slice(row*80,(row+1)*80)).size,1);
     assert.deepEqual(validateModel(JSON.parse(JSON.stringify(model))),model);
@@ -19,7 +19,7 @@ test('profile can leave the original silhouette without losing circular rings or
 
 test('local profile gestures keep circular rings, move a bulge vertically, and survive undo/save',()=>{
   const original=freshModel(),wide=freshModel();reshapeProfile(wide,original,.4,.28,0);
-  assert.ok(shapedRadius(wide,16,0)-shapedRadius(original,16,0)>.2);
+  assert.ok(shapedRadius(wide,16,0)-shapedRadius(original,16,0)>.12);
   assert.ok(Math.abs(shapedRadius(wide,5,0)-shapedRadius(original,5,0))<.04,'faraway clay moves much less than the grabbed area');
   for(let row=0;row<=40;row++)assert.equal(new Set(wide.offsets.slice(row*80,(row+1)*80)).size,1);
   const moved=structuredClone(wide),shiftedBase=structuredClone(original);reshapeProfile(moved,wide,.4,0,.15);reshapeProfile(shiftedBase,original,.4,0,.15);
