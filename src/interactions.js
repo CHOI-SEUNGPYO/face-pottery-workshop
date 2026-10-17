@@ -11,7 +11,7 @@ export class Interactions {
   set(stage,tool){this.cancel();this.stage=stage;this.tool=tool;this.pottery.setTool?.(tool);}
   down(e){
     if(e.button!==0||this.drag||![1,2,3,4,7,8,9].includes(this.stage))return;
-    if(e.target.closest('button'))return;const hit=this.pottery.hit(e.clientX,e.clientY,this.stage===3);
+    if(e.target.closest('button'))return;const hit=this.pottery.hit(e.clientX,e.clientY,this.stage===3&&this.tool==='erase');
     const rotate=this.tool==='rotate'||[4,8,9].includes(this.stage);const crown=this.stage===2?this.pottery.crownPoint(e.clientX,e.clientY):null;
     const grab=this.stage===1&&!rotate?this.pottery.shapeGrab(e.clientX,e.clientY):null;
     if(this.stage===1&&!rotate&&!grab)return;
@@ -26,7 +26,19 @@ export class Interactions {
   sample(e){
     const d=this.drag;if(!d)return;const r=this.surface.getBoundingClientRect();
     if(this.stage===2){const p=this.pottery.crownPoint(e.clientX,e.clientY);if(p&&(!d.points.length||Math.hypot(p[0]-d.points.at(-1)[0],p[1]-d.points.at(-1)[1])>.002)){d.points.push(p);d.screen.push([e.clientX-r.left,e.clientY-r.top]);}}
-    else if(this.stage===3&&!d.rotate){const h=this.pottery.hit(e.clientX,e.clientY,true);if(h&&h.uv.y>.05&&h.uv.y<.9){d.points.push([h.uv.x,h.uv.y]);d.screen.push([e.clientX-r.left,e.clientY-r.top]);}}
+    else if(this.stage===3&&!d.rotate){
+      const h=this.pottery.hit(e.clientX,e.clientY,this.tool==='erase');
+      if(h&&h.uv.y>.05&&h.uv.y<.9){
+        if(d.gap)d.broken=true;
+        if(d.lastSurface&&h.point){
+          const screenDistance=Math.hypot(e.clientX-d.lastSurface.x,e.clientY-d.lastSurface.y),camera=this.pottery.camera;
+          const scale=camera?(camera.right-camera.left)/Math.max(1,r.width):.01;
+          if(h.point.distanceTo(d.lastSurface.point)>screenDistance*scale*3+.08)d.broken=true;
+        }
+        if(!d.broken){d.points.push([h.uv.x,h.uv.y]);d.screen.push([e.clientX-r.left,e.clientY-r.top]);}
+        if(h.point)d.lastSurface={point:h.point.clone(),x:e.clientX,y:e.clientY};
+      }else if(d.points.length)d.gap=true;
+    }
     if((this.stage===2||this.stage===3)&&!d.rotate){
       this.preview.setAttribute('points',d.screen.map(p=>p.join(',')).join(' '));
       const first=d.screen[0],last=d.screen.at(-1),closed=this.stage===3?closedStroke(d.points):d.screen.length>5&&Math.hypot(first[0]-last[0],first[1]-last[1])<14;
@@ -53,6 +65,7 @@ export class Interactions {
     reshapeProfile(this.pottery.model,d.shapeBefore,v,totalX*unitsPerPixel*side,-totalY*unitsPerPixel);
     const actual=profileY(this.pottery.model,v),requested=profileY(d.before,v)-totalY*unitsPerPixel;
     if(!d.boundMessage&&actual-requested>2*unitsPerPixel&&actual<profileY(this.pottery.model,0)+.221){d.boundMessage=true;this.onMessage('바닥에 가까워졌어요. 옆으로 펼쳐 볼까요?');}
+    if(!d.boundMessage&&Math.abs(actual-requested)>.06){d.boundMessage=true;this.onMessage('주변 흙도 함께 움직여요. 다른 곳을 잡아 조금씩 다듬어 보세요.');}
     d.changed=true;this.invalidate();this.pottery.refreshShape();
   }
   invalidate(){invalidateProcess(this.pottery.model);}
@@ -66,6 +79,7 @@ export class Interactions {
       if(points.length>=3){model.crown=points;this.invalidate();d.changed=true;this.onMessage('그린 테두리 안쪽의 흙을 뚫었어요!');}
       else this.onMessage(outside?'흙 가장자리 안쪽에 테두리를 그려 주세요.':'점을 찍는 대신, 구멍의 테두리를 이어 그려 보세요.');
     }
+    if(this.stage===3&&!d.rotate&&d.points.length&&(d.broken||d.gap&&this.tool==='ear')){this.onMessage('떨어진 면은 이어 뚫을 수 없어요. 이어진 흙 표면에 다시 그려 주세요.');d.points=[];}
     if(this.stage===3&&!d.rotate&&d.points.length){
       if(this.tool==='erase'){const count=model.marks.length;for(const [u,v]of d.points)eraseAt(model,u,v);d.changed=count!==model.marks.length;}
       else if(model.marks.length>=120)this.onMessage('표현이 많이 쌓였어요. 지우기로 조금 정리해 볼까요?');
@@ -73,7 +87,7 @@ export class Interactions {
         let points=unwrap(d.points),tool=this.tool;
         const tap=d.screen.length&&Math.max(...d.screen.map(p=>Math.hypot(p[0]-d.screen[0][0],p[1]-d.screen[0][1])))<6;
         if(tool==='carve'&&(tap||closedStroke(points))){tool='hole';if(tap)points=points.slice(0,1);}
-        if(['hole','ear'].includes(tool)){if(tap)points=points.slice(0,1);points=openingLoop({tool,points})||[];}
+        if(['hole','ear'].includes(tool)){if(tap)points=points.slice(0,1);points=openingLoop({tool,points},model)||[];}
         else{points=points.filter((_,i)=>i%Math.max(1,Math.ceil(points.length/600))===0);if(points.length===1)points.push([points[0][0]+.002,points[0][1]]);}
         if(!points.length)this.onMessage('구멍의 테두리를 이어 그려 보세요.');
         else{model.marks.push({tool,points});d.changed=true;if(tool==='hole')this.onMessage('테두리 안쪽이 뚫렸어요. 돌려서 안쪽도 살펴봐요!');if(tool==='ear')this.onMessage('구멍 둘레가 바깥으로 올라왔어요. 돌려서 살펴봐요!');}

@@ -32,7 +32,7 @@ test('drawing a closed face with the carve tool clears its centre instead of lea
   const e=p=>({button:0,pointerId:1,clientX:p[0]*1000,clientY:p[1]*1000,target:{closest:()=>null},preventDefault(){}});
   interaction.down(e(circle[0]));for(const p of circle.slice(1))interaction.move(e(p));interaction.up(e(circle.at(-1)));
   assert.equal(commits,1);assert.equal(model.marks[0].tool,'hole');
-  const loops=model.marks.map(openingLoop);assert.equal(insideOpening(0,.5,loops),true);assert.equal(insideOpening(1,.5,loops),true);assert.equal(insideOpening(.07,.5,loops),false);
+  const loops=model.marks.map(mark=>openingLoop(mark,model));assert.equal(insideOpening(0,.5,loops),true);assert.equal(insideOpening(1,.5,loops),true);assert.equal(insideOpening(.07,.5,loops),false);
   assert.ok(validateModel(JSON.parse(JSON.stringify(model))));
   assert.equal(closedStroke(circle.slice(0,30)),false);assert.equal(openingLoop({tool:'carve',points:circle.slice(0,30)}),null);
   assert.ok(openingLoop({tool:'carve',points:circle}),'old closed carve strokes also open');

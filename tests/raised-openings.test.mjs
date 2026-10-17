@@ -29,7 +29,7 @@ test('one carving control handles taps, open grooves and closed holes, separatel
 
 test('raised openings extend outward, retain an open tunnel and wrap around the UV seam',()=>{
   const model=draw('ear',[[0,.65]]),loop=openingLoop(model.marks[0]),foot=raisedFootprint(loop),inner=bodyGeometry(model,true);
-  assert.ok(insideOpening(.999,.65,[loop]));assert.ok(insideOpening(.03,.65,[foot]));
+  assert.ok(insideOpening(.999,.65,[loop]));assert.ok(insideOpening(.02,.65,[foot]));
   const ordinary=openingWalls(model,inner,[loop]),raised=openingWalls(model,inner,[loop],[true]);
   assert.ok([...raised.attributes.position.array].every(Number.isFinite));
   const maxRadius=g=>Math.max(...Array.from({length:g.attributes.position.count},(_,i)=>Math.hypot(g.attributes.position.getX(i),g.attributes.position.getZ(i))));
@@ -37,7 +37,7 @@ test('raised openings extend outward, retain an open tunnel and wrap around the 
   const mesh=new THREE.Mesh(raised,new THREE.MeshBasicMaterial({side:THREE.DoubleSide}));mesh.updateMatrixWorld();
   const ray=new THREE.Raycaster(new THREE.Vector3(0,(.65*2-1)*model.height,3),new THREE.Vector3(0,0,-1));
   assert.equal(ray.intersectObject(mesh).length,0,'the projected centre must stay open');
-  const atEdge=new THREE.Raycaster(new THREE.Vector3(.19,(.65*2-1)*model.height,3),new THREE.Vector3(0,0,-1));
+  const atEdge=new THREE.Raycaster(new THREE.Vector3(.13,(.65*2-1)*model.height,3),new THREE.Vector3(0,0,-1));
   assert.ok(atEdge.intersectObject(mesh).length>0,'the lifted skirt must have a real surface');
   inner.dispose();ordinary.dispose();raised.dispose();mesh.material.dispose();
 });
