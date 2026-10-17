@@ -1,0 +1,19 @@
+<!doctype html><html lang="ko"><meta charset="utf-8"><title>접힌 부분 펼치기 비교</title>
+<style>*{box-sizing:border-box}body{margin:0;background:#f6f0e4;color:#594235;font:17px sans-serif}h1{margin:24px;font-size:25px}main{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;padding:0 20px}section{min-width:0;border:1px solid #d9c6ae;border-radius:20px;text-align:center}h2{font-size:20px}section>div{height:430px}p{font-size:15px;padding:0 18px;line-height:1.6}button{padding:12px 20px;margin:8px;border:1px solid #9c7b5b;border-radius:20px;background:#fff7e8;color:#594235}canvas{display:block;width:100%;height:100%}</style>
+<h1>같은 접힘을 잡아 옆과 위로 당겼을 때</h1><main>
+<section><h2>다듬기 전</h2><div id="before"></div><p>아래쪽이 접힌 윤곽을 재현했습니다.<br>세 화면은 같은 모델에서 시작합니다.</p></section>
+<section><h2>이전 계산</h2><div id="old"></div><p>작은 접힘을 당겨도<br>몸체의 넓은 범위가 함께 바뀝니다.</p></section>
+<section><h2>수정한 계산</h2><div id="local"></div><p>잡은 접힘을 중심으로 펼쳐집니다.<br>멀리 있는 몸체와 바닥은 유지됩니다.</p><button id="up">위로만 당긴 모습</button><button id="width">옆으로만 펼친 모습</button><button id="turn">돌려 보기</button></section>
+</main><script type="module">
+import {Pottery} from '../src/pottery.js';
+import {reshapeProfile,clamp,baseRadius,ROWS,COLS} from '../src/model.js';
+import {foldedModel} from './folded-fixture.js';
+const before=foldedModel();new Pottery(document.querySelector('#before'),before);
+const old=structuredClone(before),v=.125,outward=.2,upward=.18,shift=clamp(upward/(2*before.height),-.1,.1);
+old.profile=before.profile.map((_,row)=>{const t=row/ROWS,w=Math.exp(-2*((t-v)/.24)**2),source=clamp(t-shift*w,0,1)*ROWS,low=Math.floor(source),r=before.profile[low]+(before.profile[Math.min(ROWS,low+1)]-before.profile[low])*(source-low);return row===ROWS?0:clamp(r+outward*w,.18*Math.min(1,(ROWS-row)/3),1.5);});
+old.profile.forEach((r,row)=>old.offsets.fill(r-baseRadius(row/ROWS),row*COLS,(row+1)*COLS));new Pottery(document.querySelector('#old'),old);
+const model=structuredClone(before);reshapeProfile(model,before,v,outward,upward);const pot=new Pottery(document.querySelector('#local'),model);
+document.querySelector('#up').onclick=()=>{reshapeProfile(model,before,v,0,upward);pot.update();};
+document.querySelector('#width').onclick=()=>{reshapeProfile(model,before,v,.27,0);pot.update();};
+document.querySelector('#turn').onclick=()=>{pot.setTool('rotate');pot.rotate(.45);};
+</script></html>

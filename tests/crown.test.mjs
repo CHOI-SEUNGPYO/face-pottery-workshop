@@ -50,9 +50,12 @@ test('tiny strokes do not create circles; nearly closed shapes retain corners',(
 });
 
 test('shaping the upper silhouette changes the head instead of leaving a fixed cap',()=>{
-  const before=freshModel(),m=structuredClone(before);reshapeProfile(m,before,.87,-.28,0);
-  for(const row of [32,35,37,38])assert.ok(shapedRadius(m,row,20)<shapedRadius(before,row,20)-.08,`upper row ${row} must follow the gesture`);
-  assert.equal(shapedRadius(m,40,20),0);assert.ok(validateModel(m));
+  const before=freshModel();
+  for(const row of [32,35,37,38]){
+    const m=structuredClone(before);reshapeProfile(m,before,row/40,-.28,0);
+    assert.ok(shapedRadius(m,row,20)<shapedRadius(before,row,20)-.08,`upper row ${row} must follow its local gesture`);
+    assert.equal(shapedRadius(m,40,20),0);assert.ok(validateModel(m));
+  }
 });
 
 test('one continuous body reaches the tip and the base stays closed after pressing',()=>{

@@ -6,7 +6,7 @@ import {Pottery} from '../src/pottery.js';
 
 test('a thin upper or lower outline remains a width handle instead of being swallowed by the height handle',()=>{
   const pot=Object.create(Pottery.prototype);pot.stage=1;pot.tool='shape';pot.model=freshModel();
-  for(let pass=0;pass<3;pass++)for(const v of [.1,.3,.5,.7,.9])reshapeProfile(pot.model,structuredClone(pot.model),v,-.6,0);
+  for(let pass=0;pass<3;pass++)for(const v of Array.from({length:21},(_,i)=>i/20))reshapeProfile(pot.model,structuredClone(pot.model),v,-.6,0);
   pot.camera={left:-1.55,right:1.55};pot.renderer={domElement:{getBoundingClientRect:()=>({left:0,top:0,width:600,height:600})}};
   const scale=600/3.1;
   for(const row of [1,38]){
@@ -18,7 +18,7 @@ test('a thin upper or lower outline remains a width handle instead of being swal
 
 test('strong narrowing leaves neither a fixed crown nor a fixed foot, and a second grab starts at the visible profile',()=>{
   const model=freshModel();
-  for(let pass=0;pass<3;pass++)for(const v of [.1,.3,.5,.7,.9])reshapeProfile(model,structuredClone(model),v,-.6,0);
+  for(let pass=0;pass<3;pass++)for(const v of Array.from({length:21},(_,i)=>i/20))reshapeProfile(model,structuredClone(model),v,-.6,0);
   for(let row=0;row<ROWS-3;row++)assert.ok(Math.abs(shapedRadius(model,row,0)-.18)<1e-9,`ring ${row} must reach the same narrow radius`);
   for(let row=ROWS-3;row<=ROWS;row++)assert.ok(shapedRadius(model,row,0)<=shapedRadius(model,row-1,0),'closing tip cannot widen into a cap');
   const before=structuredClone(model);

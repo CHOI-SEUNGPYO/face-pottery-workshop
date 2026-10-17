@@ -44,7 +44,12 @@ export function shapedRadius(model,row,col){
     return radius*Math.sqrt(Math.max(0,(1-t)*(1+(1+slope)*t)));
   }
   const low=Math.floor(row),a=profileRadius(model,low,col),b=profileRadius(model,Math.min(ROWS,low+1),col);
-  return a+(b-a)*(row-low);
+  const previous=profileRadius(model,Math.max(0,low-1),col),next=profileRadius(model,Math.min(ROWS,low+2),col),t=row-low;
+  const tangent=(x,y)=>x*y>0?2*x*y/(x+y):0;
+  const m0=tangent(a-previous,b-a),m1=tangent(b-a,next-b);
+  // Monotone Hermite interpolation rounds ring joins without inventing a
+  // larger collar or overshooting the child's control radii.
+  return clamp((2*t**3-3*t*t+1)*a+(t**3-2*t*t+t)*m0+(-2*t**3+3*t*t)*b+(t**3-t*t)*m1,Math.min(a,b),Math.max(a,b));
 }
 export function sculptProfile(model,u,v,amount){
   for(let row=2;row<32;row++){
@@ -57,15 +62,43 @@ export function sculptProfile(model,u,v,amount){
 }
 export function reshapeProfile(model,before,v,outward,upward){
   const radii=Array.from({length:ROWS+1},(_,row)=>before.profile?.[row]??Array.from({length:COLS},(_,col)=>shapedRadius(before,row,col)).reduce((sum,x)=>sum+x,0)/COLS);
-  const shift=clamp(upward/(2*before.height),-.1,.1);
-  model.profile=[];
+  const centre=clamp(v,1/ROWS,1-1/ROWS),reach=clamp(.24/(2*before.height),.08,.15);
+  const shift=clamp(upward/(2*before.height),-.45*centre,.45*(1-centre));
+  const left=Math.min(centre,reach+Math.max(0,-shift)*2),right=Math.min(1-centre,reach+Math.max(0,shift)*2);
+  const weight=t=>{const q=(t-centre)/(t<centre?left:right);return Math.abs(q)>=1?0:(1-q*q)**3;};
+  const contact=t=>{const q=(t-v)/reach;return Math.abs(q)>=1?0:(1-q*q)**3;};
+  model.profile=[];const contactWeights=[];
   for(let row=0;row<=ROWS;row++){
-    const t=row/ROWS,weight=Math.exp(-2*((t-v)/.24)**2),source=clamp(t-shift*weight,0,1)*ROWS;
+    const t=row/ROWS;
+    // Move the contacted material forward, then invert that monotone map.
+    // Subtracting a local shift at the destination used to fold the source
+    // coordinates over each other and replace neighbouring parts of the pot.
+    let source=t;
+    if(shift&&weight(t)){
+      let low=Math.max(0,t-Math.max(0,shift)),high=Math.min(1,t-Math.min(0,shift));
+      for(let i=0;i<24;i++){const mid=(low+high)/2;if(mid+shift*weight(mid)<t)low=mid;else high=mid;}
+      source=(low+high)/2;
+    }
+    const influence=contact(source);source*=ROWS;
     const low=Math.floor(source),radius=radii[low]+(radii[Math.min(ROWS,low+1)]-radii[low])*(source-low);
     // Only the pole closes at zero; there is no reserved head or foot section.
-    const next=row===ROWS?0:clamp(radius+outward*weight,.18*Math.min(1,(ROWS-row)/3),1.5);
+    const next=row===ROWS?0:clamp(radius+outward*influence,.18*Math.min(1,(ROWS-row)/3),1.5);
     model.profile.push(next);
-    const offset=next-baseRadius(t);
+    contactWeights.push(Math.max(influence,shift?weight(t):0));
+  }
+  // Relax creases only in the touched patch. A zero-motion re-grab must leave
+  // the saved profile intact, and untouched rows are never faired globally.
+  const pressure=Math.min(1,Math.hypot(outward,upward)/.12),heldRow=Math.min(ROWS-3,Math.round((v+shift*weight(v))*ROWS));
+  for(let pass=0;pass<8&&pressure;pass++){
+    const previous=model.profile.slice();
+    for(let row=1;row<ROWS;row++){
+      if(row===heldRow)continue;
+      const blend=.7*pressure*Math.sqrt(contactWeights[row]);
+      model.profile[row]=clamp(previous[row]+((previous[row-1]+previous[row+1])/2-previous[row])*blend,.18*Math.min(1,(ROWS-row)/3),1.5);
+    }
+  }
+  for(let row=0;row<=ROWS;row++){
+    const offset=model.profile[row]-baseRadius(row/ROWS);
     model.offsets.fill(offset,row*COLS,(row+1)*COLS);
   }
 }

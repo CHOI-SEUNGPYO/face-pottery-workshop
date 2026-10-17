@@ -10,7 +10,7 @@ import {freshModel,reshapeProfile} from '../src/model.js';
 const neck=freshModel();
 for(let i=0;i<2;i++)reshapeProfile(neck,structuredClone(neck),.99,-.5,0);
 new Pottery(document.querySelector('#neck'),neck);
-const thin=freshModel();for(let pass=0;pass<3;pass++)for(const v of [.1,.3,.5,.7,.9])reshapeProfile(thin,structuredClone(thin),v,-.6,0);
+const thin=freshModel();for(let pass=0;pass<3;pass++)for(const v of Array.from({length:21},(_,i)=>i/20))reshapeProfile(thin,structuredClone(thin),v,-.6,0);
 new Pottery(document.querySelector('#thin'),thin);
 const opened=freshModel();reshapeProfile(opened,structuredClone(opened),.94,-.2,0);
 opened.crown=Array.from({length:40},(_,i)=>[Math.cos(i/40*Math.PI*2)*.22,Math.sin(i/40*Math.PI*2)*.22]);
