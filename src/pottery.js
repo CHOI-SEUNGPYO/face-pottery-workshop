@@ -114,10 +114,18 @@ export class Pottery {
     if(this.profileView){
       const rect=this.renderer.domElement.getBoundingClientRect(),unitsPerPixel=(this.camera.right-this.camera.left)/rect.width;
       const x=(clientX-rect.left-rect.width/2)*unitsPerPixel,y=(rect.top+rect.height/2-clientY)*unitsPerPixel,side=x>=0?1:-1;
-      const v=clamp((y/this.model.height+1)/2,0,1),col=side===1?20:60;
-      const radius=shapedRadius(this.model,v*ROWS,col);
-      const end=Math.abs(x)<Math.max(.06,radius*.35)&&(Math.abs(y-this.model.height)<48*unitsPerPixel||Math.abs(y+this.model.height)<48*unitsPerPixel)?(y>0?1:-1):0;
-      if(end||Math.abs(Math.abs(x)-radius)<48*unitsPerPixel&&Math.abs(y)<this.model.height+20*unitsPerPixel)return {v:clamp(v,0,.97),side,unitsPerPixel,end};
+      const col=side===1?20:60;
+      const end=Math.abs(x)<12*unitsPerPixel&&(Math.abs(y-this.model.height)<24*unitsPerPixel||Math.abs(y+this.model.height)<24*unitsPerPixel)?(y>0?1:-1):0;
+      if(end)return {v:y>0?.97:0,side,unitsPerPixel,end};
+      let closest=null,distance=48*unitsPerPixel;
+      for(let row=1;row<=SURFACE_ROWS;row++){
+        const va=(row-1)/SURFACE_ROWS,vb=row/SURFACE_ROWS;
+        const ax=shapedRadius(this.model,va*ROWS,col),ay=(va*2-1)*this.model.height,bx=shapedRadius(this.model,vb*ROWS,col),by=(vb*2-1)*this.model.height;
+        const dx=bx-ax,dy=by-ay,t=clamp(((Math.abs(x)-ax)*dx+(y-ay)*dy)/(dx*dx+dy*dy||1),0,1);
+        const d=Math.hypot(Math.abs(x)-ax-dx*t,y-ay-dy*t);
+        if(d<distance){distance=d;closest=va+(vb-va)*t;}
+      }
+      if(closest!==null)return {v:clamp(closest,0,.97),side,unitsPerPixel,end:0};
       return null;
     }
     const rect=this.renderer.domElement.getBoundingClientRect();let closest=null,distance=48;

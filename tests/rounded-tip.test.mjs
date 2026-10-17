@@ -6,7 +6,7 @@ import {topPoint,crownRadius} from '../src/crown.js';
 
 test('narrowed ends close round, follow the edited neck and never flare into a separate cap',()=>{
   const model=freshModel();
-  for(let pass=0;pass<3;pass++)for(const v of [.1,.3,.5,.7,.9])reshapeProfile(model,structuredClone(model),v,-.6,0);
+  for(let pass=0;pass<3;pass++)for(const v of Array.from({length:21},(_,i)=>i/20))reshapeProfile(model,structuredClone(model),v,-.6,0);
   const saved=JSON.stringify(model),neck=shapedRadius(model,37,0);
   let previous=neck;
   for(let row=37;row<=40;row+=.05){const r=shapedRadius(model,row,0);assert.ok(r<=previous+1e-9);previous=r;}
