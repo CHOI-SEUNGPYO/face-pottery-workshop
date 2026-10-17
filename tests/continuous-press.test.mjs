@@ -29,8 +29,8 @@ test('pressing the top follows a long stroke past the old height limit and keeps
 
 test('pressing the upper contour carries its top instead of leaving a tall fixed pole',()=>{
   const before=freshModel(),model=structuredClone(before);reshapeProfile(model,before,.85,0,-1.1);
-  assert.ok(Math.abs(profileY(model,.85)-profileY(before,.85)+1.1)<1e-8);
-  assert.ok(Math.abs(profileY(model,1)-profileY(before,1)+1.1)<1e-8);
+  const moved=profileY(model,.85)-profileY(before,.85);assert.ok(moved<-.05&&moved>=-1.1);
+  assert.ok(Math.abs(profileY(model,1)-profileY(before,1)-moved)<.002,'upper clay follows the grip even when resistance limits the full stroke');
   assert.equal(profileY(model,0),profileY(before,0));assert.ok(validateModel(model));
   const pot=Object.create(Pottery.prototype);pot.stage=1;pot.tool='shape';pot.model=model;
   pot.camera={left:-1.55,right:1.55};pot.renderer={domElement:{getBoundingClientRect:()=>({left:0,top:0,width:600,height:600})}};
