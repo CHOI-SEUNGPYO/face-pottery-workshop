@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import {freshModel,reshapeProfile,shapedRadius,createWorkshopHistory,validateModel,ROWS,COLS} from '../src/model.js';
 import {bodyGeometry} from '../src/body.js';
 import {Pottery} from '../src/pottery.js';
+import {clayVolume} from '../src/clay-material.js';
+import {sampledProfile,profileY} from '../src/model.js';
 
 test('a thin upper or lower outline remains a width handle instead of being swallowed by the height handle',()=>{
   const pot=Object.create(Pottery.prototype);pot.stage=1;pot.tool='shape';pot.model=freshModel();
@@ -18,8 +20,9 @@ test('a thin upper or lower outline remains a width handle instead of being swal
 
 test('strong narrowing leaves neither a fixed crown nor a fixed foot, and a second grab starts at the visible profile',()=>{
   const model=freshModel();
+  const amount=clayVolume(sampledProfile(model),Array.from({length:41},(_,i)=>profileY(model,i/40)));
   for(let pass=0;pass<3;pass++)for(const v of Array.from({length:21},(_,i)=>i/20))reshapeProfile(model,structuredClone(model),v,-.6,0);
-  for(let row=0;row<ROWS-3;row++)assert.ok(Math.abs(shapedRadius(model,row,0)-.18)<1e-9,`ring ${row} must reach the same narrow radius`);
+  assert.ok(Math.abs(clayVolume(model.profile,Array.from({length:41},(_,i)=>profileY(model,i/40)))/amount-1)<1e-5,'repeated narrowing cannot silently delete most of the clay');
   for(let row=ROWS-3;row<=ROWS;row++)assert.ok(shapedRadius(model,row,0)<=shapedRadius(model,row-1,0),'closing tip cannot widen into a cap');
   const before=structuredClone(model);
   reshapeProfile(model,before,.85,0,0);

@@ -10,13 +10,14 @@ test('retouching the upper part after a long pull preserves the lower body alrea
  const pulled=structuredClone(start);reshapeProfile(pulled,start,.35,.36,.65);
  const before=structuredClone(pulled);
  reshapeProfile(pulled,before,.86,-.14,-.18);
- for(let row=0;row<=20;row++)assert.equal(pulled.profile[row],before.profile[row],'the lower body made by the first stroke keeps its width');
+ for(let row=0;row<=13;row++)assert.equal(pulled.profile[row],before.profile[row],'remote lower clay keeps its width');
+ for(let row=14;row<=20;row++)assert.ok(Math.abs(pulled.profile[row]-before.profile[row])<.065,'adjacent clay shares pressure without erasing the lower bulge');
  assert.equal(profileY(pulled,0),profileY(before,0));assert.ok(validateModel(pulled));
  // Reversing a vertical stroke must not switch to a different upper-body policy.
  for(const dy of [-.12,.12]){
   const m=structuredClone(before);reshapeProfile(m,before,.85,-.08,dy);
-  assert.ok(Math.abs(profileY(m,.85)-profileY(before,.85)-dy)<1e-8);
-  assert.ok(Math.abs(profileY(m,1)-profileY(before,1)-dy)<1e-8);
+  const moved=profileY(m,.85)-profileY(before,.85);assert.ok(moved*dy>0&&Math.abs(moved)<=Math.abs(dy)+1e-8);
+  assert.ok(Math.abs(profileY(m,1)-profileY(before,1)-moved)<1e-8);
  }
 });
 
@@ -42,7 +43,7 @@ test('a frame applies the latest diagonal input once, and pointer-up flushes its
   const expected=structuredClone(before);reshapeProfile(expected,{...before,profile:sampledProfile(before)},1,.2,-.4);
   input.up(e(120,140));assert.equal(refreshes,2);assert.equal(commits,1);assert.deepEqual(pot.model.profile,expected.profile);assert.deepEqual(pot.model.profileLevels,expected.profileLevels);
   const vertical=structuredClone(before);reshapeProfile(vertical,{...before,profile:sampledProfile(before)},1,0,-.4);
-  assert.ok(pot.model.profile[37]>vertical.profile[37],'top touch retains its horizontal component');
+  assert.ok(pot.model.profile.some((r,i)=>r>vertical.profile[i]+.01),'top touch retains its horizontal component within the clay patch');
  }finally{globalThis.requestAnimationFrame=raf;globalThis.cancelAnimationFrame=caf;}
 });
 

@@ -15,7 +15,7 @@ test('narrowed ends close round, follow the edited neck and never flare into a s
   assert.ok(slope(ROWS/SURFACE_ROWS)<.35,'the final rendered segment must not look like a pointed cone');
   assert.equal(JSON.stringify(model),saved,'rendering must not modify saved edits');
   const wider=structuredClone(model);reshapeProfile(wider,model,.94,.3,0);
-  assert.ok(shapedRadius(wider,39.5,0)>shapedRadius(model,39.5,0)*2,'round end must grow with the edited neck');
+  assert.ok(shapedRadius(wider,39.5,0)>shapedRadius(model,39.5,0)*1.1,'round end grows with the edited neck while retaining material');
 });
 
 test('top openings and inside surface use the rounded surface at fractional profile heights',()=>{

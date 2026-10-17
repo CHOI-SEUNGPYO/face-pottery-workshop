@@ -65,6 +65,7 @@ export class Interactions {
     reshapeProfile(this.pottery.model,d.shapeBefore,v,totalX*unitsPerPixel*side,-totalY*unitsPerPixel);
     const actual=profileY(this.pottery.model,v),requested=profileY(d.before,v)-totalY*unitsPerPixel;
     if(!d.boundMessage&&actual-requested>2*unitsPerPixel&&actual<profileY(this.pottery.model,0)+.221){d.boundMessage=true;this.onMessage('바닥에 가까워졌어요. 옆으로 펼쳐 볼까요?');}
+    if(!d.boundMessage&&Math.abs(actual-requested)>.06){d.boundMessage=true;this.onMessage('주변 흙도 함께 움직여요. 다른 곳을 잡아 조금씩 다듬어 보세요.');}
     d.changed=true;this.invalidate();this.pottery.refreshShape();
   }
   invalidate(){invalidateProcess(this.pottery.model);}

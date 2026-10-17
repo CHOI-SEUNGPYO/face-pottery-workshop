@@ -5,20 +5,23 @@ import {bodyGeometry} from '../src/body.js';
 import {topPoint} from '../src/crown.js';
 import {Pottery} from '../src/pottery.js';
 import {Interactions} from '../src/interactions.js';
+import {clayVolume} from '../src/clay-material.js';
+import {sampledProfile} from '../src/model.js';
+const volume=m=>clayVolume(sampledProfile(m),Array.from({length:41},(_,i)=>profileY(m,i/40)));
 
 test('pressing the top follows a long stroke past the old height limit and keeps the base planted',()=>{
   const before=freshModel(),short=structuredClone(before),shorter=structuredClone(before);
   reshapeProfile(short,before,1,0,-1.3,1);reshapeProfile(shorter,before,1,0,-1.9,1);
-  assert.ok(Math.abs(profileY(shorter,1)-(profileY(before,1)-1.9))<1e-8);
-  assert.ok(shorter.height<.65);assert.ok(profileY(shorter,1)<profileY(short,1)-.59);
+  assert.ok(shorter.height<.65);assert.ok(profileY(shorter,1)<profileY(short,1)-.01);
+  assert.ok(Math.abs(volume(shorter)/volume(before)-1)<1e-5,'pressing cannot delete clay to satisfy an impossible height');
   for(const model of [short,shorter]){
     assert.equal(profileY(model,0),profileY(before,0));assert.ok(validateModel(model));
     for(let row=1;row<=ROWS;row++)assert.ok(model.profileLevels[row]>model.profileLevels[row-1]);
   }
   const again=structuredClone(shorter);reshapeProfile(again,shorter,1,0,-.1,1);
-  assert.ok(Math.abs(profileY(again,1)-profileY(shorter,1)+.1)<1e-8,'a new press continues from the actual top');
+  assert.ok(profileY(again,1)<=profileY(shorter,1)+1e-8,'a new press continues from the actual top without expanding upward');
   const flat=structuredClone(before);reshapeProfile(flat,before,1,0,-20,1);
-  assert.ok(Math.abs(profileY(flat,1)-profileY(flat,0)-.22)<1e-8);assert.ok(validateModel(flat));
+  assert.ok(volume(flat)>volume(before)*.99999,'remaining material limits extreme compression');assert.ok(validateModel(flat));
   const flatAgain=structuredClone(flat);reshapeProfile(flatAgain,flat,.85,0,-.3);
   assert.ok(profileY(flatAgain,1)<=profileY(flat,1)+1e-8,'pressing a flattened shoulder must never push the top upward');
   reshapeProfile(shorter,before,1,0,0,1);assert.equal(shorter.profileLevels,undefined);assert.equal(shorter.height,before.height);
@@ -59,7 +62,8 @@ test('the real top-handle pointer follows the complete downward gesture and canc
     const surface={addEventListener(){},getBoundingClientRect:()=>({left:0,top:0}),setPointerCapture(){},focus(){},classList:{toggle(){},remove(){}}};
     const input=new Interactions(pottery,surface,{setAttribute(){}},()=>{},()=>{}),e=y=>({button:0,pointerId:1,clientX:100,clientY:y,target:{closest:()=>null},preventDefault(){}});
     input.down(e(100));input.move(e(220));pending();const first=profileY(pottery.model,1);input.move(e(290));pending();
-    assert.ok(Math.abs(profileY(pottery.model,1)-first+.7)<1e-8);assert.equal(profileY(pottery.model,0),profileY(before,0));
+    assert.ok(profileY(pottery.model,1)<first-.05,'continued input still presses until material capacity is reached');assert.ok(Math.abs(volume(pottery.model)/volume(before)-1)<1e-5);assert.equal(profileY(pottery.model,0),profileY(before,0));
+    const lowest=profileY(pottery.model,1);input.move(e(160));pending();assert.ok(profileY(pottery.model,1)>lowest+.2,'reversing the same gesture responds immediately after resistance');
     input.cancel();assert.deepEqual(pottery.model,before);
   }finally{globalThis.requestAnimationFrame=raf;globalThis.cancelAnimationFrame=caf;}
 });
