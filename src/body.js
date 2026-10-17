@@ -1,7 +1,7 @@
 import * as THREE from '../vendor/three.module.js';
 import {ROWS,COLS,SURFACE_ROWS,shapedRadius,profileY,wrapDistance} from './model.js';
 import {crownGeometry} from './crown.js';
-import {openingLoop,insideOpening,raisedFootprint} from './openings.js';
+import {openingLoop,insideOpening,raisedFootprint,openingFrame} from './openings.js';
 
 export const WALL_THICKNESS=.11;
 export const EAR_RISE=.18;
@@ -19,7 +19,7 @@ export function refreshBodyGeometry(model,geometry,inner=false){
   const radius=Array.from({length:SURFACE_ROWS+1},(_,i)=>shapedRadius(model,i/SURFACE_ROWS*ROWS,0));
   const levels=radius.map((_,i)=>profileY(model,i/SURFACE_ROWS)),r=cache.radii,normal=cache.normals,stride=COLS+1;
   for(let row=0;row<=SURFACE_ROWS;row++)for(let col=0;col<=COLS;col++){
-    const i=row*stride+col;r[i]=Math.max(0,radius[row]-cache.cuts[i]-(inner?WALL_THICKNESS:0));
+    const i=row*stride+col;cache.outerRadii[i]=Math.max(0,radius[row]-cache.cuts[i]);r[i]=Math.max(0,cache.outerRadii[i]-(inner?WALL_THICKNESS:0));
   }
   for(let row=0;row<=SURFACE_ROWS;row++)for(let col=0;col<=COLS;col++){
     const i=row*stride+col,k=i*3;
@@ -50,10 +50,10 @@ export function refreshBodyGeometry(model,geometry,inner=false){
   p.needsUpdate=true;n.needsUpdate=true;geometry.computeBoundingSphere();geometry.boundingBox=null;
   return true;
 }
-function sculptCache(cuts){return {cuts:new Float32Array(cuts),radii:new Float64Array(cuts.length),normals:new Float64Array(cuts.length*3)};}
+function sculptCache(cuts,outside){return {outerRadii:new Float64Array(outside),cuts:new Float32Array(cuts),radii:new Float64Array(cuts.length),normals:new Float64Array(cuts.length*3)};}
 
 export function bodyGeometry(model,inner=false){
-  const pos=[],normals=[],uv=[],indices=[],cuts=[],dents=model.marks.filter(mark=>!openingLoop(mark));
+  const pos=[],normals=[],uv=[],indices=[],cuts=[],outside=[],dents=model.marks.filter(mark=>!openingLoop(mark,model));
   // Three.js r180 LatheGeometry (MIT): revolve one continuous meridian.
   // Reorder its grid for our existing opening-wall UV interpolation.
   const profile=Array.from({length:SURFACE_ROWS+1},(_,row)=>new THREE.Vector2(shapedRadius(model,row/SURFACE_ROWS*ROWS,0),profileY(model,row/SURFACE_ROWS)));
@@ -71,7 +71,7 @@ export function bodyGeometry(model,inner=false){
     // A stroke cannot detach the shoulder or the foot. Repeated pressing also has a depth limit.
     const joinFade=Math.max(0,Math.min(1,v/.12,(1-v)/.12));
     const cut=Math.min(.2,indent)*joinFade;cuts.push(cut);radius-=cut;
-    radius=Math.max(0,radius-(inner?WALL_THICKNESS:0));
+    outside.push(Math.max(0,radius));radius=Math.max(0,radius-(inner?WALL_THICKNESS:0));
     const source=col*(SURFACE_ROWS+1)+row,scale=profile[row].x?radius/profile[row].x:0;
     pos.push(vertices.getX(source)*scale,vertices.getY(source),vertices.getZ(source)*scale);uv.push(u,v);
   }
@@ -82,7 +82,7 @@ export function bodyGeometry(model,inner=false){
     side.attributes.normal.setXYZ(first,n.x,n.y,n.z);side.attributes.normal.setXYZ(last,n.x,n.y,n.z);
     if(row===SURFACE_ROWS)for(let col=1;col<COLS;col++)side.attributes.normal.setXYZ(first+col,0,1,0);
   }
-  if(inner){side.userData.sculpt=sculptCache(cuts);return side;}
+  if(inner){side.userData.sculpt=sculptCache(cuts,outside);return side;}
   const plain=side.toNonIndexed();side.dispose();
   const append=(target,source)=>{for(const value of source)target.push(value);};
   pos.length=0;uv.length=0;append(pos,plain.attributes.position.array);append(uv,plain.attributes.uv.array);append(normals,plain.attributes.normal.array);
@@ -96,55 +96,74 @@ export function bodyGeometry(model,inner=false){
     pos.push(0,bottom,0,Math.sin(b)*rb,bottom,Math.cos(b)*rb,Math.sin(a)*ra,bottom,Math.cos(a)*ra);
     normals.push(0,-1,0,0,-1,0,0,-1,0);uv.push(.5,.5,(Math.sin(b)+1)/2,(Math.cos(b)+1)/2,(Math.sin(a)+1)/2,(Math.cos(a)+1)/2);
   }
-  const merged=new THREE.BufferGeometry();merged.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));merged.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));merged.setAttribute('normal',new THREE.Float32BufferAttribute(normals,3));merged.addGroup(0,sideCount,0);merged.addGroup(sideCount,topCount,1);merged.addGroup(sideCount+topCount,COLS*3,2);merged.userData.sculpt=sculptCache(cuts);plain.dispose();top.dispose();return merged;
+  const merged=new THREE.BufferGeometry();merged.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));merged.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));merged.setAttribute('normal',new THREE.Float32BufferAttribute(normals,3));merged.addGroup(0,sideCount,0);merged.addGroup(sideCount,topCount,1);merged.addGroup(sideCount+topCount,COLS*3,2);merged.userData.sculpt=sculptCache(cuts,outside);plain.dispose();top.dispose();return merged;
 }
 
 export function openingWalls(model,inner,loops,raised=[]){
   const positions=[],colors=[],uvs=[],indices=[],verticesByKey=new Map(),grid=inner.attributes.position;
-  const footprints=loops.map((loop,i)=>raised[i]?raisedFootprint(loop):loop);
+  const frames=loops.map(loop=>openingFrame(loop,model)),footprints=loops.map((loop,i)=>raised[i]?raisedFootprint(loop,model):loop);
   const surface=(u,v,depth)=>{
     const x=((u%1+1)%1)*COLS,y=Math.max(0,Math.min(SURFACE_ROWS-.00001,v*SURFACE_ROWS)),col=Math.floor(x),row=Math.floor(y),fx=x-col,fy=y-row,i=row*(COLS+1)+col;
-    const a=new THREE.Vector3().fromBufferAttribute(grid,i),b=new THREE.Vector3().fromBufferAttribute(grid,i+1),c=new THREE.Vector3().fromBufferAttribute(grid,i+COLS+1),d=new THREE.Vector3().fromBufferAttribute(grid,i+COLS+2);
-    const p=fx+fy<=1?a.multiplyScalar(1-fx-fy).addScaledVector(b,fx).addScaledVector(c,fy):b.multiplyScalar(1-fy).addScaledVector(c,1-fx).addScaledVector(d,fx+fy-1);
-    const radius=Math.hypot(p.x,p.z),scale=(radius+WALL_THICKNESS-depth)/Math.max(radius,.001);p.x*=scale;p.z*=scale;
-    if(depth<0){
-      // Lift the mouth along the shoulder's outward/upward direction. Both
-      // the skirt and its tunnel share this displacement and stay connected.
-      const row=Math.max(1,Math.min(ROWS-1,v*ROWS)),col=u*COLS|0;
-      const slope=(shapedRadius(model,row-1,col)-shapedRadius(model,row+1,col))/(profileY(model,(row+1)/ROWS)-profileY(model,(row-1)/ROWS));
-      p.y+=-depth*Math.max(.35,Math.min(.9,slope));
-    }
-    return p;
+    const vertex=(index,outer)=>{
+      const p=new THREE.Vector3().fromBufferAttribute(grid,index);
+      if(outer){const c=index%(COLS+1),r=inner.userData.sculpt.outerRadii[index];p.x=r*ringSin[c];p.z=r*ringCos[c];}return p;
+    };
+    // LatheGeometry uses the a-d diagonal, not the b-c diagonal.
+    const at=outer=>{
+      const a=vertex(i,outer),d=vertex(i+COLS+2,outer);
+      return fx>=fy?a.multiplyScalar(1-fx).addScaledVector(vertex(i+1,outer),fx-fy).addScaledVector(d,fy):a.multiplyScalar(1-fy).addScaledVector(d,fx).addScaledVector(vertex(i+COLS+1,outer),fy-fx);
+    };
+    const p=at(true);
+    if(depth>=0)return p.lerp(at(false),Math.min(1,depth/WALL_THICKNESS));
+    const r=Math.max(1,Math.min(ROWS-1,v*ROWS)),c=(u*COLS|0),dy=profileY(model,(r+1)/ROWS)-profileY(model,(r-1)/ROWS);
+    const slope=(shapedRadius(model,r-1,c)-shapedRadius(model,r+1,c))/Math.max(dy,.000001),tilt=Math.max(.35,Math.min(.9,slope));
+    const angle=u*Math.PI*2,normal=new THREE.Vector3(Math.sin(angle),tilt,Math.cos(angle)).normalize();
+    return p.addScaledVector(normal,-depth);
   };
-  const quad=(vertices,coordinates,light=[1,1,1,1])=>{
-    for(const k of [0,1,2,0,2,3]){
-      const point=vertices[k].toArray(),key=[...point,...coordinates[k],light[k]].map(n=>Math.round(n*1e5)).join(',');
+  const triangle=(vertices,coordinates,light=[1,1,1])=>{
+    for(let k=0;k<3;k++){
+      const point=vertices[k].toArray(),key=[...point,...coordinates[k],light[k]].map(n=>Math.round(n*1e6)).join(',');
       if(!verticesByKey.has(key)){verticesByKey.set(key,positions.length/3);positions.push(...point);colors.push(light[k],light[k],light[k]);uvs.push(...coordinates[k]);}
       indices.push(verticesByKey.get(key));
     }
   };
+  const quad=(v,p,light=[1,1,1,1])=>{for(const ids of [[0,1,2],[0,2,3]])triangle(ids.map(i=>v[i]),ids.map(i=>p[i]),ids.map(i=>light[i]));};
+  const edge=(a,b,callback,depth=0)=>{
+    const mid=a.map((v,i)=>(v+b[i])/2),pa=surface(...a,0),pb=surface(...b,0),pm=surface(...mid,0);
+    if(depth<14&&(pa.distanceTo(pb)>.022||pm.distanceTo(pa.clone().add(pb).multiplyScalar(.5))>.002)){edge(a,mid,callback,depth+1);edge(mid,b,callback,depth+1);}else callback(a,b);
+  };
   for(let index=0;index<loops.length;index++){
-    const loop=loops[index],foot=footprints[index],others=footprints.filter((_,i)=>i!==index);
-    for(let i=0;i<loop.length;i++){
-      const a=loop[i],b=loop[(i+1)%loop.length],steps=Math.max(1,Math.ceil(Math.hypot((b[0]-a[0])*6,(b[1]-a[1])*2)/.012));
-      for(let j=0;j<steps;j++){
-        const p=[a[0]+(b[0]-a[0])*j/steps,a[1]+(b[1]-a[1])*j/steps],q=[a[0]+(b[0]-a[0])*(j+1)/steps,a[1]+(b[1]-a[1])*(j+1)/steps];
-        if(insideOpening((p[0]+q[0])/2,(p[1]+q[1])/2,others))continue;
-        if(raised[index]){
-          const fa=foot[i],fb=foot[(i+1)%foot.length],fp=fa.map((v,k)=>v+(fb[k]-v)*j/steps),fq=fa.map((v,k)=>v+(fb[k]-v)*(j+1)/steps);
-          const blend=(outer,inner,t)=>outer.map((v,k)=>v+(inner[k]-v)*t);
-          for(let ring=0;ring<12;ring++){
-            const t=ring/12,s=(ring+1)/12,pa=blend(fp,p,t),qa=blend(fq,q,t),pb=blend(fp,p,s),qb=blend(fq,q,s);
-            const rise=t=>-EAR_RISE*Math.sin(t*Math.PI/2)**2;
-            quad([surface(...pa,rise(t)),surface(...qa,rise(t)),surface(...qb,rise(s)),surface(...pb,rise(s))],[pa,qa,qb,pb]);
-          }
-          // Close the underside of the raised skirt as well as the visible tunnel.
-          quad([surface(...fp,WALL_THICKNESS),surface(...fq,WALL_THICKNESS),surface(...q,WALL_THICKNESS),surface(...p,WALL_THICKNESS)],[fp,fq,q,p],[.38,.38,.38,.38]);
-        }
-        const lift=raised[index]?-EAR_RISE:0;
-        quad([surface(...p,lift),surface(...q,lift),surface(...q,WALL_THICKNESS),surface(...p,WALL_THICKNESS)],[p,q,q,p],[1,1,.38,.38]);
-      }
+    const loop=frames[index].sampleLoop(loops[index]),foot=footprints[index],others=footprints.filter((_,i)=>i!==index),frame=frames[index];
+    if(raised[index]){
+      const outer=foot.map(frame.toPlane),hole=loop.map(frame.toPlane),points=[...outer,...hole];
+      const faces=THREE.ShapeUtils.triangulateShape(outer.map(p=>new THREE.Vector2(...p)),[hole.map(p=>new THREE.Vector2(...p))]);
+      const distance=(p,path)=>{let d=Infinity;for(let i=0;i<path.length;i++){const a=path[i],b=path[(i+1)%path.length],dx=b[0]-a[0],dy=b[1]-a[1],t=Math.max(0,Math.min(1,((p[0]-a[0])*dx+(p[1]-a[1])*dy)/(dx*dx+dy*dy||1)));d=Math.min(d,Math.hypot(p[0]-a[0]-dx*t,p[1]-a[1]-dy*t));}return d;};
+      const emit=coords=>{
+        const centre=coords[0].map((_,k)=>(coords[0][k]+coords[1][k]+coords[2][k])/3),uv=coords.map(frame.fromPlane),c=frame.fromPlane(centre);
+        if(insideOpening(...c,others))return;
+        const lift=coords.map(p=>{const a=distance(p,outer),b=distance(p,hole),t=a/(a+b||1);return -EAR_RISE*Math.sin(t*Math.PI/2)**2;});
+        triangle(uv.map((p,i)=>surface(...p,lift[i])),uv);
+        triangle(uv.map(p=>surface(...p,WALL_THICKNESS)).reverse(),uv.slice().reverse(),[.38,.38,.38]);
+      };
+      const patch=(a,b,c,depth=0)=>{
+        const points=[a,b,c],world=points.map(p=>surface(...frame.fromPlane(p),0));
+        const lengths=points.map((p,i)=>{
+          const q=points[(i+1)%3],mid=p.map((v,k)=>(v+q[k])/2),actualMid=surface(...frame.fromPlane(mid),0),chord=world[i].clone().add(world[(i+1)%3]).multiplyScalar(.5);
+          return Math.max(Math.hypot(p[0]-q[0],p[1]-q[1])/.025,world[i].distanceTo(world[(i+1)%3])/.035,actualMid.distanceTo(chord)/.002);
+        });
+        const longest=lengths.indexOf(Math.max(...lengths));
+        if(lengths[longest]>1&&depth<18){
+          const p=points[longest],q=points[(longest+1)%3],other=points[(longest+2)%3],mid=p.map((v,i)=>(v+q[i])/2);
+          patch(p,mid,other,depth+1);patch(mid,q,other,depth+1);
+        }else emit(points);
+      };
+      for(const face of faces)patch(...face.map(i=>points[i]));
     }
+    for(let i=0;i<loop.length;i++)edge(loop[i],loop[(i+1)%loop.length],(p,q)=>{
+      if(insideOpening((p[0]+q[0])/2,(p[1]+q[1])/2,others))return;
+      const lift=raised[index]?-EAR_RISE:0;
+      quad([surface(...p,lift),surface(...q,lift),surface(...q,WALL_THICKNESS),surface(...p,WALL_THICKNESS)],[p,q,q,p],[1,1,.38,.38]);
+    });
   }
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));g.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));g.setIndex(indices);g.computeVertexNormals();return g;
 }
