@@ -1,4 +1,4 @@
-name: Test and deploy game
+name: Test and deploy workshop
 
 on:
   push:
@@ -15,37 +15,56 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
+  build:
+    name: Build and verify prototype
+    runs-on: windows-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v7
         with:
-          node-version: '22'
-      - run: npm test
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - name: Verify build, geometry, UI and museum editor
+        run: npm run verify
+      - name: Save verified website
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: workshop-site
+          path: dist
+          if-no-files-found: error
+          retention-days: 7
+      - name: Save failed browser checks
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-check-failures
+          path: asset/review
+          if-no-files-found: ignore
+          retention-days: 7
 
   deploy:
+    name: Publish GitHub Pages
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    needs: test
+    needs: build
     runs-on: ubuntu-latest
     permissions:
-      contents: read
       pages: write
       id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v4
+        with:
+          name: workshop-site
+          path: dist
       - uses: actions/configure-pages@v5
-      - name: Prepare game files
-        run: |
-          mkdir _site
-          cp index.html styles.css _site/
-          cp -R src vendor assets asset font _site/
       - uses: actions/upload-pages-artifact@v4
         with:
-          path: _site
-      - name: Deploy game
+          path: dist
+      - name: Deploy verified website
         id: deployment
         uses: actions/deploy-pages@v4

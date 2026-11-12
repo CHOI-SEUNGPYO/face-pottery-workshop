@@ -1,7 +1,33 @@
 {
   "name": "face-pottery-workshop",
-  "version": "0.3.9",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
-  "scripts": { "start": "node server.mjs", "test": "node --test tests/*.test.mjs" }
+  "scripts": {
+    "start": "node server.mjs",
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build && node scripts/package-licenses.mjs",
+    "preview": "node server.mjs",
+    "edit-story": "node scripts/museum-editor.mjs",
+    "typecheck": "tsc --noEmit",
+    "check:openings": "node scripts/check-openings.mjs",
+    "check:ui": "node scripts/check-interactions.mjs",
+    "check:workshop": "node scripts/check-workshop.mjs",
+    "verify": "npm run build && npm run check:openings && npm test && npm run check:ui && npm run check:workshop",
+    "test": "node --test scripts/check.mjs"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "dependencies": {
+    "polygon-clipping": "0.15.7",
+    "three": "0.180.0",
+    "three-mesh-bvh": "^0.9.2"
+  },
+  "devDependencies": {
+    "@types/three": "^0.180.0",
+    "playwright": "1.65.0",
+    "typescript": "~5.9.3",
+    "vite": "^7.2.0"
+  }
 }
