@@ -74,14 +74,20 @@ uniform sampler2D clayGrain;`,
       )
       .replace(
         "#include <color_fragment>",
-        "#include <color_fragment>\nfloat claySample=texture2D(clayGrain,clayP.xy*2.0+clayP.z*.37).r; diffuseColor.rgb*=.955+.08*claySample;",
+        `#include <color_fragment>
+float claySample=texture2D(clayGrain,clayP.xy*2.0+clayP.z*.37).r;
+vec2 stampUV=vec2(atan(clayP.x,clayP.z)*14.3,clayP.y*48.0);
+stampUV.x+=mod(floor(stampUV.y),2.0)*.5;
+vec2 cell=fract(stampUV)-.5;
+float stamp=1.0-smoothstep(.22,.49,length(cell*vec2(1.35,.88)));
+diffuseColor.rgb*=.955+.06*claySample-.035*stamp;`,
       )
       .replace(
         "#include <normal_fragment_maps>",
-        "#include <normal_fragment_maps>\nfloat h=claySample*.00035; normal=perturbNormalArb(-vViewPosition,normal,vec2(dFdx(h),dFdy(h)),faceDirection);",
+        "#include <normal_fragment_maps>\nfloat h=claySample*.0003+stamp*.0013; normal=perturbNormalArb(-vViewPosition,normal,vec2(dFdx(h),dFdy(h)),faceDirection);",
       );
   };
-  m.customProgramCacheKey = () => "togi-shell-grain-texture-v3";
+  m.customProgramCacheKey = () => "togi-shell-stamped-clay-v4";
 }
 export class PotteryView {
   root = new T.Group();

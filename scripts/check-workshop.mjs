@@ -34,8 +34,9 @@ try{
   const errors=[];page.on('pageerror',error=>errors.push(error.message));
   await page.goto(url);await page.waitForSelector('#loading',{state:'detached'});await page.locator('[data-action="new"]').click();
   for(const stage of ['body','mouth','faces','inspect','firing']){
+   await page.waitForFunction(s=>document.body.dataset.stage===s,stage);
    await layout(page,stage,width);
-   if(width===1366){await page.setViewportSize({width:1920,height:1080});await layout(page,stage,1920);await page.setViewportSize({width:1366,height:768});await layout(page,stage,width);}
+   if(width===1366){for(const viewport of [{width:1920,height:1080},{width:844,height:390},{width:740,height:360},{width:1024,height:768},{width:1180,height:820}]){await page.setViewportSize(viewport);await layout(page,stage,viewport.width);}await page.setViewportSize({width:1366,height:768});}
    if(width===1366&&['body','faces'].includes(stage))await shot(page,'layout-'+stage);
    if(stage!=='firing')await page.locator('[data-action="next"]').click();
   }
@@ -74,13 +75,18 @@ try{
     await page.waitForFunction(()=>document.querySelector('#firing-phase')?.textContent==='완성',null,{timeout:90000});
   }else await page.locator('[data-action="next"]').click();
   await page.locator('[data-action="next"]').click();await layout(page,'excavation',width);
-  for(let i=0;i<12;i++)await page.locator('[data-action="assist"]').click();
-  await page.locator('[data-action="next"]').click();
+  for(let i=0;i<12&&await page.locator('body').getAttribute('data-stage')==='excavation';i++){await page.locator('[data-action="assist"]').click();if(await page.locator('[data-action="next"]').isEnabled()){await page.locator('[data-action="next"]').click();break;}}
+  await page.waitForFunction(()=>document.body.dataset.stage==='assembly');
   assert.equal(await page.locator('body').getAttribute('data-stage'),'assembly');
   await layout(page,'assembly',width);await page.locator('[data-action="place"]').click();await page.locator('[data-action="next"]').click();
+  await page.waitForFunction(()=>document.body.dataset.stage==='compare');
   await layout(page,'compare',width);await page.locator('.story-teaser').click();assert.ok(await page.locator('.story-photo img').isVisible());
   await page.locator('[data-action="story-next"]').click();assert.equal(await page.locator('.fact-badge').textContent(),'연구자의 해석');
-  await page.locator('[data-action="close"]').click();await page.locator('[data-action="next"]').click();await layout(page,'ending',width);
+  await page.locator('[data-action="close"]').click();await page.locator('[data-action="next"]').click();await page.waitForSelector('.photo-editor canvas');
+  assert.equal(await page.locator('[data-sticker]').count(),3);await page.locator('[data-sticker="경산이"]').click();
+  await page.locator('[data-photo="size"]').fill('340');await page.locator('[data-photo="angle"]').fill('25');
+  const download=page.waitForEvent('download');await page.locator('[data-photo="download"]').click();assert.ok((await download).suggestedFilename().endsWith('.png'));
+  await page.locator('[data-action="close"]').click();
   assert.deepEqual(errors,[]);await page.close();
  }
  // Editor writes only synthetic content in a temporary workspace.

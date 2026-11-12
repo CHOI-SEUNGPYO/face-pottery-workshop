@@ -50,7 +50,9 @@ export function openingGeometry(d: PotteryDocument) {
           widths[i] = Math.min(lip, previous[i] * 0.6 +
             (previous[(i + n - 1) % n] + previous[(i + 1) % n]) * 0.2);
       }
-      const height = Math.min(clamp(radius * 1.5, 0.028, 0.085), lip * 5);
+      const height = f.kind==='raised-hole'
+        ? Math.min(clamp(radius * 1.5, 0.028, 0.085), lip * 5)
+        : clamp(radius*.2,.004,.013);
       const profile =
         f.kind === "raised-hole"
           ? [
@@ -62,7 +64,7 @@ export function openingGeometry(d: PotteryDocument) {
               [1.65, 0.45],
               [2.1, 0],
             ]
-          : [[0, 0]];
+          : [[0,.45],[.25,1],[.8,.65],[1.25,0]];
       const start = positions.length / 3,
         rings = profile.length + 1;
       const tangentSpan = Math.min(Math.floor(n / 8),

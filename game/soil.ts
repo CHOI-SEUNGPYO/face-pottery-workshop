@@ -29,6 +29,7 @@ export function migrateSoilMask(old: Uint8Array) {
   return result;
 }
 export class SoilTerrain {
+  surfaceLevel=.8;
   mesh: T.Mesh<T.BufferGeometry, T.MeshStandardMaterial>;
   cursor = new T.Mesh(
     new T.RingGeometry(0.135, 0.145, 48),
@@ -114,27 +115,16 @@ export class SoilTerrain {
     this.mask = mask;
     this.targets = targets;
     this.coverageCache = null;
+    this.surfaceLevel=Math.max(.6,...targets.map(t=>t.top+.13));
     for (let j = 0; j <= GRID; j++)
       for (let i = 0; i <= GRID; i++) {
         const x = (i / GRID - 0.5) * SOIL_WIDTH,
           z = (j / GRID - 0.5) * SOIL_DEPTH;
-        const edge = smooth((1 - (x / 1.7) ** 2 - (z / 1.5) ** 2) / 0.32);
-        let cover = 0;
-        for (const t of targets) {
-          const dx =
-            (x - (t.minX + t.maxX) / 2) / ((t.maxX - t.minX) / 2 + 0.14);
-          const dz =
-            (z - (t.minZ + t.maxZ) / 2) / ((t.maxZ - t.minZ) / 2 + 0.17);
-          cover = Math.max(
-            cover,
-            (t.top - SOIL_FLOOR + 0.24) * Math.exp(-0.45 * (dx ** 2 + dz ** 2)),
-          );
-        }
         const grain =
           0.007 * Math.sin(x * 11 + z * 9) * Math.sin(z * 13 - x * 7) +
           0.004 * Math.sin(x * 21 - z * 17);
         this.bases[j * (GRID + 1) + i] =
-          SOIL_FLOOR + edge * (cover + 0.035 + grain);
+          this.surfaceLevel + grain*.18;
       }
     for (let y = 0; y < MASK; y++)
       for (let x = 0; x < MASK; x++) {

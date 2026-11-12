@@ -7,7 +7,7 @@ const { outputFiles } = await build({
     contents: `
 import assert from "node:assert/strict";
 import { alignedInterior, COLS, ROWS, surfacePoint, cloneDoc, freshDocument, freshSave, setMouth, validateSave, isHole } from "./game/model.ts";
-import { addSurfaceFeature, openingsForDisplay, nearestFeature } from "./game/features.ts";
+import { addSurfaceFeature, openingsForDisplay, nearestFeature, crossToolOverlap } from "./game/features.ts";
 import { applyForm, createSoftDocument, forms, adjustMouth } from "./game/form.ts";
 import { surfaceFrame, sampleSurfacePath } from "./game/surface-path.ts";
 import { openingGeometry } from "./game/openings.ts";
@@ -111,6 +111,14 @@ assert.equal(nearestFeature(legacy,[0,.54],.01)?.id,"legacy");
 assert.deepEqual(legacy,savedLegacy,"display repair never rewrites saved artwork");
 assert.equal(openingsForDisplay(display),display,"normal artwork needs no extra processing");
 
+// Cross-tool cuts respect actual contours, including the UV seam.
+{
+ const d=createSoftDocument(),f=(kind,x)=>({id:'check',kind,width:.006,points:[[x-.01,.45],[x+.01,.45],[x+.01,.49],[x-.01,.49]]});
+ d.features=[f('hole',.99)];
+ assert.equal(crossToolOverlap(d,f('raised-hole',-.01)),true);
+ assert.equal(crossToolOverlap(d,f('raised-hole',.91)),false);
+ assert.equal(crossToolOverlap(d,f('hole',.99)),false);
+}
 // Same-size click and hand-drawn side holes should have comparable raised rims.
 const collarDoc=createSoftDocument();
 const ring=jagged=>Array.from({length:48},(_,i)=>{

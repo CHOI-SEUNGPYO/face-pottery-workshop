@@ -10,6 +10,8 @@ import { scenes } from "./content";
 import { surfaceFrame } from "./surface-path";
 import { FiringView, firingFrame } from './firing';
 import {museum,museumAsset} from './museum';
+import {referencePots,workshopTools,outdoorSite,museumRoom} from './environments';
+import {createSoftDocument,applyForm} from './form';
 import {
   clamp,
   isHole,
@@ -18,6 +20,7 @@ import {
   type GameSave,
   type SceneId,
   type UV,
+  type SurfaceFeature,
 } from "./model";
 
 export type ViewPreset =
@@ -28,7 +31,7 @@ const stageYaw: Record<SceneId, number> = {
   mouth: 18,
   faces: 0,
   inspect: -26,
-  firing: 12,
+  firing: 32,
   excavation: 0,
   assembly: 22,
   compare: -12,
@@ -78,6 +81,12 @@ export class World {
   private firingProgress:number|null=null;
   private displayPots=new T.Group();
   private exhibits=new T.Group();
+  private museumRoom=new T.Group();
+  private referencePhoto=new T.Group();
+  private referencePot=new PotteryView();
+  private site=new T.Group();
+  private audience=new T.Group();
+  private digLevel=.8;
   onExhibit?:(stage:SceneId)=>void;
   excavation = new T.Group();
   siru = new T.Group();
@@ -162,6 +171,7 @@ export class World {
       this.firingView.group,
       this.displayPots,
       this.exhibits,
+      this.museumRoom,this.referencePhoto,this.site,this.audience,
     );
     this.excavation.position.y = 0.45;
     this.stroke.renderOrder = 9;
@@ -195,7 +205,6 @@ export class World {
       (
         [
           ["workshop", this.workshop],
-          ["excavation", this.excavation],
           ["siru", this.siru],
           ["display-stand", this.stand],
         ] as const
@@ -206,6 +215,18 @@ export class World {
           const pots:T.Object3D[]=[];
           gltf.scene.traverse(o=>{if(o.name.startsWith('Shelf_pottery')||o.name.startsWith('Shelf pottery'))pots.push(o);});
           for(const pot of pots)this.displayPots.attach(pot);
+          const props:T.Object3D[]=[];
+          gltf.scene.traverse(o=>{if(/^(Plant pot|Plant stem|Soft leaf|Brush cup|Resting brush)/.test(o.name.replaceAll('_',' ')))props.push(o);});
+          props.forEach(o=>o.removeFromParent());
+        }
+        if(name==='siru'){
+          const handles:T.Mesh[]=[];
+          gltf.scene.traverse(o=>{if(o instanceof T.Mesh&&o.name.replaceAll('_',' ').startsWith('Horn handle'))handles.push(o);});
+          for(const handle of handles){
+            handle.geometry.computeBoundingBox();const c=handle.geometry.boundingBox!.getCenter(new T.Vector3());
+            // Reflect the horn about its attachment, without altering the source GLB.
+            handle.geometry.translate(-c.x,-.32,-c.z);const pivot=new T.Group();pivot.position.set(c.x,.32,c.z);pivot.rotation.x=Math.PI;handle.removeFromParent();pivot.add(handle);gltf.scene.add(pivot);
+          }
         }
         batchStatic(gltf.scene);
         group.add(gltf.scene);
@@ -213,16 +234,22 @@ export class World {
           if (o instanceof T.Mesh) {
             o.castShadow = true;
             o.receiveShadow = true;
-            if (
-              name === "excavation" &&
-              !Array.isArray(o.material) &&
-              o.material.name === "Warm earth"
-            )
-              o.visible = false;
           }
         });
       }),
     );
+    this.displayPots.clear();this.displayPots.add(referencePots());
+    this.workshop.add(workshopTools());
+    this.museumRoom.add(museumRoom());
+    const ref=createSoftDocument();
+    applyForm(ref,{height:1.45,width:1,radii:[.36,.32,.32,.36,.43,.29,.085]});
+    const opening=(u:number,v:number,rx:number,ry:number,kind:SurfaceFeature['kind']='hole'):SurfaceFeature=>({id:`reference-${u}-${v}`,kind,width:.004,points:Array.from({length:40},(_,i)=>[u+Math.cos(i*Math.PI/20)*rx,v+Math.sin(i*Math.PI/20)*ry])});
+    for(let face=0;face<3;face++){
+      const u=face/3;
+      ref.features.push(opening(u-.048,.79,.028,.014),opening(u+.048,.79,.028,.014),opening(u-.017,.715,.008,.016),opening(u+.017,.715,.008,.016),opening(u,.64,.042,.012+face*.003),opening(u+1/6,.76,.014,.027,'raised-hole'));
+    }
+    this.referencePot.update(ref);this.referencePot.appearance(1);this.referencePot.floor.visible=false;
+    this.referencePot.root.position.set(.9,.01,0);this.referencePhoto.add(this.referencePot.root);
     for(const entry of museum.exhibits){
       try{
         const gltf=await loader.loadAsync(museumAsset(entry.file));
@@ -236,6 +263,10 @@ export class World {
       }catch{console.warn('전시 모델을 불러오지 못했어요:',entry.name);}
     }
     this.displayPots.visible=museum.exhibits.length===0;
+    const atlas=await new T.TextureLoader().loadAsync(asset('animations/party-travel.png'));
+    atlas.colorSpace=T.SRGBColorSpace;atlas.repeat.set(1/3,1/2);atlas.offset.set(0,0);
+    const backs=new T.Sprite(new T.SpriteMaterial({map:atlas,transparent:true,toneMapped:false,depthWrite:false}));
+    backs.center.set(.5,0);backs.scale.set(2.1,2.1,1);backs.position.set(.25,-.02,2.05);this.audience.add(backs);
     this.renderer.domElement.addEventListener('click',event=>{
       if(this.paused||this.firingProgress!==null)return;
       this.scene.updateMatrixWorld(true);
@@ -280,6 +311,7 @@ export class World {
       this.getSave().firedRevision === this.getSave().document.revision ? 1 : 0,
     );
     this.pottery.root.rotation.y = this.getSave().rotation;
+    this.referencePot.root.rotation.y=this.getSave().rotation;
     this.refresh(true);
   }
   get transitioning() {
@@ -307,14 +339,17 @@ export class World {
     this.zoom = 1;
     this.terrain.cursor.visible = false;
     const s = this.getSave();
-    this.workshop.visible = stage !== "excavation";
-    this.exhibits.visible=stage!=='excavation';
-    this.displayPots.visible=stage!=='excavation'&&this.exhibits.children.length===0;
-    this.excavation.visible = stage === "excavation";
-    this.earth.visible = stage === "excavation";
-    this.soil.visible = stage === "excavation";
+    const outdoors=stage==='excavation'||stage==='assembly',museumStage=stage==='compare'||stage==='ending';
+    this.workshop.visible = !outdoors&&!museumStage&&stage!=='firing';
+    this.exhibits.visible=this.workshop.visible;
+    this.displayPots.visible=this.workshop.visible&&this.exhibits.children.length===0;
+    this.excavation.visible = false;
+    this.earth.visible = outdoors;
+    this.soil.visible = outdoors;
+    this.site.visible=outdoors;this.museumRoom.visible=museumStage;this.referencePhoto.visible=museumStage;
+    this.firingView.group.visible=stage==='firing';this.audience.visible=stage==='firing';
     this.siru.visible = ["excavation", "assembly"].includes(stage);
-    this.stand.visible = ["welcome", "inspect", "compare", "ending"].includes(
+    this.stand.visible = ["welcome", "inspect"].includes(
       stage,
     );
     this.pottery.root.position.set(
@@ -351,9 +386,16 @@ export class World {
     this.mask = s.excavationMask;
     this.siru.rotation.x = stage === "excavation" ? -Math.PI / 2 : 0;
     if (stage === "excavation") this.siru.position.set(0.62, 0.1, 0.3);
+    if(stage==='assembly'){
+      const placed=s.assembledRevision===s.document.revision;
+      this.siru.position.set(0,this.digLevel+.01,0);
+      this.pottery.root.position.set(placed?0:-.8,this.digLevel+(placed?.62:.01),placed?0:.35);
+    }
+    if(museumStage)this.pottery.root.position.set(-.78,.01,0);
+    if(stage==='firing')this.pottery.root.position.set(-1.65,0,1);
     for (const [name, sprite] of this.sprites) {
       sprite.material.depthTest = stage !== "excavation";
-      sprite.visible = stage === "ending" || stage === "welcome";
+      sprite.visible = stage === "welcome"&&name!=='소월이';
       const size = stage === "welcome" ? 0.3 : 0.34;
       const im = sprite.material.map!.image;
       sprite.scale.set((size * im.width) / im.height, size, 1);
@@ -363,7 +405,7 @@ export class World {
         0,
         stage === "ending" ? 0.25 : 0.3,
       );
-      if (stage === "welcome") sprite.position.set(-0.04 + idx * 0.31, 0, 0.55);
+      if (stage === "welcome") sprite.position.set(.05+idx*.38, 0, .85+Math.sin(idx)*.12);
       if (stage === "excavation") sprite.position.set(-1.04, 0.61, 0.75);
     }
     this.key.intensity = stage === "firing" ? 2.4 : 3.2;
@@ -386,7 +428,15 @@ export class World {
         };
       });
       this.terrain.configure(this.mask, targets);
+      this.digLevel=this.terrain.surfaceLevel;
+      if(!this.site.children.length)this.site.add(outdoorSite(this.digLevel));
+      else this.site.position.y=this.digLevel-(this.site.userData.level??this.digLevel);
+      this.site.userData.level??=this.digLevel;
     }
+    const color=museumStage?0x8a5540:outdoors||stage==='firing'?0xd5c7a5:0xead4a9;
+    this.scene.background=new T.Color(color);this.scene.fog=new T.Fog(color,8,22);
+    this.scene.environmentIntensity=museumStage?.65:1;
+    if(stage==='firing')this.firingView.update(0,this.reduced);
     this.compose(instant);
   }
   reframe() {
@@ -459,8 +509,11 @@ export class World {
       );
     if (this.siru.visible) bounds.expandByObject(this.siru);
     if (this.soil.visible) bounds.expandByObject(this.soil);
-    if (["welcome", "ending"].includes(this.stage))
+    if(this.stage==='compare'||this.stage==='ending')bounds.expandByObject(this.referencePhoto);
+    if(this.stage==='firing')bounds.set(new T.Vector3(-2.15,-.12,-1.9),new T.Vector3(1.4,2.7,2.1));
+    if (this.stage==='welcome')
       for (const sprite of this.sprites.values()) {
+        if(!sprite.visible)continue;
         bounds.expandByPoint(
           sprite.position
             .clone()
@@ -662,17 +715,18 @@ export class World {
     const wasInKiln=this.firingProgress!==null&&firingFrame(this.firingProgress).inKiln;
     this.firingProgress=progress;
     const inKiln=progress!==null&&firingFrame(progress).inKiln;
-    this.firingView.group.visible=inKiln;
-    this.workshop.visible=this.stage!=='excavation'&&!inKiln;
-    this.exhibits.visible=this.stage!=='excavation'&&!inKiln;
-    this.displayPots.visible=this.stage!=='excavation'&&!inKiln&&this.exhibits.children.length===0;
-    this.scene.background=new T.Color(inKiln?0x241914:0xead4a9);
-    this.scene.fog=new T.Fog(inKiln?0x241914:0xead4a9,6,16);
-    this.scene.environmentIntensity=inKiln?.28:1;
-    this.key.intensity=inKiln?.6:this.stage==='firing'?2.4:3.2;
-    if(progress!==null){this.firingView.update(progress,this.reduced);this.pottery.appearance(progress);}
+    if(this.stage==='firing'){
+      this.firingView.group.visible=true;
+      this.scene.environmentIntensity=inKiln?.4:.8;this.key.intensity=inKiln?1.1:2.4;
+      this.pottery.root.position.set(inKiln?0:-1.65,inKiln?.04:0,inKiln?-.2:1);
+      this.firingView.update(progress??1,this.reduced);
+      if(progress!==null)this.pottery.appearance(progress);
+    }
     this.refresh(wasInKiln!==inKiln);
   }
+  get kilnCutaway(){return this.firingView.cutaway;}
+  toggleKiln(){this.firingView.setCutaway(!this.firingView.cutaway);this.refresh(true);}
+  get assemblyHeight(){return this.digLevel+.62;}
   private animate = () => {
     this.frame = 0;
     const now = performance.now();
@@ -690,6 +744,7 @@ export class World {
       this.camera.position.lerp(this.target,zoom);this.camera.lookAt(this.target);
     }
     if (this.stage === "excavation") this.terrain.update();
+    if(this.stage==='compare'||this.stage==='ending')this.referencePot.root.rotation.y=this.getSave().rotation;
     for (const s of this.sprites.values()) {
       s.material.rotation =
         !this.reduced && now < this.reactionUntil
@@ -745,6 +800,7 @@ export class World {
     cancelAnimationFrame(this.frame);
     this.observer.disconnect();
     this.pottery.dispose();
+    this.referencePot.dispose();
     this.firingView.dispose();
     this.terrain.cursor.geometry.dispose();
     this.terrain.cursor.material.dispose();

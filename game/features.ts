@@ -1,4 +1,5 @@
 import clipping, { type Polygon, type MultiPolygon } from "polygon-clipping";
+import {surfaceFrame,surfaceOffset} from './surface-path';
 import {
   insideLoop,
   surfacePoint,
@@ -11,6 +12,40 @@ import {
 } from "./model";
 
 export type FeatureIssue = "boundary" | "too-small" | "complex";
+/** Cross-tool overlap is checked in the same unwrapped coordinates as the cut.
+ * Same-tool unions and legacy render repair keep their existing behaviour. */
+export function crossToolOverlap(d:PotteryDocument,feature:SurfaceFeature){
+  try{
+  const u=centerU(feature.points);
+  for(const old of d.features){
+    if((old.kind==='raised-hole')===(feature.kind==='raised-hole'))continue;
+    if(old.kind==='groove'||feature.kind==='groove'){
+      const line=old.kind==='groove'?old:feature,hole=old.kind==='groove'?feature:old;
+      const shift=Math.round(centerU(hole.points)-centerU(line.points));
+      const points=line.points.map(([x,y])=>[x+shift,y] as UV);
+      if(points.some(([x,y])=>insideLoop(x,y,hole.points)))return true;
+      // A narrow swept polygon catches a short line crossing a hole between samples.
+      for(let i=1;i<points.length;i++){
+        const a=points[i-1],b=points[i],w=Math.max(line.width*.5,.0002),length=Math.hypot(b[0]-a[0],b[1]-a[1])||1;
+        const x=-(b[1]-a[1])/length*w,y=(b[0]-a[0])/length*w;
+        const strip:Polygon=[[[a[0]-x,a[1]-y],[b[0]-x,b[1]-y],[b[0]+x,b[1]+y],[a[0]+x,a[1]+y]]];
+        if(area(clipping.intersection(polygon(hole),strip))>1e-10)return true;
+      }
+    }else if(area(clipping.intersection(footprint(d,feature),footprint(d,old,Math.round(u-centerU(old.points)))))>1e-10)return true;
+  }
+  return false;
+  }catch{return true;}
+}
+function footprint(d:PotteryDocument,f:SurfaceFeature,shift=0):Polygon{
+  const positions=f.points.map(p=>surfacePoint(d,...p)),n=positions.length;
+  const perimeter=positions.reduce((sum,p,i)=>sum+p.distanceTo(positions[(i+1)%n]),0);
+  const lip=Math.max(.007,Math.min(.021,perimeter/(2*Math.PI)*.38));
+  const sign=Math.sign(f.points.reduce((sum,p,i)=>{const q=f.points[(i+1)%n];return sum+p[0]*q[1]-q[0]*p[1];},0))||1;
+  return [f.points.map((p,i)=>{
+    const outward=positions[(i+1)%n].clone().sub(positions[(i+n-1)%n]).normalize().cross(surfaceFrame(d,...p).normal).multiplyScalar(sign);
+    const uv=surfaceOffset(d,p,outward,lip*(f.kind==='raised-hole'?2.1:1.25));return [uv[0]+shift,uv[1]];
+  })];
+}
 export const loopArea = (points: UV[]) =>
   Math.abs(
     points.reduce((sum, p, i) => {

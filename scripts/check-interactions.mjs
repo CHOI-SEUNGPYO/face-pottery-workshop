@@ -18,7 +18,7 @@ try {
   const url = output.match(/http:\/\/127\.0\.0\.1:\d+/)?.[0];
   assert.ok(url);
   browser = await chromium.launch({ channel: "msedge", headless: true });
-  for (const viewport of [{ width: 1366, height: 900 }, { width: 390, height: 844 }]) {
+  for (const viewport of [{ width: 1366, height: 900 }, { width: 844, height: 390 }]) {
     const page = await browser.newPage({ viewport, reducedMotion: "reduce" });
     const errors = [];
     page.on("pageerror", e => errors.push(e.message));
@@ -28,7 +28,9 @@ try {
       await page.locator('[data-action="new"]').click();
       await page.locator('[data-action="next"]').click();
       await page.locator('[data-action="next"]').click();
+      await page.locator('.view-controls summary').click();
       await page.locator('[data-action="view-front"]').click();
+      const choose=async tool=>{await page.locator('.drawing-actions summary').click();await page.locator(`button[data-tool="${tool}"]`).click();};
       assert.equal(await page.locator('[data-action="coach-demo"], [data-action="demo"], .tool-example').count(), 0);
       await page.locator('[data-action="help"]').click();
       assert.equal(await page.locator('[data-action="demo"]').count(), 0, "help has no demonstration entry");
@@ -54,7 +56,7 @@ try {
       };
       // One-click holes remain available; drawing keeps deliberate corners.
       for (const tool of ["carve", "pierce"]) {
-        await page.locator(`button[data-tool="${tool}"]`).click();
+        await choose(tool);
         const kind = tool === "carve" ? "hole" : "raised-hole";
         await page.mouse.click(x, y);
         assert.equal((await saved()).length, 1);
@@ -71,7 +73,7 @@ try {
         assert.deepEqual(await saved(), shape);
         await page.locator('[data-action="undo"]').click();
       }
-      await page.locator('button[data-tool="carve"]').click();
+      await choose('carve');
       await draw([[20,-20],[-20,-20],[-20,20],[20,20]]);
       assert.equal((await saved()).length, 0, "open arcs stay open");
       await draw([[0,0],[0,-400],[30,0],[0,0]]);
@@ -79,7 +81,7 @@ try {
       assert.equal(await page.locator("#opening-placement").count(), 0);
       assert.equal(await page.locator("#opening-outline").isVisible(), false);
       assert.equal(await page.locator("#opening-outline path").first().getAttribute("d"), null);
-      const radius = viewport.width > 760 ? 100 : 48;
+      const radius = viewport.height > 600 ? 100 : 42;
       await draw(Array.from({ length: 81 }, (_, i) => [
         radius * Math.cos(i * Math.PI / 40), radius * Math.sin(i * Math.PI / 40),
       ]));
@@ -89,6 +91,7 @@ try {
       await page.waitForSelector("#loading", { state: "detached" });
       await page.locator('[data-action="continue"]').click();
       assert.deepEqual(await saved(), result);
+      if(viewport.width===844){await page.setViewportSize({width:390,height:844});assert.equal(await page.locator('#orientation-guide').isVisible(),true);await page.setViewportSize(viewport);assert.equal(await page.locator('#orientation-guide').isVisible(),false);assert.deepEqual(await saved(),result);}
       assert.deepEqual(errors, []);
     } catch (error) {
       await mkdir("asset/review", { recursive: true });

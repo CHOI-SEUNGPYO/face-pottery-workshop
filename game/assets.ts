@@ -3,6 +3,7 @@ const files = import.meta.glob(
     "../asset/runtime/characters/*.png",
     "../asset/runtime/models/*.glb",
     "../asset/runtime/audio/*.wav",
+    "../asset/runtime/animations/*.png",
   ],
   {
     eager: true,

@@ -9,6 +9,14 @@
       "caption": "경산 소월리 출토 자료 사진",
       "credit": "제공된 출토 자료 · assets/CREDITS.md 참조",
       "source": "https://www.kculture.or.kr/brd/board/399/L/menu/498?bbIdx=11513&brdType=R"
+    },
+    {
+      "id": "user-face-reference",
+      "file": "face-reference.jpg",
+      "alt": "사용자가 제공한 소월리 얼굴토기 전시 참고 사진",
+      "caption": "제공받은 전시 사진 · 사진 속 전시물의 모습",
+      "credit": "사용자 제공 사진",
+      "source": ""
     }
   ],
   "stages": {
@@ -90,11 +98,15 @@
     "firing": {
       "title": "토기는 어떻게 구웠을까요?",
       "photo": "artifact",
-      "summary": "이 유물의 세부 소성 과정은 확인되지 않았어요. 지금 장면은 체험을 위한 상상이에요.",
+      "summary": "당시 영남 지역 가마 자료를 참고한 체험 장면이에요. 이 유물을 구운 특정 가마는 확인되지 않았어요.",
       "blocks": [
         {
+          "kind": "fact",
+          "text": "삼국시대 영남 지역에서는 경사진 지형에 만든 반지하식 토기가마 등이 사용되었어요."
+        },
+        {
           "kind": "imagination",
-          "text": "가열과 냉각, 불빛과 불티는 체험을 위해 짧게 보여주는 연출이에요. 이 유물을 말리고 구운 세부 과정은 확인하지 못했어요."
+          "text": "이 장면은 당시 지역의 가마 구조를 참고해 구성했어요. 소월리 얼굴토기를 구운 특정 가마와 정확한 소성 과정은 현재 확인한 자료로 알 수 없어요. 내부 보기는 설명을 위한 단면이에요."
         }
       ]
     },
@@ -130,7 +142,7 @@
     },
     "compare": {
       "title": "내 작품과 유물을 나란히",
-      "photo": "artifact",
+      "photo": "user-face-reference",
       "summary": "오른쪽은 실제 유물 사진이에요. 얼굴 표정, 둥근 구멍, 낮은 입구를 찾아보세요.",
       "blocks": [
         {
