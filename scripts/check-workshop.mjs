@@ -7,7 +7,7 @@ import {join} from 'node:path';
 import {chromium} from 'playwright';
 import {stages} from '../content/schema.mjs';
 const review=process.env.TOGI_REVIEW==='1',processes=[];
-let browser,testRoot;
+let browser,testRoot,activePage;
 async function serve(file,env){const process=spawn(globalThis.process.execPath,[file],{env:{...globalThis.process.env,...env},windowsHide:true,stdio:['ignore','pipe','pipe']});processes.push(process);const output=await Promise.race([once(process.stdout,'data').then(([chunk])=>String(chunk)),once(process,'exit').then(()=>{throw Error('Test server exited');})]);const url=output.match(/http:\/\/127\.0\.0\.1:\d+/)?.[0];assert.ok(url);return url;}
 async function shot(page,name){if(review){await mkdir('asset/review',{recursive:true});await page.screenshot({path:`asset/review/${name}.png`});}}
 async function layout(page,stage,width){
@@ -31,6 +31,7 @@ try{
  browser=await chromium.launch({channel:'msedge',headless:true});
  for(const width of [1366,1280]){
   const page=await browser.newPage({viewport:{width,height:width===1280?720:768},reducedMotion:width===1280?'reduce':'no-preference'});
+  activePage=page;
   const errors=[];page.on('pageerror',error=>errors.push(error.message));
   await page.goto(url);await page.waitForSelector('#loading',{state:'detached'});await page.locator('[data-action="new"]').click();
   for(const stage of ['body','mouth','faces','inspect','firing']){
@@ -76,7 +77,9 @@ try{
   }else await page.locator('[data-action="next"]').click();
   await page.locator('[data-action="next"]').click();await layout(page,'excavation',width);
   if(width===1366){for(const viewport of [{width:740,height:360},{width:1024,height:768}]){await page.setViewportSize(viewport);await layout(page,'excavation',viewport.width);}await page.setViewportSize({width:1366,height:768});}
-  for(let i=0;i<12&&await page.locator('body').getAttribute('data-stage')==='excavation';i++){await page.locator('[data-action="assist"]').click();if(await page.locator('[data-action="next"]').isEnabled()){await page.locator('[data-action="next"]').click();break;}}
+  // Discovery changes scenes automatically. Do not click the shared "next"
+  // selector after checking it: on a slow renderer it may already be assembly's button.
+  for(let i=0;i<12&&await page.locator('body').getAttribute('data-stage')==='excavation';i++){await page.locator('[data-action="assist"]').click();if(await page.locator('[data-action="next"]').isEnabled())break;}
   await page.waitForFunction(()=>document.body.dataset.stage==='assembly');
   assert.equal(await page.locator('body').getAttribute('data-stage'),'assembly');
   await layout(page,'assembly',width);
@@ -131,6 +134,12 @@ try{
  await exhibitPage.close();
  const restored=await fetch(editorURL+'/api/restore',{method:'POST',headers:{'X-Editor-Token':token}});assert.equal(restored.status,200);assert.deepEqual(await restored.json(),synthetic);
  console.log('PASS: all-stage desktop layouts, firing phases/pause/skip, story pages, editor photo/text persistence, publish and restore.');
+}catch(error){
+ if(activePage&&!activePage.isClosed()){
+  console.error('Workshop diagnostic:',await activePage.evaluate(()=>({stage:document.body.dataset.stage,toast:document.querySelector('#toast')?.textContent,next:document.querySelector('[data-action="next"]')?.outerHTML})).catch(()=>null));
+  await mkdir('asset/review',{recursive:true});await activePage.screenshot({path:'asset/review/workshop-failure.png',timeout:10000}).catch(()=>{});
+ }
+ throw error;
 }finally{
  await browser?.close();for(const process of processes)if(process.exitCode===null){const stopped=once(process,'exit');process.kill();await stopped;}
  if(testRoot){const absolute=await realpath(testRoot);if(absolute.startsWith(join(tmpdir(),'togi-editor-check-')))await rm(absolute,{recursive:true,force:true});}
