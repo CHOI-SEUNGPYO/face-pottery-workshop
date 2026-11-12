@@ -17,7 +17,8 @@ try {
   ]);
   const url = output.match(/http:\/\/127\.0\.0\.1:\d+/)?.[0];
   assert.ok(url);
-  browser = await chromium.launch({ channel: "msedge", headless: true });
+  browser = await chromium.launch({ channel: "msedge", headless: true,
+    args: process.env.CI ? ['--use-angle=swiftshader','--enable-unsafe-swiftshader'] : [] });
   for (const viewport of [{ width: 1366, height: 900 }, { width: 390, height: 844 }]) {
     const page = await browser.newPage({ viewport, reducedMotion: "reduce" });
     const errors = [];

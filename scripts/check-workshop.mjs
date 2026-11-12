@@ -28,7 +28,8 @@ async function layout(page,stage,width){
 }
 try{
  const url=await serve('server.mjs',{PORT:'0'});
- browser=await chromium.launch({channel:'msedge',headless:true});
+ browser=await chromium.launch({channel:'msedge',headless:true,
+   args:process.env.CI?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:[]});
  for(const width of [1366,1280]){
   const page=await browser.newPage({viewport:{width,height:width===1280?720:768},reducedMotion:width===1280?'reduce':'no-preference'});
   const errors=[];page.on('pageerror',error=>errors.push(error.message));

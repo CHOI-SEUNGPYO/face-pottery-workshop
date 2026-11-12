@@ -321,6 +321,7 @@ function arrangeHUD() {
 function modal(html: string) {
   cancelGesture();
   world.paused = true;
+  fireLast = performance.now();
   dialog.innerHTML = `${button("close", "닫기", "close", "round icon-only modal-close")}${html}`;
   if(!dialog.open) dialog.showModal();
   dialog.querySelector<HTMLElement>("button")?.focus();
@@ -328,6 +329,7 @@ function modal(html: string) {
 function closeModal() {
   dialog.close();
   world.paused = false;
+  fireLast = performance.now();
   world.refresh();
   world.renderer.domElement.focus({ preventScroll: true });
 }
@@ -399,7 +401,7 @@ function startFire() {
   fireElapsed=0;fireLast=performance.now();
   const duration=world.reduced?4000:14000;
   const tick=(now:number)=>{
-    const delta=Math.min(100,now-fireLast);fireLast=now;
+    const delta=Math.max(0,now-fireLast);fireLast=now;
     if(!world.paused&&!document.hidden){
       fireElapsed+=delta;
       const t=clamp(fireElapsed/duration,0,1),frame=firingFrame(t);
@@ -415,6 +417,10 @@ function startFire() {
   };
   fireTimer=requestAnimationFrame(tick);
 }
+document.addEventListener('visibilitychange',()=>{
+  fireLast=performance.now();
+  if(document.hidden)audio.firing(0);
+});
 function place() {
   save.assembledRevision = save.document.revision;
   world.setStage("assembly");
