@@ -109,6 +109,17 @@ body[data-stage="welcome"] #hud .welcome-copy h1{font-size:clamp(30px,4.2vw,62px
 @media(prefers-reduced-motion:reduce){.rotate-device,.travel-party,.action-panel{animation:none!important}}
 .reduced-motion .travel-party,.reduced-motion .rotate-device,.reduced-motion .action-panel{animation:none!important}.photo-editor canvas{width:min(100%,calc(48dvh * 16 / 9));height:auto;max-height:none;margin-inline:auto}
 @media(max-width:1099px),(max-height:599px){.photo-editor canvas{width:min(100%,calc(37dvh * 16 / 9))}}
+@media(max-height:599px) and (orientation:landscape){
+ body dialog:has(.photo-editor){height:calc(100dvh - 20px);max-height:calc(100dvh - 20px);padding:16px}
+ .photo-editor{height:100%;display:grid;grid-template-columns:minmax(0,1fr) 252px;grid-template-rows:auto auto minmax(0,1fr) auto auto;grid-template-areas:'eyebrow picker' 'title controls' 'canvas controls' 'canvas actions' 'status status';gap:5px 12px}
+ .photo-editor .eyebrow{grid-area:eyebrow;margin:0}.photo-editor h2{grid-area:title;margin:0;font-size:16px}
+ .photo-editor canvas{grid-area:canvas;width:min(100%,calc((100dvh - 128px) * 16 / 9));align-self:center}
+ .sticker-picker{grid-area:picker;margin:0;justify-content:flex-start;gap:5px;padding-right:28px}.sticker-picker button{padding:4px 7px}.sticker-picker img{height:28px;width:22px}
+ .sticker-controls{grid-area:controls;display:grid;grid-template-columns:1fr 1fr;align-content:center;gap:5px}
+ .sticker-controls label{grid-column:1 / -1;justify-content:space-between}.sticker-controls input{width:194px}
+ .photo-actions{grid-area:actions;margin:0;gap:8px}.photo-actions button{padding:8px 14px;flex:1}
+ .photo-status{grid-area:status;margin:0;min-height:14px}
+}
 @media(orientation:portrait) and (max-width:1180px){body dialog{visibility:hidden}body dialog::backdrop{background:transparent}}
 .travel-party{position:relative;overflow:visible}
 .travel-vessel{position:absolute;height:94%;width:auto;max-width:none;left:50%;top:25%;transform:translate(-50%,-50%) rotate(90deg);pointer-events:none;filter:drop-shadow(0 5px 2px #58371520)}

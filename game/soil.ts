@@ -232,6 +232,10 @@ export class SoilTerrain {
           else hi = mid;
         }
         ray.at((lo + hi) / 2, point);
+        // The rendered cells form an ellipse, not the enclosing rectangular box.
+        const i=Math.floor((point.x/SOIL_WIDTH+.5)*GRID),
+          j=Math.floor((point.z/SOIL_DEPTH+.5)*GRID);
+        if((((i+.5)/GRID)*2-1)**2+(((j+.5)/GRID)*2-1)**2>=.995)return null;
         const normal = new T.Vector3(
           this.heightAt(point.x - 0.01, point.z) -
             this.heightAt(point.x + 0.01, point.z),

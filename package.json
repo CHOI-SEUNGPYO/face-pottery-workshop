@@ -13,7 +13,8 @@
     "check:openings": "node scripts/check-openings.mjs",
     "check:ui": "node scripts/check-interactions.mjs",
     "check:workshop": "node scripts/check-workshop.mjs",
-    "verify": "npm run build && npm run check:openings && npm test && npm run check:ui && npm run check:workshop",
+    "check:journey": "node scripts/check-journey.mjs",
+    "verify": "npm run build && npm run check:openings && npm test && npm run check:ui && npm run check:workshop && npm run check:journey",
     "test": "node --test scripts/check.mjs"
   },
   "engines": {

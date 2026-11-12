@@ -13,7 +13,13 @@ import { surfaceFrame, sampleSurfacePath } from "./game/surface-path.ts";
 import { openingGeometry } from "./game/openings.ts";
 import { placeOpening } from "./game/opening-placement.ts";
 import { finishStroke, strokeIntent } from "./game/stroke.ts";
-import { Vector3 } from "three";
+import { Vector3, Ray } from "three";
+import { SoilTerrain } from "./game/soil.ts";
+
+const soil=new SoilTerrain();
+soil.configure(new Uint8Array(65536),[{minX:-.4,maxX:.4,minZ:-.4,maxZ:.4,top:.5}]);
+assert.ok(soil.hit(new Ray(new Vector3(0,3,0),new Vector3(0,-1,0))),"flat soil is hittable");
+assert.equal(soil.hit(new Ray(new Vector3(1.5,3,1.2),new Vector3(0,-1,0))),null,"outside the elliptical trench is not invisible soil");
 
 const circle = (x, radius = 10) => Array.from({ length: 41 }, (_, i) => ({
   x: x + Math.cos(i * Math.PI / 20) * radius,

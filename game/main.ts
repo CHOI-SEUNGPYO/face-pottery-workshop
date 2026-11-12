@@ -534,7 +534,7 @@ document.addEventListener("click", async (e) => {
   }
   if (a === "help") {
     modal(
-      `<div class="help-copy"><p class="eyebrow">천천히, 마음 가는 대로</p><h2>이렇게 해보세요</h2><p>${scenes[stage].instruction}</p><ul><li>손으로 빚기: 몸체를 좌우로 끌면 잡은 높이 주변이 둥글게 달라져요.</li><li>높이·넓이 손잡이와 조절 막대로 크기를 바꿔요. 매끈하게 정리로 굴곡을 부드럽게 만들 수 있어요.</li><li>눈·입 그리기와 옆 구멍: 원하는 윤곽을 직접 그려 닫아요. 작은 손떨림과 끝의 작은 틈만 보정해요. ‘선’은 입이나 눈썹을 얇게 새겨요.</li><li>돌려 보기: 좌우로 회전하고 위아래로 보는 높이를 바꿔요. 마우스 오른쪽 끌기도 사용할 수 있어요.</li><li>위의 방향 버튼과 ＋/−로 시점을 바꿔요. 마우스 휠도 사용할 수 있어요.</li><li>되돌리기 또는 Ctrl / ⌘ + Z로 복구해요.</li></ul><label class="motion-setting"><input id="reduce-motion" type="checkbox" ${world.reduced ? "checked" : ""}> 움직임 줄이기</label></div>`,
+      `<div class="help-copy"><p class="eyebrow">천천히, 마음 가는 대로</p><h2>이렇게 해보세요</h2><p>${scenes[stage].instruction}</p><ul><li>손으로 빚기: 몸체를 좌우로 끌면 잡은 높이 주변이 둥글게 달라져요.</li><li>토기 옆 높이·넓이 손잡이로 크기를 바꿔요. 매끈하게 정리로 굴곡을 부드럽게 만들 수 있어요.</li><li>그리기 도구를 펼쳐 눈·입과 옆 구멍을 골라요. 톡 누르면 기본 구멍, 윤곽을 직접 그려 닫으면 그 모양으로 뚫려요. 작은 손떨림과 끝의 작은 틈만 보정해요.</li><li>토기 밖을 끌면 좌우로 회전하고, 위아래로 보는 높이가 바뀌어요. 마우스 오른쪽 끌기도 사용할 수 있어요.</li><li>보기를 펼쳐 앞·비스듬히·옆·위로 시점을 바꿔요. ＋/− 버튼이나 마우스 휠로 확대·축소해요.</li><li>되돌리기 또는 Ctrl / ⌘ + Z로 복구해요.</li></ul><label class="motion-setting"><input id="reduce-motion" type="checkbox" ${world.reduced ? "checked" : ""}> 움직임 줄이기</label></div>`,
     );
     return;
   }

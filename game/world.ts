@@ -276,7 +276,7 @@ export class World {
       if(object?.userData.storyStage)this.onExhibit?.(object.userData.storyStage as SceneId);
     });
     await Promise.all(
-      ["압이", "소월이", "독이", "경산이"].map(async (name) => {
+      ["압이", "독이", "경산이"].map(async (name) => {
         const texture = await new T.TextureLoader().loadAsync(
           characterImage(name),
         );
@@ -386,10 +386,11 @@ export class World {
     this.mask = s.excavationMask;
     this.siru.rotation.x = stage === "excavation" ? -Math.PI / 2 : 0;
     if (stage === "excavation") this.siru.position.set(0.62, 0.1, 0.3);
-    if(stage==='assembly'){
-      const placed=s.assembledRevision===s.document.revision;
-      this.siru.position.set(0,this.digLevel+.01,0);
-      this.pottery.root.position.set(placed?0:-.8,this.digLevel+(placed?.62:.01),placed?0:.35);
+    // Use the buried poses to rebuild the same site even on a direct assembly resume.
+    if(outdoors){
+      this.pottery.root.rotation.x=this.siru.rotation.x=-Math.PI/2;
+      this.pottery.root.position.set(-.58,.13,.47);
+      this.siru.position.set(.62,.1,.3);
     }
     if(museumStage)this.pottery.root.position.set(-.78,.01,0);
     if(stage==='firing')this.pottery.root.position.set(-1.65,0,1);
@@ -399,7 +400,7 @@ export class World {
       const size = stage === "welcome" ? 0.3 : 0.34;
       const im = sprite.material.map!.image;
       sprite.scale.set((size * im.width) / im.height, size, 1);
-      const idx = ["압이", "독이", "소월이", "경산이"].indexOf(name);
+      const idx = ["압이", "독이", "경산이"].indexOf(name);
       sprite.position.set(
         stage === "ending" ? -1.04 + idx * 0.69 : -0.85,
         0,
@@ -410,7 +411,7 @@ export class World {
     }
     this.key.intensity = stage === "firing" ? 2.4 : 3.2;
     this.update();
-    if (stage === "excavation") {
+    if (outdoors) {
       if (!s.excavationLayout) {
         s.excavationMask = migrateSoilMask(s.excavationMask);
         s.excavationLayout = "terrain-v1";
@@ -432,6 +433,12 @@ export class World {
       if(!this.site.children.length)this.site.add(outdoorSite(this.digLevel));
       else this.site.position.y=this.digLevel-(this.site.userData.level??this.digLevel);
       this.site.userData.level??=this.digLevel;
+    }
+    if(stage==='assembly'){
+      const placed=s.assembledRevision===s.document.revision;
+      this.pottery.root.rotation.x=this.siru.rotation.x=0;
+      this.siru.position.set(0,this.digLevel+.01,0);
+      this.pottery.root.position.set(placed?0:-.8,this.digLevel+(placed?.62:.01),placed?0:.35);
     }
     const color=museumStage?0x8a5540:outdoors||stage==='firing'?0xd5c7a5:0xead4a9;
     this.scene.background=new T.Color(color);this.scene.fog=new T.Fog(color,8,22);
@@ -508,7 +515,8 @@ export class World {
         new T.Vector3(0.55, 1.55, 0.55),
       );
     if (this.siru.visible) bounds.expandByObject(this.siru);
-    if (this.soil.visible) bounds.expandByObject(this.soil);
+    // Once found, frame the two artifacts rather than the full excavation pit.
+    if (this.stage === "excavation") bounds.expandByObject(this.soil);
     if(this.stage==='compare'||this.stage==='ending')bounds.expandByObject(this.referencePhoto);
     if(this.stage==='firing')bounds.set(new T.Vector3(-2.15,-.12,-1.9),new T.Vector3(1.4,2.7,2.1));
     if (this.stage==='welcome')

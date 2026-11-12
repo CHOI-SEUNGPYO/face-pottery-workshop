@@ -14,6 +14,7 @@ export class PhotoEditor {
   constructor(private root:HTMLElement,url:string){
     root.innerHTML=`<div class="photo-editor"><p class="eyebrow">박물관에서 남기는 한 장</p><h2>친구들과 사진을 꾸며요</h2><canvas width="1920" height="1080" tabindex="0" aria-label="사진 꾸미기: 스티커를 끌어 옮기거나 방향키로 이동하세요"></canvas><div class="sticker-picker" aria-label="캐릭터 스티커">${['경산이','독이','압이'].map(name=>`<button data-sticker="${name}" aria-label="${name} 스티커 추가"><img src="${characterImage(name)}" alt="">${name}</button>`).join('')}</div><div class="sticker-controls"><label>크기<input data-photo="size" aria-label="스티커 크기" type="range" min="90" max="650" value="250"></label><label>회전<input data-photo="angle" aria-label="스티커 회전" type="range" min="-180" max="180" value="0"></label><button data-photo="delete">선택 삭제</button><button data-photo="undo">꾸미기 되돌리기</button></div><div class="photo-actions"><button data-action="retake" class="secondary">다시 찍기</button><button data-photo="download" class="primary">사진 저장</button></div><p role="status" class="photo-status">캐릭터를 고른 뒤 사진 위에서 옮겨 보세요.</p></div>`;
     this.canvas=root.querySelector('canvas')!;
+    this.sync();
     this.base.onload=()=>this.draw();this.base.src=url;
     for(const name of ['경산이','독이','압이']){const im=new Image();im.onload=()=>this.draw();im.src=characterImage(name);this.images.set(name,im);}
     const options={signal:this.events.signal};
@@ -21,7 +22,7 @@ export class PhotoEditor {
       const el=(event.target as HTMLElement).closest<HTMLElement>('[data-sticker],[data-photo]');if(!el)return;
       if(el.dataset.sticker){this.remember();this.stickers.push({name:el.dataset.sticker,x:600+this.stickers.length%4*200,y:800,size:250,angle:0});this.selected=this.stickers.length-1;this.sync();this.draw();}
       if(el.dataset.photo==='delete')this.remove();
-      if(el.dataset.photo==='undo'){const prev=this.history.pop();if(prev){this.stickers=prev;this.selected=-1;this.draw();}}
+      if(el.dataset.photo==='undo'){const prev=this.history.pop();if(prev){this.stickers=prev;this.selected=-1;this.sync();this.draw();}}
       if(el.dataset.photo==='download')void this.download();
     },options);
     root.addEventListener('input',event=>{
@@ -57,7 +58,7 @@ export class PhotoEditor {
   }
   private async download(){
     const status=this.root.querySelector<HTMLElement>('.photo-status')!;
-    try{this.draw(false);const blob=await new Promise<Blob>((resolve,reject)=>this.canvas.toBlob(b=>b?resolve(b):reject(Error('encode')),'image/png'));const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`내-얼굴토기-${new Date().toISOString().slice(0,10)}.png`;a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);status.textContent='꾸민 사진을 저장했어요.';}
+    try{await Promise.all([this.base,...this.stickers.map(s=>this.images.get(s.name)!)].map(im=>im.decode()));this.draw(false);const blob=await new Promise<Blob>((resolve,reject)=>this.canvas.toBlob(b=>b?resolve(b):reject(Error('encode')),'image/png'));const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`내-얼굴토기-${new Date().toISOString().slice(0,10)}.png`;a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);status.textContent='꾸민 사진을 저장했어요.';}
     catch{status.textContent='사진을 저장하지 못했어요. 다시 눌러 주세요.';}finally{this.draw();}
   }
   dispose(){this.events.abort();this.base.onload=null;for(const im of this.images.values())im.onload=null;}

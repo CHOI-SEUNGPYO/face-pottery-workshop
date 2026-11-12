@@ -75,12 +75,17 @@ try{
     await page.waitForFunction(()=>document.querySelector('#firing-phase')?.textContent==='완성',null,{timeout:90000});
   }else await page.locator('[data-action="next"]').click();
   await page.locator('[data-action="next"]').click();await layout(page,'excavation',width);
+  if(width===1366){for(const viewport of [{width:740,height:360},{width:1024,height:768}]){await page.setViewportSize(viewport);await layout(page,'excavation',viewport.width);}await page.setViewportSize({width:1366,height:768});}
   for(let i=0;i<12&&await page.locator('body').getAttribute('data-stage')==='excavation';i++){await page.locator('[data-action="assist"]').click();if(await page.locator('[data-action="next"]').isEnabled()){await page.locator('[data-action="next"]').click();break;}}
   await page.waitForFunction(()=>document.body.dataset.stage==='assembly');
   assert.equal(await page.locator('body').getAttribute('data-stage'),'assembly');
-  await layout(page,'assembly',width);await page.locator('[data-action="place"]').click();await page.locator('[data-action="next"]').click();
+  await layout(page,'assembly',width);
+  if(width===1366){for(const viewport of [{width:740,height:360},{width:1024,height:768}]){await page.setViewportSize(viewport);await layout(page,'assembly',viewport.width);}await page.setViewportSize({width:1366,height:768});}
+  await page.locator('[data-action="place"]').click();await page.locator('[data-action="next"]').click();
   await page.waitForFunction(()=>document.body.dataset.stage==='compare');
-  await layout(page,'compare',width);await page.locator('.story-teaser').click();assert.ok(await page.locator('.story-photo img').isVisible());
+  await layout(page,'compare',width);
+  if(width===1366){for(const viewport of [{width:740,height:360},{width:1024,height:768}]){await page.setViewportSize(viewport);await layout(page,'compare',viewport.width);}await page.setViewportSize({width:1366,height:768});}
+  await page.locator('.story-teaser').click();assert.ok(await page.locator('.story-photo img').isVisible());
   await page.locator('[data-action="story-next"]').click();assert.equal(await page.locator('.fact-badge').textContent(),'연구자의 해석');
   await page.locator('[data-action="close"]').click();await page.locator('[data-action="next"]').click();await page.waitForSelector('.photo-editor canvas');
   assert.equal(await page.locator('[data-sticker]').count(),3);await page.locator('[data-sticker="경산이"]').click();
