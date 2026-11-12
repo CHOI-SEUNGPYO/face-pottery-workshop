@@ -28,8 +28,7 @@ async function layout(page,stage,width){
 }
 try{
  const url=await serve('server.mjs',{PORT:'0'});
- browser=await chromium.launch({channel:'msedge',headless:true,
-   args:process.env.CI?['--use-angle=swiftshader','--enable-unsafe-swiftshader']:[]});
+ browser=await chromium.launch({channel:'msedge',headless:true});
  for(const width of [1366,1280]){
   const page=await browser.newPage({viewport:{width,height:width===1280?720:768},reducedMotion:width===1280?'reduce':'no-preference'});
   const errors=[];page.on('pageerror',error=>errors.push(error.message));
@@ -40,19 +39,39 @@ try{
    if(width===1366&&['body','faces'].includes(stage))await shot(page,'layout-'+stage);
    if(stage!=='firing')await page.locator('[data-action="next"]').click();
   }
+  // Hold transient phases through the real story button, before the remote
+  // browser can finish rendering and return the click command to the runner.
+  await page.evaluate(holdCooling=>{
+    window.__observedFiring=[];
+    const held=new Set();
+    const observer=new MutationObserver(()=>{
+      const phase=document.querySelector('#firing-phase')?.textContent;
+      if(!phase)return;
+      if(window.__observedFiring.at(-1)!==phase)window.__observedFiring.push(phase);
+      if((phase==='가열'||(holdCooling&&phase==='냉각'))&&!held.has(phase)){
+        held.add(phase);document.querySelector('.story-teaser').click();
+      }
+      if(phase==='완성')observer.disconnect();
+    });
+    observer.observe(document.querySelector('#hud'),{childList:true,subtree:true,characterData:true});
+  },width===1366);
   await page.locator('[data-action="next"]').click();
-  await page.waitForFunction(()=>document.querySelector('#firing-phase')?.textContent==='가열');
-  if(width===1366)await page.waitForFunction(()=>parseFloat(document.querySelector('#fire-progress').style.width)>35);
-  if(width===1366)await shot(page,'firing-heat');
-  await page.locator('.story-teaser').click();
+  try{
+    await page.waitForFunction(()=>document.querySelector('dialog').open&&window.__observedFiring.includes('가열'),null,{timeout:90000});
+  }catch(error){
+    console.error('Firing diagnostic:',await page.evaluate(()=>({phase:document.querySelector('#firing-phase')?.textContent,progress:document.querySelector('#fire-progress')?.getAttribute('style'),hidden:document.hidden,observed:window.__observedFiring})));
+    await mkdir('asset/review',{recursive:true});await page.screenshot({path:'asset/review/firing-timeout.png',timeout:10000}).catch(()=>{});throw error;
+  }
   await page.waitForTimeout(80);
   const progress=await page.locator('#fire-progress').getAttribute('style');
   await page.waitForTimeout(220);assert.equal(await page.locator('#fire-progress').getAttribute('style'),progress,'story dialog pauses firing');
   await page.locator('[data-action="close"]').click();
+  if(width===1366)await shot(page,'firing-heat');
   if(width===1366){
-    await page.waitForFunction(()=>document.querySelector('#firing-phase')?.textContent==='냉각',{},{timeout:18000});
+    await page.waitForFunction(()=>document.querySelector('dialog').open&&window.__observedFiring.includes('냉각'),null,{timeout:90000});
+    await page.locator('[data-action="close"]').click();
     await shot(page,'firing-cooling');
-    await page.waitForFunction(()=>document.querySelector('#firing-phase')?.textContent==='완성',{},{timeout:18000});
+    await page.waitForFunction(()=>document.querySelector('#firing-phase')?.textContent==='완성',null,{timeout:90000});
   }else await page.locator('[data-action="next"]').click();
   await page.locator('[data-action="next"]').click();await layout(page,'excavation',width);
   for(let i=0;i<12;i++)await page.locator('[data-action="assist"]').click();
