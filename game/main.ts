@@ -240,11 +240,13 @@ function updateUI() {
     n = order.indexOf(stage),
     isEdit = ["body", "mouth", "faces"].includes(stage),
     fired = save.firedRevision === save.document.revision;
+  const drawingLabel=tool==='carve'?(carveMode==='opening'?'눈·입 · 구멍':'눈·입 · 선'):toolLabels[tool];
+  const instruction=stage==='faces'?(tool==='carve'?(carveMode==='opening'?'톡 찍으면 작은 구멍, 그려서 닫으면 원하는 모양으로 뚫려요.':'토기 위에 선을 그어 눈썹이나 입을 새겨요. 닫지 않아도 돼요.'):toolHelp[tool].instruction):c.instruction;
   document.body.dataset.stage = stage;
   host.dataset.tool = tool;
   world.renderer.domElement.setAttribute(
     "aria-description",
-    stage === "mouth" ? scenes.mouth.instruction : toolHelp[tool].instruction,
+    stage === "mouth" || stage === "faces" ? instruction : toolHelp[tool].instruction,
   );
   const header = `<header><a class="brand" href="#" data-action="home"><span class="brand-pot">${icon("mouth")}</span><span>얼굴토기<br><small>작은 흙 공방</small></span></a><nav aria-label="공통 메뉴">${
     stage !== "welcome"
@@ -268,7 +270,7 @@ function updateUI() {
     stage === "firing" && !fired
       ? fireStart
         ? "연출 건너뛰기"
-        : "과정 보기"
+        : "가마에 넣고 굽기"
       : returnToInspect&&isEdit ? '수정 마치고 확인하기' : stage==='excavation'&&digComplete ? '발견! 시루에 얹어 보기' : c.next;
   let extras = "";
   if (stage === "body") extras = formControls();
@@ -290,7 +292,7 @@ function updateUI() {
     extras = button("new", "새 작품 만들기", "plus", "secondary");
   hud.innerHTML =
     header +
-    `<div class="work-area" aria-hidden="true"></div><div class="scene-info"><section class="scene-heading"><p class="eyebrow">${c.eyebrow}</p><h1>${c.title}</h1><p>${c.instruction}</p></section>
+    `<div class="work-area" aria-hidden="true"></div><div class="scene-info"><section class="scene-heading"><p class="eyebrow">${c.eyebrow}</p><h1>${c.title}</h1><p>${instruction}</p></section>
     ${stage==='body' ? '<p class="background-hint">토기 밖을 끌면 돌아가요</p>' : ''}
     <div class="scene-extras">${extras}</div>
     <aside class="guide-bubble"><img class="guide-character" src="${characterImage(c.character)}" alt="${c.character}"><p>${c.speech.replaceAll("\n", "<br>")}</p></aside>
@@ -299,7 +301,7 @@ function updateUI() {
     ${stage === "mouth" && save.document.mouth.opened ? '<div class="form-handles"><svg class="handle-guides" aria-hidden="true"><path/></svg><button data-form-handle="mouth-height" aria-label="입구 높이 손잡이: 위아래로 끌기" title="위아래로 끌거나 방향키로 입구 높이 조절">↕ <span>입구 높이</span></button><button data-form-handle="mouth-width" aria-label="입구 넓이 손잡이: 좌우로 끌기" title="좌우로 끌거나 방향키로 입구 넓이 조절">↔ <span>입구 넓이</span></button></div>' : ""}
     ${storyCard(stage)}
     <footer><div class="left-actions">${button("previous", "이전", "previous", "round icon-only")}${isEdit ? button("undo", "되돌리기", "undo", "round icon-only", !history.undoStack.length) + button("redo", "다시 실행", "redo", "round icon-only", !history.redoStack.length) : button("home", "처음 화면", "home", "round icon-only")}</div>
-    ${stage==='faces'?actionbar('그리기 도구',`<div class="tools" role="toolbar" aria-label="작업 도구">${c.tools.map((t) => `<button data-tool="${t}" class="tool ${tool === t ? "selected" : ""}" aria-pressed="${tool === t}" aria-label="${toolLabels[t]}">${icon(t)}<span>${t==='refine'?'구멍 다듬기':toolLabels[t]}</span></button>`).join("")}</div>${toolGuide(tool,carveMode)}`,'drawing-actions'):''}
+    ${stage==='faces'?actionbar(drawingLabel,`<div class="tools" role="toolbar" aria-label="작업 도구">${c.tools.map((t) => `<button data-tool="${t}" class="tool ${tool === t ? "selected" : ""}" aria-pressed="${tool === t}" aria-label="${toolLabels[t]}">${icon(t)}<span>${t==='refine'?'구멍 다듬기':toolLabels[t]}</span></button>`).join("")}</div>${toolGuide(tool,carveMode)}`,'drawing-actions'):''}
     ${button("next", primaryLabel, stage === "ending" ? "photo" : "next", "primary next-button")}</footer>`;
   arrangeHUD();
   if(stage==='firing')hud.querySelector('.firing-status')?.insertAdjacentHTML('beforeend',`<button data-action="kiln-inside" class="small-button" aria-pressed="${world.kilnCutaway}">${world.kilnCutaway?'외부로 보기':'내부 보기'}</button><small class="kiln-note">당시 가마 자료를 참고한 장면 · 내부는 설명용 단면</small>`);
@@ -374,7 +376,7 @@ async function travelTo(next:SceneId,label:string){
 function checkDiscovery(){
   if(stage!=='excavation'||digComplete||world.coverage().some(n=>n<.7))return;
   digComplete=true;audio.effect('success');toast('찾았어요! 같은 현장에서 시루 위에 함께 놓아 볼까요?');
-  updateUI();setTimeout(()=>{if(stage==='excavation'&&digComplete&&!gesture)go('assembly');},900);
+  updateUI();
 }
 function record(before: ReturnType<typeof cloneDoc>) {
   history.push(before, stage);
@@ -498,6 +500,7 @@ document.addEventListener("click", async (e) => {
     return;
   }
   const a = el.dataset.action!;
+  if(a==='finish-photo'){closeModal();go('ending');return;}
   if(a==='kiln-inside'){world.toggleKiln();el.setAttribute('aria-pressed',String(world.kilnCutaway));el.textContent=world.kilnCutaway?'외부로 보기':'내부 보기';return;}
   if(a==='settings'){
     const opened=hud.classList.toggle('settings-open');el.setAttribute('aria-expanded',String(opened));return;

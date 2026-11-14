@@ -77,9 +77,10 @@ try{
   }else await page.locator('[data-action="next"]').click();
   await page.locator('[data-action="next"]').click();await layout(page,'excavation',width);
   if(width===1366){for(const viewport of [{width:740,height:360},{width:1024,height:768}]){await page.setViewportSize(viewport);await layout(page,'excavation',viewport.width);}await page.setViewportSize({width:1366,height:768});}
-  // Discovery changes scenes automatically. Do not click the shared "next"
-  // selector after checking it: on a slow renderer it may already be assembly's button.
+  // Let the player inspect the find before explicitly leaving the trench.
   for(let i=0;i<12&&await page.locator('body').getAttribute('data-stage')==='excavation';i++){await page.locator('[data-action="assist"]').click();if(await page.locator('[data-action="next"]').isEnabled())break;}
+  assert.equal(await page.locator('body').getAttribute('data-stage'),'excavation');
+  await page.locator('[data-action="next"]').click();
   await page.waitForFunction(()=>document.body.dataset.stage==='assembly');
   assert.equal(await page.locator('body').getAttribute('data-stage'),'assembly');
   await layout(page,'assembly',width);

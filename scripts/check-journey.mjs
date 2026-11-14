@@ -92,6 +92,8 @@ try{
    const stream=await file.createReadStream(),chunks=[];for await(const chunk of stream)chunks.push(chunk);const png=Buffer.concat(chunks);
    assert.equal(png.readUInt32BE(16),1920);assert.equal(png.readUInt32BE(20),1080);
    assert.deepEqual(await page.evaluate(()=>Array.from(window.togi.save.document.outerXYZ)),placed.doc,'photo editing preserves pottery');
+   await page.locator('[data-action="finish-photo"]').click();
+   assert.equal(await page.locator('body').getAttribute('data-stage'),'ending','photo editor leads to the completed artwork');
    assert.deepEqual(errors,[]);
   }catch(error){await mkdir('asset/review',{recursive:true});await page.screenshot({path:`asset/review/journey-${viewport.width}-failure.png`});throw error;}
   finally{await context.close();}
