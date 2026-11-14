@@ -26,7 +26,7 @@ import {
   type ToolId,
   type CarveMode,
 } from "./content";
-import { World, type ViewPreset } from "./world";
+import { World } from "./world";
 import { toolGuide } from "./tool-guide";
 import { finishStroke, strokeIntent, type StrokePoint } from "./stroke";
 import { placeOpening, type OpeningPlacement, type ScreenPoint } from "./opening-placement";
@@ -55,7 +55,7 @@ import { museum, loadMuseum, museumAsset, photoFor, storyCard, escapeHTML as e, 
 
 const app = document.querySelector<HTMLDivElement>("#app")!;
 app.innerHTML =
-  '<div id="world"></div><div class="vignette"></div><svg id="opening-outline" aria-hidden="true"><path class="outline-halo"/><path class="outline-line"/></svg><main id="hud"></main><div id="toast" role="status" aria-live="polite"></div><dialog id="dialog"></dialog><div id="orientation-guide" role="status"><div class="rotate-device" aria-hidden="true">↻</div><h2>가로로 돌려 주세요</h2><p>넓은 화면에서 토기를 함께 만들어 봐요.</p></div><div id="travel" hidden aria-live="polite"><div class="travel-party" role="img" aria-label="세 친구가 옆으로 눕힌 큰 얼굴토기를 함께 들고 달려요"><img class="travel-vessel" alt=""></div><h2></h2><p>경산이 · 독이 · 압이와 함께</p></div><div id="loading"><span class="loading-pot">◡</span><p>햇살 가득한 작업실을 준비하고 있어요</p></div>';
+  '<div id="world"></div><div class="vignette"></div><svg id="opening-outline" aria-hidden="true"><path class="outline-halo"/><path class="outline-line"/></svg><main id="hud"></main><div id="toast" role="status" aria-live="polite"></div><dialog id="dialog"></dialog><div id="travel" hidden aria-live="polite"><div class="travel-party" role="img" aria-label="세 친구가 옆으로 눕힌 큰 얼굴토기를 함께 들고 달려요"><img class="travel-vessel" alt=""></div><h2></h2><p>경산이 · 독이 · 압이와 함께</p></div><div id="loading"><span class="loading-pot">◡</span><p>햇살 가득한 작업실을 준비하고 있어요</p></div>';
 const host = document.querySelector<HTMLDivElement>("#world")!,
   hud = document.querySelector<HTMLDivElement>("#hud")!,
   dialog = document.querySelector<HTMLDialogElement>("#dialog")!,
@@ -83,14 +83,12 @@ const history = new History(),
   audio = new AudioController();
 let world: World;
 let photoEditor:PhotoEditor|null=null,returnToInspect=false,travelling=false,digComplete=false;
-const portrait=matchMedia('(orientation:portrait) and (max-width:1180px)');
-function syncPause(){if(!world)return;world.paused=portrait.matches||dialog.open;fireLast=performance.now();document.body.classList.toggle('portrait-paused',portrait.matches);if(!world.paused)world.refresh();}
-portrait.addEventListener('change',()=>{cancelGesture();syncPause();});
+function syncPause(){if(!world)return;world.paused=dialog.open;fireLast=performance.now();if(!world.paused)world.refresh();}
 function closeActions(){hud.querySelectorAll<HTMLDetailsElement>('details[open]').forEach(d=>d.open=false);}
 document.addEventListener('pointerdown',event=>{if(!(event.target as HTMLElement).closest('details.actionbar'))closeActions();});
 document.addEventListener('toggle',event=>{const el=event.target;if(el instanceof HTMLDetailsElement&&el.open&&el.classList.contains('actionbar'))hud.querySelectorAll<HTMLDetailsElement>('details[open]').forEach(d=>{if(d!==el)d.open=false;});},true);
 document.addEventListener('keydown',event=>{if(event.key==='Escape')closeActions();});
-function actionbar(label:string,content:string,classes:string){return `<details class="actionbar ${classes}"><summary>${icon(classes==='view-controls'?'rotate':classes==='edit-actions'?'shape':'carve')}<span>${label}</span><span class="action-chevron">＋</span></summary><div class="action-panel">${content}</div></details>`;}
+function actionbar(label:string,content:string,classes:string){return `<details class="actionbar ${classes}"><summary>${icon(classes==='edit-actions'?'shape':'carve')}<span>${label}</span><span class="action-chevron">＋</span></summary><div class="action-panel">${content}</div></details>`;}
 const button = (
   action: string,
   label: string,
@@ -139,38 +137,18 @@ function layoutUI() {
     right = compact ? w-156 : w-256;
     top = compact ? 62 : 90;
     bottom = compact ? h-72 : h-96;
+    if(w<=600&&h>w){
+      left=16;right=w-16;
+      top=Math.max(155,(hud.querySelector('.scene-info')?.getBoundingClientRect().bottom??140)+12);
+      const settings=hud.querySelector<HTMLElement>('.settings-dock');
+      bottom=settings&&settings.getClientRects().length?settings.getBoundingClientRect().top-16:h-205;
+    }
   }
   area.style.cssText = `left:${left}px;top:${top}px;width:${Math.max(120, right - left)}px;height:${Math.max(120, bottom - top)}px`;
   world.reframe();
   positionFormHandles();
 }
 window.addEventListener("resize", () => requestAnimationFrame(layoutUI));
-function viewControls() {
-  return actionbar("보기",`<div class="view-presets">${(
-    [
-      ["front", "앞", "앞에서 보기"],
-      ["angle", "비스듬히", "비스듬히 보기"],
-      ["side", "옆", "옆에서 보기"],
-      ["top", "위", "위에서 보기"],
-    ] as const
-  )
-    .map(
-      ([id, label, name]) =>
-        `<button data-action="view-${id}" aria-label="${name}" aria-pressed="${world.viewPreset === id}">${label}</button>`,
-    )
-    .join(
-      "",
-    )}</div><div class="view-zoom">${button("zoom-out", "멀리 보기", "minus", "view-icon")}${button("zoom-in", "가까이 보기", "plus", "view-icon")}${button("view-stage", "추천 시점으로", "rotate", "view-icon")}</div>`,"view-controls");
-}
-function syncViewControls() {
-  for (const b of hud.querySelectorAll<HTMLButtonElement>(
-    ".view-presets button",
-  ))
-    b.setAttribute(
-      "aria-pressed",
-      String(b.dataset.action === `view-${world.viewPreset}`),
-    );
-}
 function formControls() {
   const f = readForm(save.document);
   return `<section class="form-controls" aria-label="몸체 모양 조절"><div class="form-ranges"><label>높이 <output id="height-value">${Math.round(f.height * 100)}%</output><input aria-label="토기 높이" data-form-range="height" type="range" min="65" max="165" value="${Math.round(f.height * 100)}"></label><label>전체 넓이 <output id="width-value">${Math.round(f.width * 100)}%</output><input aria-label="토기 전체 넓이" data-form-range="width" type="range" min="65" max="140" value="${Math.round(f.width * 100)}"></label></div>${button("smooth-form", "매끈하게 정리", "shape", "smooth-button")}</section>`;
@@ -293,11 +271,11 @@ function updateUI() {
   hud.innerHTML =
     header +
     `<div class="work-area" aria-hidden="true"></div><div class="scene-info"><section class="scene-heading"><p class="eyebrow">${c.eyebrow}</p><h1>${c.title}</h1><p>${instruction}</p></section>
-    ${stage==='body' ? '<p class="background-hint">토기 밖을 끌면 돌아가요</p>' : ''}
+    ${['body','mouth','faces','inspect','compare','ending'].includes(stage) ? '<p class="background-hint">빈 곳을 끌거나 두 손가락으로 돌려요</p>' : ''}
     <div class="scene-extras">${extras}</div>
     <aside class="guide-bubble"><img class="guide-character" src="${characterImage(c.character)}" alt="${c.character}"><p>${c.speech.replaceAll("\n", "<br>")}</p></aside>
     ${["excavation", "assembly"].includes(stage) ? `<div class="context-label">${stage === "excavation" ? "상상 발굴 체험" : "함께 사용했을 가능성을 살펴보는 장면"}</div>` : ""}
-    </div>${viewControls()}${stage === "body" ? '<div class="form-handles"><button data-form-handle="height" aria-label="높이 손잡이: 위아래로 끌기" title="위아래로 끌거나 방향키로 높이 조절">↕ <span>높이</span></button><button data-form-handle="width" aria-label="넓이 손잡이: 좌우로 끌기" title="좌우로 끌거나 방향키로 넓이 조절">↔ <span>넓이</span></button></div>' : ""}
+    </div>${stage === "body" ? '<div class="form-handles"><button data-form-handle="height" aria-label="높이 손잡이: 위아래로 끌기" title="위아래로 끌거나 방향키로 높이 조절">↕ <span>높이</span></button><button data-form-handle="width" aria-label="넓이 손잡이: 좌우로 끌기" title="좌우로 끌거나 방향키로 넓이 조절">↔ <span>넓이</span></button></div>' : ""}
     ${stage === "mouth" && save.document.mouth.opened ? '<div class="form-handles"><svg class="handle-guides" aria-hidden="true"><path/></svg><button data-form-handle="mouth-height" aria-label="입구 높이 손잡이: 위아래로 끌기" title="위아래로 끌거나 방향키로 입구 높이 조절">↕ <span>입구 높이</span></button><button data-form-handle="mouth-width" aria-label="입구 넓이 손잡이: 좌우로 끌기" title="좌우로 끌거나 방향키로 입구 넓이 조절">↔ <span>입구 넓이</span></button></div>' : ""}
     ${storyCard(stage)}
     <footer><div class="left-actions">${button("previous", "이전", "previous", "round icon-only")}${isEdit ? button("undo", "되돌리기", "undo", "round icon-only", !history.undoStack.length) + button("redo", "다시 실행", "redo", "round icon-only", !history.redoStack.length) : button("home", "처음 화면", "home", "round icon-only")}</div>
@@ -370,7 +348,7 @@ async function travelTo(next:SceneId,label:string){
   if(travelling)return;travelling=true;cancelGesture();closeActions();
   const overlay=document.querySelector<HTMLElement>('#travel')!;
   overlay.querySelector('h2')!.textContent=label;overlay.hidden=false;
-  await new Promise<void>(resolve=>{let elapsed=0,last=performance.now();const tick=(now:number)=>{if(!portrait.matches&&!document.hidden)elapsed+=now-last;last=now;if(elapsed>=(world.reduced?450:1600))resolve();else requestAnimationFrame(tick);};requestAnimationFrame(tick);});
+  await new Promise<void>(resolve=>{let elapsed=0,last=performance.now();const tick=(now:number)=>{if(!document.hidden)elapsed+=now-last;last=now;if(elapsed>=(world.reduced?450:1600))resolve();else requestAnimationFrame(tick);};requestAnimationFrame(tick);});
   go(next);overlay.hidden=true;travelling=false;
 }
 function checkDiscovery(){
@@ -446,7 +424,7 @@ function place() {
   void persist();
 }
 async function next() {
-  if(travelling||portrait.matches)return;
+  if(travelling)return;
   if(returnToInspect&&['body','mouth','faces'].includes(stage)){returnToInspect=false;go('inspect');return;}
   if (stage === "mouth" && !save.document.mouth.opened) {
     toast("‘열린 입구로 바꾸기’를 눌러 이어서 다듬어 보세요.");
@@ -488,7 +466,7 @@ document.addEventListener("click", async (e) => {
   const el = (e.target as HTMLElement).closest<HTMLElement>(
     "[data-action],button[data-tool]",
   );
-  if (!el || !loaded||travelling||portrait.matches) return;
+  if (!el || !loaded||travelling) return;
   e.preventDefault();
   if (el instanceof HTMLButtonElement && el.disabled) return;
   audio.start();
@@ -514,14 +492,7 @@ document.addEventListener("click", async (e) => {
     updateUI();
     return;
   }
-  if (a.startsWith("view-") || a.startsWith("zoom-")) {
-    cancelGesture();
-    if (a.startsWith("view-")) world.setView(a.slice(5) as ViewPreset);
-    else world.zoomBy(a === "zoom-in" ? 1.1 : 1 / 1.1);
-    syncViewControls();
-    closeActions();
-    return;
-  }
+
   if (a === "close" || a === "retake") {
     closeModal();
     return;
@@ -537,7 +508,7 @@ document.addEventListener("click", async (e) => {
   }
   if (a === "help") {
     modal(
-      `<div class="help-copy"><p class="eyebrow">천천히, 마음 가는 대로</p><h2>이렇게 해보세요</h2><p>${scenes[stage].instruction}</p><ul><li>손으로 빚기: 몸체를 좌우로 끌면 잡은 높이 주변이 둥글게 달라져요.</li><li>토기 옆 높이·넓이 손잡이로 크기를 바꿔요. 매끈하게 정리로 굴곡을 부드럽게 만들 수 있어요.</li><li>그리기 도구를 펼쳐 눈·입과 옆 구멍을 골라요. 톡 누르면 기본 구멍, 윤곽을 직접 그려 닫으면 그 모양으로 뚫려요. 작은 손떨림과 끝의 작은 틈만 보정해요.</li><li>토기 밖을 끌면 좌우로 회전하고, 위아래로 보는 높이가 바뀌어요. 마우스 오른쪽 끌기도 사용할 수 있어요.</li><li>보기를 펼쳐 앞·비스듬히·옆·위로 시점을 바꿔요. ＋/− 버튼이나 마우스 휠로 확대·축소해요.</li><li>되돌리기 또는 Ctrl / ⌘ + Z로 복구해요.</li></ul><label class="motion-setting"><input id="reduce-motion" type="checkbox" ${world.reduced ? "checked" : ""}> 움직임 줄이기</label></div>`,
+      `<div class="help-copy"><p class="eyebrow">천천히, 마음 가는 대로</p><h2>이렇게 해보세요</h2><p>${scenes[stage].instruction}</p><ul><li>손으로 빚기: 몸체를 좌우로 끌면 잡은 높이 주변이 둥글게 달라져요.</li><li>토기 옆 높이·넓이 손잡이로 크기를 바꿔요. 매끈하게 정리로 굴곡을 부드럽게 만들 수 있어요.</li><li>그리기 도구를 펼쳐 눈·입과 옆 구멍을 골라요. 톡 누르면 기본 구멍, 윤곽을 직접 그려 닫으면 그 모양으로 뚫려요. 작은 손떨림과 끝의 작은 틈만 보정해요.</li><li>토기 밖을 끌면 좌우로 회전하고, 위아래로 보는 높이가 바뀌어요. 마우스 오른쪽 끌기도 사용할 수 있어요.</li><li>두 손가락으로 끌면 시점을 바꾸고, 벌리거나 오므리면 확대·축소해요. PC에서는 오른쪽 드래그와 마우스 휠을 사용해요.</li><li>되돌리기 또는 Ctrl / ⌘ + Z로 복구해요.</li></ul><label class="motion-setting"><input id="reduce-motion" type="checkbox" ${world.reduced ? "checked" : ""}> 움직임 줄이기</label></div>`,
     );
     return;
   }
@@ -950,11 +921,8 @@ function sample(e: PointerEvent) {
     dy = e.clientY - g.lastY;
   g.travel += Math.hypot(dx, dy);
   if (g.kind === "rotate") {
-    save.rotation += dx * 0.008;
-    world.pottery.root.rotation.y = save.rotation;
-    if (Math.abs(dy) > 0) world.tilt(dy * 0.25);
-    world.refresh(true);
-    syncViewControls();
+    world.orbit(dx,dy);
+
     g.moved = true;
   } else if (g.kind === "shape") {
     if (g.travel >= 3) {
@@ -1042,30 +1010,51 @@ function flushPointer() {
 }
 function bindPointer() {
   const canvas = world.renderer.domElement;
+  const touches=new Map<number,{x:number;y:number}>();
+  let viewing=false,previousView:{x:number;y:number;distance:number}|null=null;
+  let touchSoil:Uint8Array|null=null;
+  const touchView=()=>{const [a,b]=[...touches.values()];return a&&b?{x:(a.x+b.x)/2,y:(a.y+b.y)/2,distance:Math.hypot(a.x-b.x,a.y-b.y)}:null;};
+  const stopPointers=()=>{touches.clear();viewing=false;previousView=null;touchSoil=null;cancelGesture();};
   canvas.addEventListener("pointerleave", () => world.hideBrush());
   canvas.addEventListener("contextmenu", (e) => e.preventDefault());
   canvas.addEventListener(
     "wheel",
     (e) => {
-      if (!loaded || dialog.open || gesture || formEdit || stage === "welcome") return;
+      if (!loaded || world.paused || travelling || gesture || formEdit || stage === "welcome") return;
       e.preventDefault();
       world.zoomBy(Math.exp(-clamp(e.deltaY, -100, 100) * 0.002));
     },
     { passive: false },
   );
   canvas.addEventListener("pointerdown", (e) => {
+    if(e.pointerType==='touch'&&loaded&&!world.paused&&!travelling&&stage!=='welcome'&&!formEdit){
+      touches.set(e.pointerId,{x:e.clientX,y:e.clientY});
+      canvas.setPointerCapture(e.pointerId);
+      if(touches.size>=2){
+        cancelGesture();
+        if(touchSoil){
+          save.excavationMask.set(touchSoil);
+          world.terrain.configure(save.excavationMask,world.terrain.findBounds);
+          const cov=world.coverage(),label=document.querySelector('#dig-progress');
+          if(label)label.textContent=`토기 ${Math.round(cov[0]*100)}% · 시루 ${Math.round(cov[1]*100)}%`;
+          world.refresh(true);touchSoil=null;
+        }
+        viewing=true;previousView=touchView();return;
+      }
+      touchSoil=stage==='excavation'?save.excavationMask.slice():null;
+      if(viewing)return;
+    }
     if (
       !loaded ||
       dialog.open ||world.paused||travelling||
       world.transitioning ||
       gesture ||
       formEdit ||
-      stage === "welcome" ||
-      stage === "firing"
+      stage === "welcome"
     )
       return;
     audio.start();
-    let kind:ToolId = e.button === 2 ? "rotate" : tool;
+    let kind:ToolId = e.button === 2 || stage==='firing' ? "rotate" : tool;
     const
       hit = world.hit(
         e.clientX,
@@ -1073,35 +1062,9 @@ function bindPointer() {
         ["erase", "refine", "carve", "pierce"].includes(kind),
         kind === "shape",
       );
-    if(!hit&&['body','mouth','faces','inspect','compare','ending'].includes(stage))kind='rotate';
+    if(!hit&&['body','mouth','faces','inspect','assembly','compare','ending'].includes(stage))kind='rotate';
+    if(stage==='excavation'&&!world.terrain.hit(world.pointer(e.clientX,e.clientY).ray))kind='rotate';
     if (!hit && kind !== "rotate" && kind !== "brush") return;
-    if ((kind === "erase" || kind === "refine") && hit?.uv) {
-      const before = cloneDoc(save.document),
-        f = nearestFeature(
-          save.document,
-          [hit.uv.x, hit.uv.y],
-          Math.max(0.018, screenUnits() * 18),
-        );
-      if (f) {
-        if (kind === "erase")
-          save.document.features = save.document.features.filter(
-            (x) => x !== f,
-          );
-        else if (refineFeature(save.document, f)) {
-          toast(
-            "이 부분은 더 다듬기 어려워요. 되돌리기로 이전 모양을 고를 수 있어요.",
-          );
-          return;
-        }
-        record(before);
-        audio.effect("clay");
-        if (kind === "refine")
-          toast("작은 삐침을 다듬었어요. 한 번 더 누르면 더 부드러워져요.");
-      } else if (kind === "refine") {
-        toast("다듬고 싶은 구멍이나 선을 톡 눌러 주세요.");
-      }
-      return;
-    }
     if (kind === "carve" || kind === "pierce") toastElement.classList.remove("visible");
     const uv: UV = [hit?.uv?.x ?? 0, hit?.uv?.y ?? 0.5];
     gesture = {
@@ -1124,10 +1087,17 @@ function bindPointer() {
     canvas.setPointerCapture(e.pointerId);
     if (kind === "brush") {
       world.beginBrush();
-      sample(e);
     }
   });
   canvas.addEventListener("pointermove", (e) => {
+    if(touches.has(e.pointerId)){
+      touches.set(e.pointerId,{x:e.clientX,y:e.clientY});
+      if(viewing){
+        const next=touchView();
+        if(next&&previousView&&!world.paused){world.orbit(next.x-previousView.x,next.y-previousView.y);if(previousView.distance>8&&next.distance>8)world.zoomBy(next.distance/previousView.distance);}
+        previousView=next;return;
+      }
+    }
     if (stage === "excavation") world.moveBrush(e.clientX, e.clientY);
     if (!gesture || e.pointerId !== gesture.pointer) return;
     const coalesced = e.getCoalescedEvents?.() ?? [];
@@ -1139,6 +1109,14 @@ function bindPointer() {
       });
   });
   canvas.addEventListener("pointerup", (e) => {
+    touches.delete(e.pointerId);
+    touchSoil=null;
+    if(viewing){
+      previousView=null;
+      if(canvas.hasPointerCapture(e.pointerId))canvas.releasePointerCapture(e.pointerId);
+      if(!touches.size)viewing=false;
+      return;
+    }
     if (!gesture || e.pointerId !== gesture.pointer) return;
     cancelAnimationFrame(raf);
     raf = 0;
@@ -1150,6 +1128,33 @@ function bindPointer() {
     gesture = null;
     if (canvas.hasPointerCapture(e.pointerId))
       canvas.releasePointerCapture(e.pointerId);
+    if ((g.kind === "erase" || g.kind === "refine") && g.travel<6) {
+      const before = g.before,
+        f = nearestFeature(
+          save.document,
+          [g.uv[0], g.uv[1]],
+          Math.max(0.018, screenUnits() * 18),
+        );
+      if (f) {
+        if (g.kind === "erase")
+          save.document.features = save.document.features.filter(
+            (x) => x !== f,
+          );
+        else if (refineFeature(save.document, f)) {
+          toast(
+            "이 부분은 더 다듬기 어려워요. 되돌리기로 이전 모양을 고를 수 있어요.",
+          );
+          return;
+        }
+        record(before);
+        audio.effect("clay");
+        if (g.kind === "refine")
+          toast("작은 삐침을 다듬었어요. 한 번 더 누르면 더 부드러워져요.");
+      } else if (g.kind === "refine") {
+        toast("다듬고 싶은 구멍이나 선을 톡 눌러 주세요.");
+      }
+      return;
+    }
     if (g.kind === "shape") {
       if (g.moved) {
         record(g.before);
@@ -1199,12 +1204,12 @@ function bindPointer() {
       }
     } else {void persist();if(g.kind==='brush')checkDiscovery();}
   });
-  canvas.addEventListener("pointercancel", cancelGesture);
+  canvas.addEventListener("pointercancel", stopPointers);
   canvas.addEventListener("lostpointercapture", () => {
     if (gesture) cancelGesture();
   });
-  window.addEventListener("blur", cancelGesture);
-  window.addEventListener("resize", cancelGesture);
+  window.addEventListener("blur", stopPointers);
+  window.addEventListener("resize", stopPointers);
   canvas.addEventListener("keydown", (e) => {
     if (
       [
@@ -1219,13 +1224,11 @@ function bindPointer() {
     ) {
       e.preventDefault();
       if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
-        save.rotation += e.key === "ArrowLeft" ? -0.15 : 0.15;
-        world.pottery.root.rotation.y = save.rotation;
-        world.refresh(true);
+        world.orbit(e.key === "ArrowLeft" ? -24 : 24,0);
       } else if (e.key === "ArrowUp" || e.key === "ArrowDown")
         world.tilt(e.key === "ArrowUp" ? 6 : -6);
       else world.zoomBy(e.key === "-" ? 1 / 1.1 : 1.1);
-      syncViewControls();
+
       void persist();
     }
   });

@@ -469,13 +469,17 @@ export class World {
     this.refresh();
   }
   tilt(delta: number) {
-    this.elevation = clamp(this.elevation + delta, 3, 78);
+    this.elevation = clamp(this.elevation + delta, 3, 86);
     this.viewPreset = "custom";
     this.compose(true);
     this.refresh();
   }
+  orbit(dx:number,dy:number){
+    this.azimuth+=dx*.35;
+    this.tilt(dy*.3);
+  }
   zoomBy(factor: number) {
-    this.zoom = clamp(this.zoom * factor, 0.8, 1.3);
+    this.zoom = clamp(this.zoom * factor, 0.65, 1.65);
     this.compose(true);
     this.refresh();
   }

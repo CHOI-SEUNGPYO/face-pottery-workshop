@@ -28,8 +28,7 @@ try {
       await page.locator('[data-action="new"]').click();
       await page.locator('[data-action="next"]').click();
       await page.locator('[data-action="next"]').click();
-      await page.locator('.view-controls summary').click();
-      await page.locator('[data-action="view-front"]').click();
+      assert.equal(await page.locator('.view-controls').count(),0,'views use direct gestures');
       const choose=async tool=>{await page.locator('.drawing-actions summary').click();await page.locator(`button[data-tool="${tool}"]`).click();};
       assert.equal(await page.locator('[data-action="coach-demo"], [data-action="demo"], .tool-example').count(), 0);
       await page.locator('[data-action="help"]').click();
@@ -91,7 +90,7 @@ try {
       await page.waitForSelector("#loading", { state: "detached" });
       await page.locator('[data-action="continue"]').click();
       assert.deepEqual(await saved(), result);
-      if(viewport.width===844){await page.setViewportSize({width:390,height:844});assert.equal(await page.locator('#orientation-guide').isVisible(),true);await page.setViewportSize(viewport);assert.equal(await page.locator('#orientation-guide').isVisible(),false);assert.deepEqual(await saved(),result);}
+      if(viewport.width===844){await page.setViewportSize({width:390,height:844});assert.equal(await page.locator('#orientation-guide').count(),0);assert.equal(await page.locator('#world canvas').isVisible(),true);await page.setViewportSize(viewport);assert.deepEqual(await saved(),result);}
       assert.deepEqual(errors, []);
     } catch (error) {
       await mkdir("asset/review", { recursive: true });

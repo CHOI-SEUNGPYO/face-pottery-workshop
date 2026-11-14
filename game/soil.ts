@@ -144,6 +144,7 @@ export class SoilTerrain {
     this.dirty = true;
     this.update();
   }
+  get findBounds(){return this.targets;}
   private removed(x: number, z: number) {
     const px = clamp((x / SOIL_WIDTH + 0.5) * (MASK - 1), 0, MASK - 1),
       py = clamp((z / SOIL_DEPTH + 0.5) * (MASK - 1), 0, MASK - 1);

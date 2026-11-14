@@ -19,6 +19,18 @@ async function drag(page,a,b){
   await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
  }finally{await touch.detach();}
 }
+async function pinch(page,point){
+ const session=await page.context().newCDPSession(page);
+ const a={x:point.x,y:point.y,id:1},b={x:point.x+40,y:point.y,id:2};
+ try{
+  await session.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[a]});
+  await session.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{...a,x:a.x+10}]});
+  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(resolve)));
+  await session.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{...a,x:a.x+10},b]});
+  await session.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{...a,x:a.x-15,y:a.y+25},{...b,x:b.x+35,y:b.y+25}]});
+  await session.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+ }finally{await session.detach();}
+}
 async function siteState(page){return page.evaluate(()=>{
  const {world:w,save:s}=window.togi;
  return {level:w.terrain.surfaceLevel,ground:w.terrain.heightAt(-1.4,-1),site:w.site.children.length,
@@ -30,20 +42,29 @@ async function project(page,point){return page.evaluate(point=>{
 },point);}
 try{
  browser=await chromium.launch({channel:'msedge',headless:true});
- for(const viewport of [{width:1366,height:768},{width:740,height:360}]){
-  const context=await browser.newContext({viewport,reducedMotion:'reduce',hasTouch:viewport.width===740});
+ for(const viewport of [{width:1366,height:768},{width:740,height:360},{width:390,height:844}]){
+  const context=await browser.newContext({viewport,reducedMotion:'reduce',hasTouch:viewport.width<800});
   const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
   try{
    await page.goto(`http://127.0.0.1:${server.httpServer.address().port}/`);
    await page.waitForSelector('#loading',{state:'detached'});await page.locator('[data-action="new"]').click();await settle(page);
    const original=await page.evaluate(()=>Array.from(window.togi.save.document.outerXYZ));
-   const rotation=await page.evaluate(()=>window.togi.save.rotation);
+   const rotation=await page.evaluate(()=>Array.from(window.togi.world.camera.position));
    const area=await page.locator('.work-area').boundingBox();
    const outside={x:area.x+8,y:area.y+8};
    assert.equal(await page.evaluate(p=>!!window.togi.world.hit(p.x,p.y),outside),false);
    await drag(page,outside,{x:outside.x+55,y:outside.y});
-   assert.notEqual(await page.evaluate(()=>window.togi.save.rotation),rotation,'background drag rotates');
+   assert.notDeepEqual(await page.evaluate(()=>Array.from(window.togi.world.camera.position)),rotation,'background drag orbits');
    assert.deepEqual(await page.evaluate(()=>Array.from(window.togi.save.document.outerXYZ)),original,'background drag never sculpts');
+   if(viewport.width<800){
+    const centre={x:area.x+area.width/2-20,y:area.y+area.height/2};
+    const zoom=await page.evaluate(()=>window.togi.world.zoom);
+    await pinch(page,centre);
+    assert.ok(await page.evaluate(()=>window.togi.world.zoom)>zoom,'two fingers zoom');
+    assert.deepEqual(await page.evaluate(()=>Array.from(window.togi.save.document.outerXYZ)),original,'a second finger cancels a pending sculpt');
+    await page.evaluate(()=>window.togi.world.setView('stage'));await settle(page);
+   }
+   if(process.env.TOGI_REVIEW==='1')await page.screenshot({path:`asset/review/body-${viewport.width}.png`});
    const handle=page.locator('[data-form-handle="height"]');await handle.focus();await handle.press('ArrowUp');
    assert.notDeepEqual(await page.evaluate(()=>Array.from(window.togi.save.document.outerXYZ)),original,'body handle edits');
    await page.locator('[data-action="undo"]').click();assert.deepEqual(await page.evaluate(()=>Array.from(window.togi.save.document.outerXYZ)),original);
@@ -60,6 +81,13 @@ try{
    await go(page,'faces');
    const faceArea=await page.locator('.work-area').boundingBox(),face={x:faceArea.x+faceArea.width/2,y:faceArea.y+faceArea.height/2};
    await page.mouse.click(face.x,face.y);assert.equal(await page.evaluate(()=>window.togi.save.document.features.length),1);
+   if(viewport.width<800){
+    await page.locator('.drawing-actions summary').click();await page.locator('[data-tool="erase"]').click();
+    const features=await page.evaluate(()=>JSON.stringify(window.togi.save.document.features));
+    await pinch(page,face);
+    assert.equal(await page.evaluate(()=>JSON.stringify(window.togi.save.document.features)),features,'orbiting with erase selected preserves features');
+    await page.evaluate(()=>window.togi.world.setView('stage'));await settle(page);
+   }
    await page.locator('.drawing-actions summary').click();await page.locator('[data-tool="pierce"]').click();
    await page.mouse.click(face.x,face.y);assert.equal(await page.evaluate(()=>window.togi.save.document.features.length),1,'different tools reject actual overlap');
    assert.ok((await page.locator('#toast').textContent()).includes('겹치는'));
@@ -69,6 +97,11 @@ try{
    await page.evaluate(()=>{window.togi.save.rotation=0;});await go(page,'excavation');
    const buried=await siteState(page);assert.ok(buried.site>0);assert.ok(Math.abs(buried.ground-buried.level)<.003);
    const start=await project(page,[-.5,buried.level,.2]),end=await project(page,[.45,buried.level,.2]);
+   if(viewport.width<800){
+    await pinch(page,start);
+    assert.deepEqual((await siteState(page)).mask,buried.mask,'two-finger view restores tentative soil edits');
+    await page.evaluate(()=>window.togi.world.setView('stage'));await settle(page);
+   }
    await drag(page,start,end);
    const dug=await siteState(page);assert.ok(dug.mask.some(n=>n>0),'real pointer drag digs soil');
    assert.ok(await page.evaluate(()=>window.togi.world.terrain.heightAt(0,.2)<window.togi.world.terrain.surfaceLevel-.03),'stroke lowers the surface');
@@ -98,5 +131,5 @@ try{
   }catch(error){await mkdir('asset/review',{recursive:true});await page.screenshot({path:`asset/review/journey-${viewport.width}-failure.png`});throw error;}
   finally{await context.close();}
  }
- console.log('PASS: background rotation, body/mouth handles, pointer excavation, assembly resume, small-screen photo controls and PNG dimensions.');
+ console.log('PASS: orbit/pinch without sculpting, erasing or digging; body/mouth handles, excavation, assembly resume and portrait/landscape photo export.');
 }finally{await browser?.close();await server.close();}
