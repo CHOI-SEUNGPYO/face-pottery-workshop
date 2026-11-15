@@ -1,9 +1,10 @@
 node_modules/
 dist/
-asset/review/
-asset/reference/video/*.mp4
-content/museum.previous.json
-content/*.tmp
+game/asset/review/
+reference/video/*.mp4
+04_목록/
+game/content/museum.previous.json
+game/content/*.tmp
 *.log
 .DS_Store
 Thumbs.db
