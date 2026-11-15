@@ -15,6 +15,7 @@ for (const [source, name] of [
   ["font/Pretendard-1.3.9/LICENSE.txt", "Pretendard.txt"],
   ["font/Cafe24Ssurround-v2.0/License-Ssurround.pdf", "Cafe24-Ssurround.pdf"],
   ["assets/CREDITS.md", "asset-credits.md"],
+  ["AI_DISCLOSURE.md", "ai-disclosure.md"],
 ])
   await copyFile(source, "dist/licenses/" + name);
 const readme = await readFile("node_modules/splaytree/Readme.md", "utf8");

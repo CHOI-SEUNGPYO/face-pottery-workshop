@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {mkdir} from 'node:fs/promises';
+import {mkdir,writeFile} from 'node:fs/promises';
 import {createServer} from 'vite';
 import {chromium} from 'playwright';
 
@@ -40,6 +40,23 @@ async function project(page,point){return page.evaluate(point=>{
  const p=window.togi.world.camera.position.clone().set(...point).project(window.togi.world.camera);
  return {x:(p.x+1)*innerWidth/2,y:(1-p.y)*innerHeight/2};
 },point);}
+async function assertPhotoDisclosure(page,png){
+ const difference=await page.evaluate(async url=>{
+ let canvas=document.querySelector('.photo-editor canvas');
+ if(url){const image=new Image();image.src=url;await image.decode();canvas=document.createElement('canvas');canvas.width=1920;canvas.height=1080;canvas.getContext('2d').drawImage(image,0,0);}
+ const data=canvas.getContext('2d').getImageData(0,1008,1920,72).data;
+ let ink=0;for(let i=0;i<data.length;i+=4){if(data[i+3]!==255)throw Error('Disclosure must have an opaque background');if(data[i]>150)ink++;}
+ if(ink<1000)throw Error('Disclosure text missing from the image');
+ const baseline=window.__photoDisclosurePixels;
+ if(!baseline){window.__photoDisclosurePixels=data.slice();return {maximum:0,mean:0};}
+ let maximum=0,total=0;
+ for(let i=0;i<data.length;i++){const delta=Math.abs(data[i]-baseline[i]);maximum=Math.max(maximum,delta);total+=delta;}
+ return {maximum,mean:total/data.length};
+ },png?`data:image/png;base64,${png.toString('base64')}`:null);
+ // Chromium can switch from GPU to CPU after repeated canvas readback.
+ // Measured text-edge rounding differs by at most 2/255; covered text differs far more.
+ assert.ok(difference.maximum<=2&&difference.mean<.1,`photo disclosure remains visible: ${JSON.stringify(difference)}`);
+}
 try{
  browser=await chromium.launch({channel:'msedge',headless:true});
  for(const viewport of [{width:1366,height:768},{width:740,height:360},{width:390,height:844}]){
@@ -49,6 +66,11 @@ try{
    await page.goto(`http://127.0.0.1:${server.httpServer.address().port}/`);
    await page.waitForSelector('#loading',{state:'detached'});await page.locator('[data-action="new"]').click();await settle(page);
    const original=await page.evaluate(()=>Array.from(window.togi.save.document.outerXYZ));
+   await page.locator('[data-action="help"]').click();
+   await page.locator('[data-action="credits"]').click();
+   assert.ok(await page.locator('.credits-copy .museum-home-link').isVisible());
+   await page.locator('[data-action="close"]').click();
+   assert.deepEqual(await page.evaluate(()=>Array.from(window.togi.save.document.outerXYZ)),original,'opening and closing AI credits preserves the artwork');
    const rotation=await page.evaluate(()=>Array.from(window.togi.world.camera.position));
    const faceBefore=await project(page,[0,.70,.33]);
    const area=await page.locator('.work-area').boundingBox();
@@ -148,13 +170,26 @@ try{
     assert.deepEqual(after.camera,state.camera,'turning an exhibit does not orbit the room');
    }
    await page.locator('[data-action="next"]').click();
+   await page.evaluate(()=>document.fonts.ready);
    for(const name of ['경산이','독이','압이'])await page.locator(`[data-sticker="${name}"]`).click();
+   assert.match(await page.locator('.photo-editor .eyebrow').textContent(),/AI\(인공지능\) 생성·편집 콘텐츠 포함/);
+   await assertPhotoDisclosure(page);
    const bounds=await page.locator('.photo-actions').boundingBox();assert.ok(bounds.y>=0&&bounds.y+bounds.height<=viewport.height,'photo save controls fit');
    await page.locator('[data-photo="size"]').fill('330');await page.locator('[data-photo="angle"]').fill('30');
+   const canvas=await page.locator('.photo-editor canvas').boundingBox();
+   const point=(x,y)=>({x:canvas.x+x/1920*canvas.width,y:canvas.y+y/1080*canvas.height});
+   await drag(page,point(1000,800),point(1700,1040));
+   await assertPhotoDisclosure(page);
+   await page.locator('[data-photo="delete"]').click();
+   await assertPhotoDisclosure(page);
+   await page.locator('[data-photo="undo"]').click();
+   if(process.env.TOGI_DISCLOSURE_REVIEW==='1'&&viewport.width===390)await page.screenshot({path:'asset/review/ai-photo-portrait.png'});
    if(process.env.TOGI_REVIEW==='1')await page.screenshot({path:`asset/review/photo-${viewport.width}.png`});
    const download=page.waitForEvent('download');await page.locator('[data-photo="download"]').click();const file=await download;
    const stream=await file.createReadStream(),chunks=[];for await(const chunk of stream)chunks.push(chunk);const png=Buffer.concat(chunks);
    assert.equal(png.readUInt32BE(16),1920);assert.equal(png.readUInt32BE(20),1080);
+   await assertPhotoDisclosure(page,png);
+   if(process.env.TOGI_DISCLOSURE_REVIEW==='1'&&viewport.width===1366)await writeFile('asset/review/ai-disclosure-export.png',png);
    assert.deepEqual(await page.evaluate(()=>Array.from(window.togi.save.document.outerXYZ)),placed.doc,'photo editing preserves pottery');
    await page.locator('[data-action="finish-photo"]').click();
    assert.equal(await page.locator('body').getAttribute('data-stage'),'ending','photo editor leads to the completed artwork');

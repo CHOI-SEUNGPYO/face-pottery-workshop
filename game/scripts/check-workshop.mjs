@@ -32,6 +32,39 @@ async function layout(page,stage,width){
  });
  if(problems.length){await mkdir('asset/review',{recursive:true});await page.screenshot({path:`asset/review/layout-${width}-${stage}-failure.png`});}
  assert.deepEqual(problems,[],`${width} ${stage} layout`);
+ assert.ok(await page.locator('.ai-mark').isVisible(),`${stage} keeps the AI notice visible`);
+}
+async function welcomeDisclosure(page,viewport){
+ await page.setViewportSize(viewport);
+ await page.evaluate(()=>document.fonts.ready);
+ await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+ const problems=await page.evaluate(()=>{
+  const selectors=['header','.welcome-copy','.welcome-foot'];
+  const boxes=selectors.map(selector=>({selector,rect:document.querySelector(selector).getBoundingClientRect()}));
+  const errors=[];
+  for(const {selector,rect:r} of boxes)if(r.x<0||r.y<0||r.right>innerWidth+1||r.bottom>innerHeight+1)errors.push(`${selector} outside viewport`);
+  for(let i=0;i<boxes.length;i++)for(const b of boxes.slice(i+1)){
+   const a=boxes[i],r=a.rect,s=b.rect;
+   if(Math.min(r.right,s.right)-Math.max(r.left,s.left)>2&&Math.min(r.bottom,s.bottom)-Math.max(r.top,s.top)>2)errors.push(`${a.selector} overlaps ${b.selector}`);
+  }
+  for(const selector of ['.ai-notice','[data-action="new"]','.welcome-foot a','.welcome-foot button']){
+   const el=document.querySelector(selector),r=el.getBoundingClientRect();
+   if(!el.getClientRects().length||r.bottom>innerHeight+1||r.right>innerWidth+1)errors.push(`${selector} hidden or clipped`);
+   const hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);
+   if(selector!=='.ai-notice'&&!el.contains(hit))errors.push(`${selector} obstructed`);
+  }
+  return errors;
+ });
+ if(problems.length||process.env.TOGI_DISCLOSURE_REVIEW==='1'){
+  await mkdir('asset/review',{recursive:true});
+  await page.screenshot({path:`asset/review/ai-welcome-${viewport.width}.png`});
+ }
+ assert.deepEqual(problems,[],`${viewport.width} × ${viewport.height} welcome disclosure layout`);
+ assert.match(await page.locator('.ai-notice').textContent(),/AI\(인공지능\)/);
+ const link=page.locator('.welcome-foot .museum-home-link');
+ assert.equal(await link.getAttribute('href'),'https://www.gbgs.go.kr/museum/main.do');
+ assert.equal(await link.getAttribute('target'),'_blank');
+ assert.match(await link.getAttribute('rel'),/noopener/);
 }
 try{
  const url=await serve('server.mjs',{PORT:'0'});
@@ -40,7 +73,17 @@ try{
   const page=await browser.newPage({viewport:{width,height:width===1280?720:768},reducedMotion:width===1280?'reduce':'no-preference'});
   activePage=page;
   const errors=[];page.on('pageerror',error=>errors.push(error.message));
-  await page.goto(url);await page.waitForSelector('#loading',{state:'detached'});await page.locator('[data-action="new"]').click();
+  await page.goto(url);await page.waitForSelector('#loading',{state:'detached'});
+  if(width===1366){
+   for(const viewport of [{width:1366,height:768},{width:740,height:360},{width:320,height:568},{width:390,height:844},{width:768,height:1024}])await welcomeDisclosure(page,viewport);
+   await page.locator('[data-action="credits"]').click();
+   assert.match(await page.locator('.credits-copy').textContent(),/실제 사진은 AI 생성 이미지가 아니에요/);
+   assert.match(await page.locator('.credits-copy').textContent(),/플레이어가 직접 조절/);
+   if(process.env.TOGI_DISCLOSURE_REVIEW==='1')await page.screenshot({path:'asset/review/ai-credits.png'});
+   await page.locator('[data-action="close"]').click();
+   await page.setViewportSize({width:1366,height:768});
+  }
+  await page.locator('[data-action="new"]').click();
   for(const stage of ['body','mouth','faces','inspect','firing']){
    await page.waitForFunction(s=>document.body.dataset.stage===s,stage);
    await layout(page,stage,width);
@@ -157,7 +200,7 @@ try{
  assert.equal(modelRequested,true,'registered exhibit is loaded separately from the room');assert.deepEqual(warnings,[]);
  await exhibitPage.close();
  const restored=await fetch(editorURL+'/api/restore',{method:'POST',headers:{'X-Editor-Token':token}});assert.equal(restored.status,200);assert.deepEqual(await restored.json(),synthetic);
- console.log('PASS: all-stage desktop layouts, firing phases/pause/skip, story pages, editor photo/text persistence, publish and restore.');
+ console.log('PASS: AI notices and museum links, all-stage layouts, firing phases/pause/skip, story pages, editor photo/text persistence, publish and restore.');
 }catch(error){
  if(activePage&&!activePage.isClosed()){
   console.error('Workshop diagnostic:',await activePage.evaluate(()=>({stage:document.body.dataset.stage,toast:document.querySelector('#toast')?.textContent,next:document.querySelector('[data-action="next"]')?.outerHTML})).catch(()=>null));

@@ -51,6 +51,7 @@ import { AudioController } from "./audio";
 import { icon } from "./icons";
 import { characterImage, asset } from "./assets";
 import {PhotoEditor} from './photo-editor';
+import {AI_CONTENT_LABEL,museumHomeLink} from './disclosure';
 import { museum, loadMuseum, museumAsset, photoFor, storyCard, escapeHTML as e, factLabels } from './museum';
 
 const app = document.querySelector<HTMLDivElement>("#app")!;
@@ -227,7 +228,7 @@ function updateUI() {
     "aria-description",
     stage === "body" || stage === "mouth" || stage === "faces" || world.inGallery ? instruction : toolHelp[tool].instruction,
   );
-  const header = `<header><a class="brand" href="#" data-action="home"><span class="brand-pot">${icon("mouth")}</span><span>얼굴토기<br><small>작은 흙 공방</small></span></a><nav aria-label="공통 메뉴">${
+  const header = `<header><a class="brand" href="#" data-action="home" aria-label="얼굴토기 작은 흙 공방 · ${AI_CONTENT_LABEL} · 처음 화면"><span class="brand-pot">${icon("mouth")}</span><span>얼굴토기<br><small class="ai-mark" title="${AI_CONTENT_LABEL}">AI 생성물 포함</small></span></a><nav aria-label="공통 메뉴">${
     stage !== "welcome"
       ? `<div class="journey" aria-label="${n} / 9 단계">${order
           .slice(1)
@@ -241,7 +242,7 @@ function updateUI() {
   if (stage === "welcome") {
     hud.innerHTML =
       header +
-      `<div class="work-area" aria-hidden="true"></div><section class="welcome-copy"><p class="eyebrow">손끝에서 피어나는 작은 발견</p><h1>흙에서 만나는<br><em>나의 얼굴</em></h1><p class="welcome-description">만지고, 빚고, 표정을 담아.<br>나만의 토기가 들려주는 이야기를 만나 보세요.</p><div class="welcome-actions">${button("new", "만들러 가기", "next", "primary large")}${saved ? button("continue", "이어 만들기", "play", "secondary") : ""}</div><p class="welcome-note">정답은 없어요. 당신의 모양이면 충분해요.</p></section><div class="welcome-foot"><span>경산 소월리의 얼굴 토기에서 시작한 창작 체험</span><span>만들기 · 발견하기 · 이야기 나누기</span></div>`;
+      `<div class="work-area" aria-hidden="true"></div><section class="welcome-copy"><p class="eyebrow">손끝에서 피어나는 작은 발견</p><h1>흙에서 만나는<br><em>나의 얼굴</em></h1><p class="welcome-description">만지고, 빚고, 표정을 담아.<br>나만의 토기가 들려주는 이야기를 만나 보세요.</p><p class="ai-notice"><strong>AI(인공지능) 활용 제작</strong><br>일부 배경·캐릭터는 AI로 생성·편집했어요.</p><div class="welcome-actions">${button("new", "만들러 가기", "next", "primary large")}${saved ? button("continue", "이어 만들기", "play", "secondary") : ""}</div></section><nav class="welcome-foot" aria-label="박물관과 제작 안내">${museumHomeLink()}<button data-action="credits" class="credits-link">제작·출처 안내</button></nav>`;
     layoutUI();
     return;
   }
@@ -335,7 +336,7 @@ function showStory(page=0,photoId=photoFor(stage).id,target:SceneId=stage) {
   });
   storyPage=clamp(page,0,pages.length-1);storyPhoto=photo.id;
   const block=pages[storyPage];
-  modal(`<div class="story-layout"><div class="story-photo"><img src="${museumAsset(photo.file)}" alt="${e(photo.alt)}"><p>${e(photo.caption)}</p><p>${e(photo.credit)}</p><div class="photo-picker">${museum.photos.map((p,i)=>`<button data-action="story-photo-${i}" aria-pressed="${photo.id===p.id}">사진 ${i+1}</button>`).join('')}</div></div><div class="story-copy"><p class="eyebrow">실제 유물에서 찾아보기</p><h2>${e(entry.title)}</h2><section><span class="fact-badge ${block.kind}">${factLabels[block.kind]}</span><p>${e(block.text)}</p></section><nav class="story-pages"><button data-action="story-previous" ${storyPage===0?'disabled':''}>이전 이야기</button><span>${storyPage+1} / ${pages.length}</span><button data-action="story-next" ${storyPage===pages.length-1?'disabled':''}>다음 이야기</button></nav>${photo.source?`<a href="${e(photo.source)}" target="_blank" rel="noopener">자료 출처 보기 ↗</a>`:''}</div></div>`);
+  modal(`<div class="story-layout"><div class="story-photo"><img src="${museumAsset(photo.file)}" alt="${e(photo.alt)}"><p>${e(photo.caption)}</p><p>${e(photo.credit)}</p><div class="photo-picker">${museum.photos.map((p,i)=>`<button data-action="story-photo-${i}" aria-pressed="${photo.id===p.id}">사진 ${i+1}</button>`).join('')}</div></div><div class="story-copy"><p class="eyebrow">실제 유물에서 찾아보기</p><h2>${e(entry.title)}</h2><section><span class="fact-badge ${block.kind}">${factLabels[block.kind]}</span><p>${e(block.text)}</p></section><nav class="story-pages"><button data-action="story-previous" ${storyPage===0?'disabled':''}>이전 이야기</button><span>${storyPage+1} / ${pages.length}</span><button data-action="story-next" ${storyPage===pages.length-1?'disabled':''}>다음 이야기</button></nav><div class="credits-actions">${photo.source?`<a href="${e(photo.source)}" target="_blank" rel="noopener noreferrer">자료 출처 보기 ↗</a>`:''}${museumHomeLink()}</div></div></div>`);
 }
 function go(next: SceneId) {
   cancelGesture();
@@ -524,9 +525,13 @@ document.addEventListener("click", async (e) => {
     updateUI();
     return;
   }
+  if (a === "credits") {
+    modal(`<div class="credits-copy"><p class="eyebrow">AI 제작 안내</p><h2>제작과 자료 출처</h2><p class="ai-content-label">${AI_CONTENT_LABEL}</p><p>이 게임은 개발과 콘텐츠 제작에 생성형 AI를 활용했어요.</p><dl><dt>배경·캐릭터와 3D 재현</dt><dd>일부 배경·재질·캐릭터 이미지를 AI로 생성·편집했고, 코드와 3D 모델 제작에도 AI의 도움을 받았어요. 유물 모형은 사진과 공개 영상을 참고한 재현이며 실측 스캔은 아니에요.</dd><dt>직접 만드는 내 토기</dt><dd>내 토기의 모양과 표정은 플레이어가 직접 조절해요. 플레이 중 AI가 자동으로 작품을 생성하는 방식은 아니에요.</dd><dt>실제 유물 사진과 자료</dt><dd>‘유물 이야기’의 실제 사진은 AI 생성 이미지가 아니에요. 각 사진의 제공자와 출처를 따로 표시했어요.</dd><dt>저장하는 기념 이미지</dt><dd>AI 생성·편집 콘텐츠가 포함됐다는 문구를 이미지 안에 함께 저장해요. 스티커를 옮기거나 지워도 이 표시는 유지돼요.</dd></dl><div class="credits-actions">${museumHomeLink()}<button data-action="story" class="secondary">실제 유물과 출처 보기</button></div></div>`);
+    return;
+  }
   if (a === "help") {
     modal(
-      `<div class="help-copy"><p class="eyebrow">천천히, 마음 가는 대로</p><h2>이렇게 해보세요</h2><p>${scenes[stage].instruction}</p><ul><li>손으로 빚기: 몸체를 좌우로 끌면 잡은 높이 주변이 둥글게 달라져요.</li><li>토기 옆 높이·넓이 손잡이로 크기를 바꿔요. 매끈하게 정리로 굴곡을 부드럽게 만들 수 있어요.</li><li>그리기 도구를 펼쳐 눈·입과 옆 구멍을 골라요. 톡 누르면 기본 구멍, 윤곽을 직접 그려 닫으면 그 모양으로 뚫려요. 작은 손떨림과 끝의 작은 틈만 보정해요.</li><li>토기 밖을 끌면 좌우로 회전하고, 위아래로 보는 높이가 바뀌어요. 마우스 오른쪽 끌기도 사용할 수 있어요.</li><li>두 손가락으로 끌면 시점을 바꾸고, 벌리거나 오므리면 확대·축소해요. PC에서는 오른쪽 드래그와 마우스 휠을 사용해요.</li><li>되돌리기 또는 Ctrl / ⌘ + Z로 복구해요.</li></ul><label class="motion-setting"><input id="reduce-motion" type="checkbox" ${world.reduced ? "checked" : ""}> 움직임 줄이기</label></div>`,
+      `<div class="help-copy"><p class="eyebrow">천천히, 마음 가는 대로</p><h2>이렇게 해보세요</h2><p>${scenes[stage].instruction}</p><ul><li>손으로 빚기: 몸체를 좌우로 끌면 잡은 높이 주변이 둥글게 달라져요.</li><li>토기 옆 높이·넓이 손잡이로 크기를 바꿔요. 매끈하게 정리로 굴곡을 부드럽게 만들 수 있어요.</li><li>그리기 도구를 펼쳐 눈·입과 옆 구멍을 골라요. 톡 누르면 기본 구멍, 윤곽을 직접 그려 닫으면 그 모양으로 뚫려요. 작은 손떨림과 끝의 작은 틈만 보정해요.</li><li>토기 밖을 끌면 좌우로 회전하고, 위아래로 보는 높이가 바뀌어요. 마우스 오른쪽 끌기도 사용할 수 있어요.</li><li>두 손가락으로 끌면 시점을 바꾸고, 벌리거나 오므리면 확대·축소해요. PC에서는 오른쪽 드래그와 마우스 휠을 사용해요.</li><li>되돌리기 또는 Ctrl / ⌘ + Z로 복구해요.</li></ul><label class="motion-setting"><input id="reduce-motion" type="checkbox" ${world.reduced ? "checked" : ""}> 움직임 줄이기</label><section class="help-credits"><p>${AI_CONTENT_LABEL}</p><div class="credits-actions"><button data-action="credits" class="secondary">AI 제작·출처 안내</button>${museumHomeLink()}</div></section></div>`,
     );
     return;
   }
