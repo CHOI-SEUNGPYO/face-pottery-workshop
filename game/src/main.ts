@@ -2,6 +2,7 @@ import "./style.css";
 import "./layout.css";
 import "./museum-presentation.css";
 import {firingFrame} from './firing';
+import {advanceFiring} from './firing-progress.mjs';
 import * as T from "three";
 import {
   freshSave,
@@ -427,7 +428,7 @@ function startFire() {
   const tick=(now:number)=>{
     const delta=Math.max(0,now-fireLast);fireLast=now;
     if(!world.paused&&!document.hidden){
-      fireElapsed+=delta;
+      fireElapsed=advanceFiring(fireElapsed/duration,delta,duration)*duration;
       const t=clamp(fireElapsed/duration,0,1),frame=firingFrame(t);
       world.setFiringProgress(t);audio.firing(frame.heat);
       const meter=document.querySelector<HTMLElement>('#fire-progress');

@@ -84,6 +84,7 @@ try{
    await page.locator('[data-action="close"]').click();
    await page.setViewportSize({width:1366,height:768});
    await checkMuseumWelcome(page);
+   console.log('PASS: museum welcome, credits and photo album across desktop, phone and tablet sizes.');
   }
   await page.locator('[data-action="new"]').click();
   for(const stage of ['body','mouth','faces','inspect','firing']){
@@ -111,6 +112,7 @@ try{
      await page.setViewportSize({width:1366,height:768});
    }
    if(width===1366&&['body','faces'].includes(stage))await shot(page,'layout-'+stage);
+   console.log(`Workshop layout: ${width} ${stage}`);
    if(stage!=='firing')await page.locator('[data-action="next"]').click();
   }
   // Hold transient phases through the real story button, before the remote
@@ -149,6 +151,7 @@ try{
     await page.waitForFunction(()=>document.querySelector('#firing-phase')?.textContent==='완성',null,{timeout:90000});
   }else await page.locator('[data-action="next"]').click();
   await page.locator('[data-action="next"]').click();await layout(page,'excavation',width);
+  console.log(`PASS: ${width} firing phases and pause/resume.`);
   if(width===1366){for(const viewport of [{width:740,height:360},{width:390,height:844},{width:320,height:568},{width:1024,height:768},{width:768,height:1024}]){await page.setViewportSize(viewport);await layout(page,'excavation',viewport.width);}await page.setViewportSize({width:1366,height:768});}
   // Let the player inspect the find before explicitly leaving the trench.
   for(let i=0;i<12&&await page.locator('body').getAttribute('data-stage')==='excavation';i++){await page.locator('[data-action="assist"]').click();if(await page.locator('[data-action="next"]').isEnabled())break;}
