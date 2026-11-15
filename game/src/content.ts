@@ -105,7 +105,7 @@ export const scenes: Record<
   compare: {
     title: "닮은 곳, 다른 곳을 찾아요",
     eyebrow: "08 · 실제 유물과 비교",
-    instruction: "각 토기를 잡고 좌우로 돌려 보세요. 오른쪽은 사진을 바탕으로 만든 3D 재현이에요.",
+    instruction: "각 토기를 잡고 좌우로 돌려 보세요. 오른쪽은 실물 사진과 스캔 영상을 참고한 3D 재현이에요.",
     character: "경산이",
     speech: "실제 유물에는 세 얼굴이 있어.\n네 작품은 어떤 이야기를 들려줄까?",
     next: "사진 찍고 꾸미기",

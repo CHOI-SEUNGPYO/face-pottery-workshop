@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {mkdir,readFile} from 'node:fs/promises';
+import {mkdir,readFile,writeFile} from 'node:fs/promises';
 import {createServer} from 'vite';
 import {chromium} from 'playwright';
 import * as T from 'three';
@@ -7,16 +7,21 @@ import {buildFaceArtifact} from './face-artifact.mjs';
 // Probe the actual geometry, not material colour: every face has open eyes,
 // nostrils and mouth. A painted black disk cannot satisfy this check.
 const model=buildFaceArtifact();model.updateMatrixWorld(true);
-for(let face=0;face<3;face++)for(const [du,y] of [[-.245,1.307],[.245,1.307],[-.087,1.198],[.087,1.198],[0,1.075]]){
-  const u=Math.PI/6+face*Math.PI*2/3+du;
-  const start=model.localToWorld(new T.Vector3(Math.sin(u)*.7,y,Math.cos(u)*.7));
+assert.equal(model.userData.openingCentres.length,18,'three faces and three pierced ear collars');
+for(const {u,y,kind} of model.userData.openingCentres){
+  const start=model.localToWorld(new T.Vector3(Math.sin(u)*.8,y,Math.cos(u)*.8));
   const centre=model.localToWorld(new T.Vector3(0,y,0));
   const hits=new T.Raycaster(start,centre.sub(start).normalize()).intersectObject(model,true);
-  assert.ok(!hits.length||hits[0].distance>.40,`face ${face+1}: opening is a real tunnel into the vessel`);
+  assert.ok(!hits.length||hits[0].distance>.40,`${kind}: opening is a real tunnel into the vessel`);
 }
+const underside=new T.Raycaster(new T.Vector3(.22,-.2,0),new T.Vector3(0,1,0)).intersectObject(model,true);
+assert.ok(underside[0]?.distance>1,'the open base leads into the vessel, not a solid bottom');
+const dimensions=new T.Box3().setFromObject(model,true).getSize(new T.Vector3());
+assert.ok(dimensions.x/dimensions.y>.65&&dimensions.x/dimensions.y<.76,'broad shoulders match the scan-video silhouette');
 model.traverse(o=>{if(o.isMesh){o.geometry.dispose();o.material.dispose();}});
 const server=await createServer({server:{host:'127.0.0.1',port:0,strictPort:false}});
 const review=process.env.TOGI_REVIEW==='1'||process.env.TOGI_ART_REVIEW==='1';
+const artifactReview=process.env.TOGI_ARTIFACT_REVIEW==='1';
 await server.listen();let browser;
 try{
   browser=await chromium.launch({channel:'msedge',headless:true});
@@ -33,7 +38,7 @@ try{
     assert.ok(start&&start.x>=0&&start.y>=0&&start.x+start.width<=viewport.width&&start.y+start.height<=viewport.height,'welcome start button fits phone and tablet screens');
   }
   await page.setViewportSize({width:1366,height:768});
-  if(review)await mkdir('asset/review',{recursive:true});
+  if(review||artifactReview)await mkdir('asset/review',{recursive:true});
   await page.locator('[data-action="new"]').click();
   const before=await page.evaluate(()=>JSON.stringify(window.togi.save.document));
   for(const stage of ['body','compare','excavation','assembly','firing']){
@@ -65,11 +70,36 @@ try{
       assert.equal(artifact.photo,false,'the static photograph no longer replaces the 3D exhibit');
       assert.equal(artifact.outline,false,'editing outline is absent in the gallery and exported photos');
       assert.equal(artifact.plinths,true,'permanent exhibit supports are visible');
+      assert.equal(await page.evaluate(()=>{
+        const materials=new Set();window.togi.world.referenceArtifact.traverse(o=>{if(o.isMesh&&o.material.userData.artifactSurface==='exterior')materials.add(o.material);});
+        return materials.size>0&&[...materials].every(m=>m.map&&m.normalMap&&!m.bumpMap&&m.map.image.width===1024);
+      }),true,'reference exhibit preserves its embedded colour and relief maps');
       for(let face=0;face<3;face++){
         await page.evaluate(angle=>{window.togi.world.referenceArtifact.rotation.y=angle;window.togi.world.refresh(true);},-face*Math.PI*2/3);
         if(review){await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));await page.screenshot({path:`asset/review/art-reference-face-${face+1}.png`});}
       }
       await page.evaluate(()=>{window.togi.world.referenceArtifact.rotation.y=0;window.togi.world.refresh(true);});
+      if(artifactReview){
+        await page.screenshot({path:'asset/review/artifact-v4-gallery.png'});
+        // Render the loaded game asset with neutral lighting at matching angles.
+        // This also checks that the GLB is self-contained outside the game room.
+        const plates=await page.evaluate(()=>{
+          const w=window.togi.world,scene=new w.scene.constructor(),artifact=w.referenceArtifact.clone(true);
+          artifact.position.set(0,0,0);scene.add(artifact);
+          scene.environment=w.scene.environment;scene.environmentIntensity=w.scene.environmentIntensity;
+          const key=w.key.clone(),fill=w.fill.clone(),ambient=w.ambient.clone();
+          key.position.set(-3,4,5);key.intensity=2.4;fill.position.set(4,2,3);fill.intensity=.75;ambient.intensity=1.1;
+          scene.add(key,fill,ambient);
+          const renderer=new w.renderer.constructor({antialias:true,preserveDrawingBuffer:true});renderer.setSize(560,680);renderer.setClearColor(0xe8e6e1,1);renderer.outputColorSpace=w.renderer.outputColorSpace;renderer.toneMapping=w.renderer.toneMapping;renderer.toneMappingExposure=w.renderer.toneMappingExposure;
+          const camera=w.camera.clone();camera.fov=28;camera.aspect=560/680;camera.zoom=1;camera.near=.01;camera.far=100;camera.updateProjectionMatrix();
+          const out=[];
+          for(let face=0;face<3;face++){
+            artifact.rotation.y=-face*Math.PI*2/3;camera.position.set(0,.84,4);camera.lookAt(0,.79,0);camera.updateMatrixWorld();renderer.render(scene,camera);out.push(renderer.domElement.toDataURL('image/png'));
+          }
+          artifact.rotation.y=0;camera.position.set(1.4,-3.5,.8);camera.lookAt(0,.75,0);camera.updateMatrixWorld();renderer.render(scene,camera);out.push(renderer.domElement.toDataURL('image/png'));renderer.dispose();return out;
+        });
+        for(let i=0;i<plates.length;i++)await writeFile(`asset/review/artifact-v4-${i===3?'underside':`face-${i+1}`}.png`,Buffer.from(plates[i].split(',')[1],'base64'));
+      }
     }
     if(stage==='excavation'){
       const documentBefore=await page.evaluate(()=>JSON.stringify(window.togi.save.document));

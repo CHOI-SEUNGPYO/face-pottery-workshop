@@ -6,6 +6,7 @@ import {GLTFExporter} from 'three/addons/exporters/GLTFExporter.js';
 import {mkdir,writeFile} from 'node:fs/promises';
 import {buildScenes} from './scene-art.mjs';
 import {buildFaceArtifact} from './face-artifact.mjs';
+import {finishFaceArtifactGlb} from './face-artifact-material.mjs';
 
 globalThis.FileReader=class{
   async readAsArrayBuffer(blob){this.result=await blob.arrayBuffer();this.onloadend?.();}
@@ -279,10 +280,12 @@ const scenes=buildScenes({T,group,mesh,box,lathe,ring,place,material,pottery,too
 scenes.assets.push(['face-artifact',buildFaceArtifact()]);
 const sceneManifest=[];
 for(const [id,root]of scenes.assets){
-  root.userData.provenance='Photo-informed game environment; not a measured artifact scan';
-  const data=await new GLTFExporter().parseAsync(root,{binary:true,onlyVisible:false});
-  await writeFile(new URL(`${id}-v3.glb`,out),Buffer.from(data));
-  sceneManifest.push({id,file:`${id}-v3.glb`,bytes:data.byteLength});
+  if(id!=='face-artifact')root.userData.provenance='Photo-informed game environment; not a measured artifact scan';
+  let data=await new GLTFExporter().parseAsync(root,{binary:true,onlyVisible:false});
+  if(id==='face-artifact')data=finishFaceArtifactGlb(data);
+  const version=id==='face-artifact'?'v4':'v3';
+  await writeFile(new URL(`${id}-${version}.glb`,out),Buffer.from(data));
+  sceneManifest.push({id,file:`${id}-${version}.glb`,bytes:data.byteLength});
 }
 await writeFile(new URL('../asset/source/scene-layout-v3.json',import.meta.url),JSON.stringify({models:sceneManifest,exhibits:scenes.records},null,2)+'\n');
 console.log(`Authored ${sceneManifest.length} separated room, courtyard and support assets.`);

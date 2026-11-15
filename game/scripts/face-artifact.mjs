@@ -1,115 +1,161 @@
 import * as T from 'three';
+import polygonClipping from 'polygon-clipping';
 
-// Authored from the supplied three-face and exhibition photographs. The profile,
-// apertures and firing marks are an interpretation, not measured scan data.
+// Visual study of the museum's public 28.3 s scan video (1, 3, 6, 9, 11, 14,
+// 16, 18, 21, 23, 26 s) and the supplied three-face colour photographs.
+// These are authored coordinates, not recovered scan vertices or measurements.
+export const artifactHeight=1.58;
+const TAU=Math.PI*2,firstFace=Math.PI/4,paramRadius=.54;
+const profile=[
+  [.440,0],[.444,.026],[.426,.070],[.413,.18],[.414,.34],
+  [.432,.49],[.490,.65],[.540,.83],[.560,.99],[.552,1.12],
+  [.520,1.26],[.454,1.38],[.350,1.455],[.219,1.495],
+  [.126,1.515],[.114,1.545],[.120,artifactHeight],
+];
+function radius(y){
+  let i=1;while(i<profile.length-1&&profile[i][1]<y)i++;
+  const a=profile[i-1],b=profile[i],p=profile[Math.max(0,i-2)],n=profile[Math.min(profile.length-1,i+1)];
+  const span=b[1]-a[1],t=T.MathUtils.clamp((y-a[1])/span,0,1);
+  const ma=(b[0]-p[0])/(b[1]-p[1]),mb=(n[0]-a[0])/(n[1]-a[1]);
+  return (2*t**3-3*t*t+1)*a[0]+(t**3-2*t*t+t)*span*ma+(-2*t**3+3*t*t)*b[0]+(t**3-t*t)*span*mb;
+}
+const angleDistance=(a,b)=>Math.atan2(Math.sin(a-b),Math.cos(a-b));
+const bell=(x,s)=>Math.exp(-((x/s)**2));
+function surface(u,y,inset=0){
+  const v=y/artifactHeight;
+  let relief=(.010*Math.sin(2*u+.5)+.006*Math.sin(5*u+y*6))*Math.sin(Math.PI*v);
+  for(let face=0;face<3;face++){
+    const du=angleDistance(u,firstFace+face*TAU/3);
+    relief+=.018*bell(du,.12)*bell(y-1.12,.14);
+    relief-=.013*bell(du-.23,.20)*bell(y-.88,.24);
+    relief-=.009*bell(du+.24,.18)*bell(y-1.14,.13);
+    const ear=angleDistance(u,firstFace+face*TAU/3+Math.PI/3);
+    relief+=.028*bell(ear,.055)*bell(y-1.37,.032);
+  }
+  const neck=T.MathUtils.smoothstep(y,1.49,artifactHeight);
+  const rimWarp=neck*(.0025*Math.sin(7*u)+.0015*Math.sin(13*u+1));
+  const r=radius(y)+relief-inset;
+  return new T.Vector3(Math.sin(u)*r+.009*Math.sin(Math.PI*v),y+rimWarp,Math.cos(u)*r+.008*Math.sin(Math.PI*v*1.4));
+}
+function surfaceNormal(u,y,inset=0){
+  const e=.0001,du=surface(u+e,y,inset).sub(surface(u-e,y,inset));
+  const dy=surface(u,Math.min(artifactHeight,y+e),inset).sub(surface(u,Math.max(0,y-e),inset));
+  return du.cross(dy).normalize().multiplyScalar(inset? -1:1);
+}
+
+// Each side has its own cut contours and slopes, including a nearly closed
+// horizontal mouth and two different leaf-shaped openings.
+const eye=[[-1,0],[-.72,.67],[-.15,.88],[.52,.55],[1,-.02],[.56,-.67],[-.10,-.76],[-.74,-.41]];
+const mouth=[[-1,0],[-.58,.58],[-.08,.83],[.40,.56],[1,.08],[.60,-.70],[.06,-.85],[-.61,-.51]];
+const slit=[[-1,.10],[-.55,.58],[.08,.62],[.73,.47],[1,-.02],[.50,-.59],[-.19,-.42],[-.76,-.55]];
+const round=Array.from({length:12},(_,i)=>{const a=-i/12*TAU;return [Math.cos(a)*(1+.05*Math.sin(i*2)),Math.sin(a)*(1+.05*Math.cos(i*3))];});
+const faces=[
+  {eyeY:[1.235,1.248],eyeW:[.101,.106],eyeH:[.024,.019],eyeTilt:[-.09,.20],noseY:[1.100,1.086],mouthY:.954,mouthW:.137,mouthH:.031,mouthTilt:.055},
+  {eyeY:[1.242,1.247],eyeW:[.104,.111],eyeH:[.017,.015],eyeTilt:[-.06,.13],noseY:[1.112,1.105],mouthY:.925,mouthW:.129,mouthH:.010,mouthTilt:.015},
+  {eyeY:[1.249,1.228],eyeW:[.099,.104],eyeH:[.020,.030],eyeTilt:[-.04,.19],noseY:[1.110,1.097],mouthY:.968,mouthW:.124,mouthH:.025,mouthTilt:-.03},
+];
+
 export function buildFaceArtifact(){
-  const root=new T.Group();root.name='Sowolri three face pottery study';
-  root.userData.provenance='Photo-informed 3D reconstruction; not a scan';
-  const height=1.58, circumference=Math.PI*2, radiusScale=.50;
-  const profile=new T.SplineCurve([
-    [.355,0],[.365,.025],[.345,.09],[.334,.28],[.356,.48],
-    [.416,.72],[.482,.96],[.488,1.10],[.459,1.25],
-    [.387,1.36],[.274,1.45],[.119,1.51],[.110,1.55],[.117,height],
-  ].map(([r,y])=>new T.Vector2(r,y))).getPoints(600);
-  function radius(y){
-    let i=1;while(i<profile.length-1&&profile[i].y<y)i++;
-    const a=profile[i-1],b=profile[i],t=T.MathUtils.clamp((y-a.y)/(b.y-a.y),0,1);
-    return T.MathUtils.lerp(a.x,b.x,t);
-  }
-  function surface(u,y,inset=0){
-    const r=radius(y)-inset;
-    const wobble=(.004*Math.sin(3*u+y*8)+.002*Math.sin(7*u-y*11))*Math.sin(Math.PI*y/height);
-    const lip=T.MathUtils.smoothstep(y,1.49,height)*(.003*Math.sin(u*9)+.002*Math.sin(u*17));
-    return new T.Vector3(Math.sin(u)*(r+wobble),y+lip,Math.cos(u)*(r+wobble));
-  }
+  const root=new T.Group();root.name='Sowolri scan-video-informed three face pottery';
+  root.userData.provenance='Authored from public scan video and photographs; not measured scan data';
+  root.userData.reference='https://www.instagram.com/reel/DOLEa8RE4-2/';
   const holes=[];
-  function aperture(name,u,y,w,h,tilt=0,seed=0,lip=.004){
+  function aperture(name,u,y,w,h,tilt,outline,seed,kind){
+    const curve=new T.CatmullRomCurve3(outline.map(([x,z])=>new T.Vector3(x,z,0)),true,'centripetal');
     const points=Array.from({length:48},(_,i)=>{
-      const a=-i/48*circumference,k=1+.035*Math.sin(a*5+seed)+.025*Math.sin(a*9-seed);
-      const x=Math.cos(a)*w*k,v=Math.sin(a)*h*k;
-      return new T.Vector2((u+x/radius(y))*radiusScale,y+v+tilt*x);
+      const p=curve.getPoint(i/48),jitter=1+.012*Math.sin(i*2.3+seed);
+      const x=p.x*w*jitter;
+      return new T.Vector2((u+x/radius(y))*paramRadius,y+p.y*h*jitter+tilt*x);
     });
-    holes.push({name,points,lip});
+    holes.push({name,u,y,points,kind});
   }
   for(let face=0;face<3;face++){
-    const u=Math.PI/6+face*circumference/3;
-    const eyeHeight=[.026,.017,.021][face],mouthHeight=[.032,.012,.025][face];
-    for(const side of [-1,1]){
-      aperture(`Face ${face+1} eye`,u+side*.245,1.307,.078,eyeHeight,side*.12,face+side,.008);
-      aperture(`Face ${face+1} nostril`,u+side*.087,1.198,.020,.026,0,face+3,.004);
+    const u=firstFace+face*TAU/3,f=faces[face];
+    for(let s=0;s<2;s++){
+      const side=s?1:-1;
+      aperture(`Face ${face+1} ${s?'right':'left'} eye`,u+side*.35,f.eyeY[s],f.eyeW[s],f.eyeH[s],f.eyeTilt[s],eye,face*3+s,'eye');
+      aperture(`Face ${face+1} ${s?'right':'left'} nostril`,u+side*.155,f.noseY[s],.024+s*.002,.031-s*.003,side*.13,round,face*5+s,'nostril');
     }
-    aperture(`Face ${face+1} mouth`,u,1.075,.101,mouthHeight,.025,face+8,.014);
-    aperture(`Side opening ${face+1}`,u+Math.PI/3,1.215,.066,.075,-.08,face+12,.032);
+    aperture(`Face ${face+1} mouth`,u,f.mouthY,f.mouthW,f.mouthH,f.mouthTilt,face===1?slit:mouth,face+9,'mouth');
+    aperture(`Side opening ${face+1}`,u+Math.PI/3,1.174+face*.006,.063,.078,-.09+face*.06,round,face+14,'ear');
   }
-  const contour=[new T.Vector2(0,0),new T.Vector2(circumference*radiusScale,0),new T.Vector2(circumference*radiusScale,height),new T.Vector2(0,height)];
-  const points=[...contour,...holes.flatMap(h=>h.points)];
-  let triangles=T.ShapeUtils.triangulateShape(contour,holes.map(h=>h.points));
-  // Conforming subdivision retains the exact aperture outlines and gives the
-  // curved body enough interior vertices without stair-stepped cut-outs.
-  for(let pass=0;pass<13;pass++){
-    const cuts=new Map(),key=(a,b)=>a<b?`${a}:${b}`:`${b}:${a}`;
-    for(const t of triangles)for(let j=0;j<3;j++){
-      const a=t[j],b=t[(j+1)%3],k=key(a,b);
-      if(!cuts.has(k)&&points[a].distanceTo(points[b])>.090){cuts.set(k,points.length);points.push(points[a].clone().lerp(points[b],.5));}
-    }
-    if(!cuts.size)break;
-    const next=[];
-    for(const [a,b,c] of triangles){
-      const ab=cuts.get(key(a,b)),bc=cuts.get(key(b,c)),ca=cuts.get(key(c,a));
-      if(ab!==undefined&&bc!==undefined&&ca!==undefined)next.push([a,ab,ca],[ab,b,bc],[ca,bc,c],[ab,bc,ca]);
-      else if(ab!==undefined&&bc!==undefined)next.push([b,bc,ab],[a,ab,c],[ab,bc,c]);
-      else if(bc!==undefined&&ca!==undefined)next.push([c,ca,bc],[b,bc,a],[bc,ca,a]);
-      else if(ca!==undefined&&ab!==undefined)next.push([a,ab,ca],[c,ca,b],[ca,ab,b]);
-      else if(ab!==undefined)next.push([a,ab,c],[ab,b,c]);
-      else if(bc!==undefined)next.push([b,bc,a],[bc,c,a]);
-      else if(ca!==undefined)next.push([c,ca,b],[ca,a,b]);
-      else next.push([a,b,c]);
-    }
-    triangles=next;
-  }
-  const outer=new T.MeshStandardMaterial({color:0xe1e6e7,roughness:.94,vertexColors:true});
-  outer.name='Charcoal gray stamped earthenware';outer.userData.surface='stamped-clay';
-  const inner=new T.MeshStandardMaterial({color:0x353633,roughness:1});inner.name='Unglazed hollow interior';
-  function colour(u,y){
-    const cloud=(Math.sin(u*5+y*7)+Math.sin(u*11-y*4)+Math.sin(u*17+y*13))/3;
-    const worn=T.MathUtils.smoothstep(cloud,.10,.72)*T.MathUtils.smoothstep(y,1.14,1.52);
-    const lower=T.MathUtils.smoothstep(y,.25,.95),gray=.52+lower*.26+cloud*.06;
-    return [gray+worn*.16,gray-worn*.04,gray-worn*.20];
-  }
-  function add(name,coords,indices,mat,colors){
+  const outer=new T.MeshStandardMaterial({color:0xffffff,roughness:.96});
+  outer.name='Sowol charcoal clay with vertical paddle impressions';outer.userData.artifactSurface='exterior';
+  const inner=new T.MeshStandardMaterial({color:0x30332f,roughness:.97});inner.name='Continuous unglazed interior';
+  function add(name,coords,indices,mat,uv,normals){
     const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(coords.flatMap(v=>v.toArray()),3));
-    if(colors)geo.setAttribute('color',new T.Float32BufferAttribute(colors.flat(),3));
-    geo.setIndex(indices.flat());geo.computeVertexNormals();
-    const m=new T.Mesh(geo,mat);m.name=name;root.add(m);return geo;
+    geo.setAttribute('uv',new T.Float32BufferAttribute(uv,2));geo.setIndex(indices.flat());geo.computeVertexNormals();
+    if(normals)geo.setAttribute('normal',new T.Float32BufferAttribute(normals.flatMap(v=>v.toArray()),3));
+    const m=new T.Mesh(geo,mat);m.name=name;root.add(m);return m;
   }
+  const toUV=p=>[p.x/paramRadius/TAU,p.y/artifactHeight];
+  const scaledPoint=(hole,p,scale)=>new T.Vector2(hole.u*paramRadius+(p.x-hole.u*paramRadius)*scale,hole.y+(p.y-hole.y)*scale);
+  const segments=192;
+  // Clip openings into small regular surface cells. This avoids the long,
+  // almost collinear triangles between separate eyes and nostrils.
+  // The outside opening meets the lip's outer edge, without overlapping clay.
   for(const inside of [false,true]){
-    const coords=points.map(p=>surface(p.x/radiusScale,p.y,inside?.028:0));
-    // Mapping (angle,height) has outward-facing CCW triangles.
+    const points=[],triangles=[],vertexIds=new Map();
+    const cutouts=holes.map(h=>{
+      const ring=h.points.map(p=>scaledPoint(h,p,inside?1:h.kind==='ear'?1.33:1.18).toArray());
+      return {ring,minX:Math.min(...ring.map(p=>p[0])),maxX:Math.max(...ring.map(p=>p[0])),minY:Math.min(...ring.map(p=>p[1])),maxY:Math.max(...ring.map(p=>p[1]))};
+    });
+    const ys=[...new Set([...Array.from({length:129},(_,i)=>i/128*artifactHeight),...profile.map(p=>p[1])])].sort((a,b)=>a-b);
+    function vertex(p){
+      const key=`${p.x.toFixed(9)}:${p.y.toFixed(9)}`;
+      if(!vertexIds.has(key)){vertexIds.set(key,points.length);points.push(p);}
+      return vertexIds.get(key);
+    }
+    for(let row=0;row<ys.length-1;row++)for(let col=0;col<segments;col++){
+      const x0=col/segments*TAU*paramRadius,x1=(col+1)/segments*TAU*paramRadius,y0=ys[row],y1=ys[row+1];
+      const clips=cutouts.filter(h=>h.minX<x1&&h.maxX>x0&&h.minY<y1&&h.maxY>y0);
+      const cell=[[[x0,y0],[x1,y0],[x1,y1],[x0,y1]]];
+      const pieces=clips.length?polygonClipping.difference(cell,...clips.map(h=>[h.ring])):[cell];
+      for(const polygon of pieces){
+        const rings=polygon.map(r=>r.map(p=>new T.Vector2(...p)));
+        for(const r of rings)if(r.length>1&&r[0].equals(r.at(-1)))r.pop();
+        const ids=rings.flat().map(vertex),faces=T.ShapeUtils.triangulateShape(rings[0],rings.slice(1));
+        triangles.push(...faces.map(t=>t.map(i=>ids[i])));
+      }
+    }
+    const coords=points.map(p=>surface(p.x/paramRadius,p.y,inside?.030:0));
     const ids=inside?triangles.map(([a,b,c])=>[a,c,b]):triangles;
-    const geo=add(inside?'Continuous inner wall':'Perforated stamped body',coords,ids,inside?inner:outer,inside?null:points.map(p=>colour(p.x/radiusScale,p.y)));
-    geo.setAttribute('uv',new T.Float32BufferAttribute(points.flatMap(p=>[p.x/radiusScale/circumference*3,p.y*1.8]),2));
+    const normals=points.map(p=>surfaceNormal(p.x/paramRadius,p.y,inside?.030:0));
+    add(inside?'Continuous inner wall':'Perforated stamped body',coords,ids,inside?inner:outer,points.flatMap(toUV),normals);
   }
   for(const hole of holes){
-    const vertices=[],colors=[],uv=[],indices=[],n=hole.points.length;
-    for(const depth of [-hole.lip,0,.028])for(const p of hole.points){
-      const u=p.x/radiusScale;vertices.push(surface(u,p.y,depth));colors.push(colour(u,p.y));uv.push(u/circumference*3,p.y*1.8);
+    const vertices=[],uv=[],indices=[],n=hole.points.length;
+    const ear=hole.kind==='ear',nose=hole.kind==='nostril';
+    // A flared clay sleeve joins the pierced body. No floating torus or dark cap.
+    const rings=ear?[[1.33,0],[1.25,-.033],[1.07,-.065],[.94,-.071],[.90,-.055],[1,.030]]:
+      [[1.18,0],[1.04,-(nose?.007:hole.kind==='mouth'?.012:.009)],[1,.030]];
+    for(const [scale,depth] of rings)for(let i=0;i<n;i++){
+      const q=scaledPoint(hole,hole.points[i],scale);
+      const wear=ear?1+.04*Math.sin(i/n*TAU*3)+.02*Math.sin(i/n*TAU*7):1;
+      vertices.push(surface(q.x/paramRadius,q.y,depth<0?depth*wear:depth));uv.push(...toUV(q));
     }
-    for(let j=0;j<2;j++)for(let i=0;i<n;i++){
-      const a=j*n+i,b=j*n+(i+1)%n,c=a+n,d=b+n;indices.push([a,b,c],[b,d,c]);
+    for(let j=0;j<rings.length-1;j++)for(let i=0;i<n;i++){
+      const a=j*n+i,b=j*n+(i+1)%n,c=a+n,d=b+n;indices.push([a,c,b],[b,c,d]);
     }
-    const geo=add(hole.name+' clay edge',vertices,indices,outer,colors);
-    geo.setAttribute('uv',new T.Float32BufferAttribute(uv,2));
+    const collar=add(hole.name+' clay edge',vertices,indices,outer,uv);collar.userData.opening={u:hole.u,y:hole.y,kind:hole.kind};
+    const normals=collar.geometry.attributes.normal;
+    for(const row of [0,rings.length-1])for(let i=0;i<n;i++){
+      const p=scaledPoint(hole,hole.points[i],rings[row][0]),v=surfaceNormal(p.x/paramRadius,p.y,row?.030:0);
+      normals.setXYZ(row*n+i,...v.toArray());
+    }
   }
-  // Open neck and open lower rim, with ceramic thickness visible from below.
-  for(const y of [0,height]){
-    const vertices=[],colors=[],uv=[],indices=[],n=144;
-    for(const depth of [0,.028])for(let i=0;i<=n;i++){
-      const u=i/n*circumference;vertices.push(surface(u,y,depth));colors.push(colour(u,y));uv.push(i/n*3,y*1.8);
+  // The scan shows a completely open underside with a flared, thick edge.
+  for(const y of [0,artifactHeight]){
+    const vertices=[],uv=[],indices=[],n=segments;
+    for(const inset of [0,.010,.030])for(let i=0;i<=n;i++){
+      const u=i/n*TAU,p=surface(u,y,inset);if(y===artifactHeight&&inset===.010)p.y+=.004;
+      vertices.push(p);uv.push(i/n,y/artifactHeight);
     }
-    for(let i=0;i<n;i++){const a=i,b=i+1,c=i+n+1,d=c+1;indices.push(...(y===0?[[a,c,b],[b,c,d]]:[[a,b,c],[b,d,c]]));}
-    const geo=add(y===0?'Open basal rim':'Uneven neck rim',vertices,indices,outer,colors);geo.setAttribute('uv',new T.Float32BufferAttribute(uv,2));
+    for(let row=0;row<2;row++)for(let i=0;i<n;i++){
+      const a=row*(n+1)+i,b=a+1,c=a+n+1,d=c+1;indices.push(...(y===0?[[a,c,b],[b,c,d]]:[[a,b,c],[b,d,c]]));
+    }
+    add(y===0?'Open flared basal rim':'Uneven short neck rim',vertices,indices,outer,uv);
   }
-  root.rotation.y=-Math.PI/6;
-  root.userData.faces=3;root.userData.openings=holes.length;
-  return root;
+  root.rotation.y=-firstFace;root.userData.faces=3;root.userData.openings=holes.length;
+  root.userData.openingCentres=holes.map(({u,y,kind})=>({u,y,kind}));return root;
 }
