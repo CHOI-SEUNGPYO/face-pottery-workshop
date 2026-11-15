@@ -5,9 +5,14 @@ export function buildScenes(c){
   const stone=material('Honed warm limestone',0xe7e4dd,'limestone',.9);
   const dark=material('Museum bronze charcoal',0x414742,null,.7,.1);
   const wallMat=material('Warm museum plaster',0xddd5c6,'plaster',.92);
-  const panel=material('Museum terracotta exhibition panel',0xb55725,'plaster',.91);
-  const navy=material('Deep blue museum walls',0x183d52,'plaster',.91);
-  const oakFloor=material('Warm museum parquet',0xbeaa89,'aged-oak',.62);
+  const panel=material('Museum orange interpretation panel',0xd58227,null,.8);
+  const navy=material('Gyeongsan deep blue case backing',0x0d2e4a,null,.85);
+  const museumWall=material('Gyeongsan warm charcoal wall',0x44403d,null,.93);
+  const museumFloor=material('Gyeongsan amber parquet',0xe9ae70,'aged-oak',.38);
+  const shelfWood=material('Pale solid maple exhibit shelves',0xf5e6cb,'aged-oak',.6);
+  const oakFloor=material('Studio parquet',0xbeaa89,'aged-oak',.62);
+  const glass=material('Clear exhibit glazing',0xc0dedf,null,.16);
+  glass.transparent=true;glass.opacity=.045;glass.depthWrite=false;glass.side=T.DoubleSide;
   const soil=material('Courtyard compacted earth',0xaaa99a,'earth',1);
   const leaves=material('Natural leaf clusters',0x839a65,'foliage',.95);leaves.side=T.DoubleSide;leaves.alphaTest=.5;
   const shrubMat=material('Planting bed',0x52664b,'earth',1);
@@ -31,14 +36,14 @@ export function buildScenes(c){
     for(let x=-width/2+1;x<width/2;x+=1)box(g,'Floor joint',.006,.002,depth,grout,x,base+.001,z,0);
     for(let dz=-depth/2+1;dz<depth/2;dz+=1)box(g,'Floor joint',width,.002,.006,grout,0,base+.001,z+dz,0);
   }
-  function parquet(g,base,width,depth,z=0){
+  function parquet(g,base,width,depth,z=0,finish=oakFloor){
     box(g,'Parquet subfloor',width,.08,depth,darkWood,0,base-.045,z,0);
     for(let row=0;row<Math.ceil(depth/.24);row++){
       const zz=z-depth/2+(row+.5)*.24;
       for(let i=0;i<Math.ceil(width/1.1)+1;i++){
         const start=-width/2+i*1.1-(row%3)*.33,end=Math.min(width/2,start+1.096),lo=Math.max(-width/2,start);
         if(end<=lo)continue;
-        box(g,'Staggered parquet board',end-lo,.025,.236,oakFloor,(end+lo)/2,base-.0125,zz,.003);
+        box(g,'Staggered parquet board',end-lo,.025,.236,finish,(end+lo)/2,base-.0125,zz,.003);
       }
     }
   }
@@ -76,9 +81,12 @@ export function buildScenes(c){
   box(conservation,'Worktable edge',2.65,.07,1.65,wood,0,.61,0,.03);
   for(const x of [-1.12,1.12])for(const z of [-.62,.62])box(conservation,'Conservation table leg',.085,.58,.085,dark,x,.29,z);
 
-  const gallery=group('Museum gallery shell');parquet(gallery,-.86,12,12,.6);
+  // Reference: supplied Gyeongsan Museum VR views, 03 pottery shelves,
+  // 05 central showcase and 06 gallery passage. Room proportions serve gameplay.
+  const gallery=group('Museum gallery shell');parquet(gallery,-.86,12,12,.6,museumFloor);
   for(const [name,x,z,a,w]of [['back',0,-4.4,0,12],['left',-6,.6,Math.PI/2,10],['right',6,.6,-Math.PI/2,10],['entrance',0,5.6,Math.PI,12]]){
-    const face=wall(gallery,`Gallery ${name} wall`,x,z,a,w,-.86,4.3,navy);
+    const face=wall(gallery,`Gallery ${name} wall`,x,z,a,w,-.86,4.3,museumWall);
+    box(face,'Black lighting track',w-.4,.045,.04,dark,0,3.18,.34);
     for(let sx=-w/2+1;sx<w/2;sx+=2){
       box(face,'Recessed wall panel seam',.012,4.1,.012,dark,sx,1.2,.012,0);
       const lampBody=mesh(face,'Gallery track spotlight',new T.CylinderGeometry(.07,.07,.18,16),dark,sx,3.15,.25);lampBody.rotation.x=.5;
@@ -87,20 +95,37 @@ export function buildScenes(c){
   }
   const fixtures=group('Permanent gallery fixtures'),galleryPots=group('Gallery ceramics');
   for(const x of [-.78,.9]){
-    const stand=lathe(fixtures,'Permanent artwork plinth',[[.001,-.86],[.64,-.86],[.69,-.81],[.69,-.04],[.67,0],[.001,0]],dark);stand.position.x=x;
-    ring(fixtures,'Plinth top bronze inlay',.675,-.018,.006,bronze).position.x=x;
-    ring(fixtures,'Plinth base moulding',.68,-.77,.015,dark).position.x=x;
+    box(fixtures,'Dark showcase plinth',1.36,.78,1.30,dark,x,-.45,0,.015);
+    box(fixtures,'Pale exhibit platform',1.32,.06,1.26,shelfWood,x,-.03,0,.008);
+    box(fixtures,'Recessed plinth foot',1.20,.08,1.16,dark,x,-.82,0,.006);
   }
-  for(const x of [-3,0,3]){
-    const cabinet=group('Wall display case');cabinet.userData.wallFixture=true;cabinet.position.set(x,0,-3.92);fixtures.add(cabinet);
-    box(cabinet,'Display backing',2.15,2.8,.10,panel,0,.7,-.22);
-    for(const sx of [-1.13,1.13])box(cabinet,'Exhibit frame',.09,2.88,.48,dark,sx,.7,0);
-    for(const y of [-.74,2.14])box(cabinet,'Exhibit frame',2.35,.085,.48,dark,0,y,0);
-    box(cabinet,'Exhibit platform',2.18,.5,.5,dark,0,-.46,0);
-    box(cabinet,'Illuminated shelf',2.08,.035,.48,stone,0,-.19,.01);
-    box(cabinet,'Case overhead lamp',2,.025,.08,lamp,0,2.08,.11);
-    for(const i of [0,1])exhibit(galleryPots,(i+(x+3)*2)%pottery.length,x+(i-.5)*.93,-.17,-3.91,.83,i*.28);
+  const cabinet=group('Gyeongsan pottery wall showcase');cabinet.userData.wallFixture=true;cabinet.position.z=-3.95;fixtures.add(cabinet);
+  box(cabinet,'Continuous blue exhibit recess',8.5,3.4,.08,navy,0,1,-.30);
+  for(const x of [-4.31,4.31])box(cabinet,'Showcase outer frame',.14,3.58,.98,dark,x,1,.1);
+  for(const y of [-.77,2.77])box(cabinet,'Showcase head and foot',8.75,.14,.98,dark,0,y,.1);
+  box(cabinet,'Case warm timber platform',8.5,.13,.96,shelfWood,0,-.65,.11);
+  box(cabinet,'Hidden case light',8.2,.025,.08,lamp,0,2.65,.3);
+  for(const x of [-2.75,-1.15]){
+    for(const side of [-.72,.72])box(cabinet,'Pale upright shelf',.085,2.65,.46,shelfWood,x+side,.71,-.02);
+    for(const y of [-.56,.06,.68,1.30,1.92])box(cabinet,'Pottery shelf with rounded edge',1.51,.055,.49,shelfWood,x,y,.005,.008);
+    for(let row=0;row<4;row++)for(let col=0;col<3;col++){
+      const index=[5,6,4,6,5,6,0,2,4,5,6,4][row*3+col];
+      exhibit(galleryPots,index,x+(col-1)*.44,[-.5325,.0875,.7075,1.3275][row],-3.94,.41,.25*col);
+    }
   }
+  // Broad jars sit on individual supports beside the small-vessel shelving.
+  for(const [x,index,s,y]of [[.50,3,1.6,-.16],[1.90,0,1.1,-.16],[3.24,3,1.75,-.16]]){
+    if(y>-.5){box(cabinet,'Individual gray exhibit riser',.84,.425,.65,dark,x,-.3725,.10);}
+    exhibit(galleryPots,index,x,y,y>-.5?-3.88:-3.50,s,x*.3);
+  }
+  // Slim divisions and restrained glazing keep the displays readable.
+  for(const x of [-2.13,0,2.13])box(cabinet,'Glass vertical join',.012,3.35,.014,bronze,x,1,.58,.002);
+  for(const x of [-3.19,-1.06,1.06,3.19])mesh(cabinet,'Showcase glazing',new T.PlaneGeometry(2.11,3.35),glass,x,1,.58);
+  const interpretation=group('Museum interpretation panel');interpretation.userData.wallFixture=true;interpretation.position.set(-5.08,0,-4.04);fixtures.add(interpretation);
+  box(interpretation,'Orange information panel',.92,1.65,.035,panel,0,.83,0,.002);
+  // A low angled reading lectern echoes the labels beside the real gallery cases.
+  const lectern=box(fixtures,'Sloped gallery reading desk',.72,.055,.42,dark,-3.7,-.24,-2.65,.008);lectern.rotation.x=.32;
+  box(fixtures,'Reading desk pedestal',.20,.54,.25,dark,-3.7,-.59,-2.65);
   // Closed, planted courtyard rather than trees scattered across an empty plane.
   const yard=group('Museum archaeology courtyard');
   const gravel=material('Weathered gray sandstone',0x797e72,'limestone',1);

@@ -13,13 +13,20 @@ async function shot(page,name){if(review){await mkdir('asset/review',{recursive:
 async function layout(page,stage,width){
  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
  const problems=await page.evaluate(()=>{
-   const selectors=['.scene-info','.tools','.lesson-dock','.settings-dock','.story-dock','.view-controls','footer'];
+   const selectors=['.scene-info','.drawing-actions[open] .action-panel','.lesson-dock','.settings-dock','.story-dock','.drawing-actions > summary','.character-dock','footer'];
    const boxes=selectors.flatMap(selector=>{const el=document.querySelector(selector);if(!el||!el.getClientRects().length)return[];const r=el.getBoundingClientRect();return [{selector,x:r.x,y:r.y,right:r.right,bottom:r.bottom,width:r.width,height:r.height,scroll:el.scrollHeight>el.clientHeight+2}];});
    const errors=boxes.filter(r=>r.x<-.5||r.y<-.5||r.right>innerWidth+.5||r.bottom>innerHeight+.5||r.scroll).map(r=>({outside:r}));
    for(let i=0;i<boxes.length;i++)for(let j=i+1;j<boxes.length;j++){
      const a=boxes[i],b=boxes[j];
      if(a.selector==='footer'||b.selector==='footer')continue;
      if(Math.min(a.right,b.right)-Math.max(a.x,b.x)>2&&Math.min(a.bottom,b.bottom)-Math.max(a.y,b.y)>2)errors.push({overlap:[a.selector,b.selector]});
+   }
+   const menu=boxes.find(b=>b.selector==='.drawing-actions > summary'),guide=boxes.find(b=>b.selector==='.character-dock');
+   if(menu&&guide&&guide.y-menu.bottom<12)errors.push({guideGap:guide.y-menu.bottom});
+   const buttons=[...document.querySelectorAll('.drawing-actions[open] button')].map(el=>({name:el.getAttribute('aria-label')||el.textContent,rect:el.getBoundingClientRect()}));
+   for(let i=0;i<buttons.length;i++)for(const b of buttons.slice(i+1)){
+     const a=buttons[i],r=a.rect,s=b.rect;
+     if(Math.min(r.right,s.right)-Math.max(r.left,s.left)>2&&Math.min(r.bottom,s.bottom)-Math.max(r.top,s.top)>2)errors.push({toolOverlap:[a.name,b.name]});
    }
    return errors;
  });
@@ -37,7 +44,20 @@ try{
   for(const stage of ['body','mouth','faces','inspect','firing']){
    await page.waitForFunction(s=>document.body.dataset.stage===s,stage);
    await layout(page,stage,width);
-   if(width===1366){for(const viewport of [{width:1920,height:1080},{width:844,height:390},{width:390,height:844},{width:320,height:568},{width:740,height:360},{width:1024,height:768},{width:768,height:1024},{width:1180,height:820}]){await page.setViewportSize(viewport);await layout(page,stage,viewport.width);}await page.setViewportSize({width:1366,height:768});}
+   if(stage==='faces'){
+     await page.locator('.drawing-actions summary').click();await layout(page,'faces-open',width);
+     await page.locator('.drawing-actions summary').click();
+   }
+   if(width===1366){
+     for(const viewport of [{width:1920,height:1080},{width:844,height:390},{width:390,height:844},{width:320,height:568},{width:740,height:360},{width:1024,height:768},{width:768,height:1024},{width:1180,height:820}]){
+       await page.setViewportSize(viewport);await layout(page,stage,viewport.width);
+       if(stage==='faces'){
+         await page.locator('.drawing-actions summary').click();await layout(page,'faces-open',viewport.width);
+         await page.locator('.drawing-actions summary').click();
+       }
+     }
+     await page.setViewportSize({width:1366,height:768});
+   }
    if(width===1366&&['body','faces'].includes(stage))await shot(page,'layout-'+stage);
    if(stage!=='firing')await page.locator('[data-action="next"]').click();
   }

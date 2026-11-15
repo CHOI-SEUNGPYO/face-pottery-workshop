@@ -296,7 +296,13 @@ function arrangeHUD() {
   const coach=hud.querySelector<HTMLElement>('.tool-coach');
   if(coach&&!coach.closest('.actionbar')){coach.classList.add('lesson-dock');hud.append(coach);}
   const bubble=hud.querySelector<HTMLElement>('.guide-bubble');
-  if(bubble){bubble.classList.add('character-dock');hud.append(bubble);}
+  if(bubble){
+    bubble.classList.add('character-dock');
+    const stack=document.createElement('div');stack.className='guide-stack';
+    const actions=hud.querySelector('.drawing-actions');
+    if(actions)stack.append(actions);
+    stack.append(bubble);hud.append(stack);
+  }
   for(const duplicate of extras.querySelectorAll('#tool-instruction'))duplicate.removeAttribute('id');
 }
 function modal(html: string) {

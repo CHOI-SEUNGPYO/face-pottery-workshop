@@ -13,7 +13,8 @@ body #hud .background-hint{font-size:12px;color:#836744;margin-top:18px}
 body #hud footer{position:fixed;left:24px;right:24px;bottom:max(18px,env(safe-area-inset-bottom));display:flex;justify-content:space-between;align-items:center;pointer-events:none}
 body #hud footer>*{pointer-events:auto}
 body #hud .next-button{min-width:176px;padding:13px 20px;min-height:52px;font-size:14px}
-body #hud .character-dock{position:fixed;left:24px;bottom:90px;width:205px;margin:0;gap:9px;pointer-events:none}
+body #hud .guide-stack{position:fixed;left:24px;bottom:90px;width:205px;display:flex;flex-direction:column;gap:14px;pointer-events:none}
+body #hud .character-dock{position:static;width:100%;margin:0;gap:9px;pointer-events:none}
 body #hud .character-dock img{width:60px;height:88px;object-fit:contain}
 body #hud .character-dock p{font-size:11px;line-height:1.6}
 body #hud .settings-dock{position:fixed;right:24px;bottom:96px;width:220px;margin:0;padding:16px;box-sizing:border-box;background:#fff9eef2;border:1px solid #dfcaa7;border-radius:20px;pointer-events:auto;box-shadow:0 8px 30px #604c2610}
@@ -44,7 +45,7 @@ body #hud .actionbar summary{list-style:none;display:flex;gap:8px;align-items:ce
 .action-chevron{color:#9b7c4b;margin-left:auto}.actionbar[open] .action-chevron{transform:rotate(45deg)}
 body #hud .action-panel{position:absolute;bottom:calc(100% + 9px);left:0;width:230px;padding:12px;background:#fffaf0fa;border:1px solid #dfc59c;border-radius:18px;box-shadow:0 10px 35px #503c2726;animation:unfold .16s ease-out}
 @keyframes unfold{from{opacity:0;transform:translateY(8px) scale(.97)}to{opacity:1;transform:none}}
-body #hud .drawing-actions{position:fixed;left:24px;bottom:175px;width:205px}
+body #hud .drawing-actions{position:relative;width:100%;flex:none}
 body #hud .drawing-actions .action-panel{left:calc(100% + 9px);bottom:0}
 body #hud .tools{position:static;display:grid;grid-template-columns:1fr 1fr;gap:6px;width:auto;transform:none;margin:0;padding:0}
 body #hud .tool{min-width:0;min-height:48px;padding:7px;border-radius:12px;display:flex;flex-direction:row;gap:6px;font-size:11px}
@@ -95,7 +96,7 @@ body[data-stage="welcome"] #hud .welcome-copy h1{font-size:clamp(30px,4.2vw,62px
  body #hud .firing-status{gap:6px}body #hud .firing-status strong{font-size:16px}body #hud .firing-status p,body #hud .firing-status span{font-size:10px}.kiln-note{font-size:8px}.firing-status .small-button{font-size:11px}
  body #hud .context-label{top:51px;font-size:9px;max-width:44vw;white-space:normal;text-align:center;padding:2px 6px}
  body #hud footer{left:14px;right:14px;bottom:max(12px,env(safe-area-inset-bottom))}body #hud .left-actions{gap:4px}body #hud .left-actions .round{width:40px;height:44px;min-width:40px}body #hud .next-button{min-width:128px;max-width:190px;min-height:46px;padding:10px 12px;font-size:11px}
- body #hud .drawing-actions{left:16px;bottom:80px;width:138px}body #hud .drawing-actions .action-panel{bottom:0;left:calc(100% + 8px);width:220px}
+ body #hud .guide-stack{left:16px;bottom:80px;width:138px}body #hud .drawing-actions .action-panel{bottom:0;left:calc(100% + 8px);width:220px}
  body #hud .tool-coach h2{font-size:12px}body #hud .tool-coach p{font-size:10px;margin-top:5px;line-height:1.4}.mode-icon{display:none}
  body .form-handles button{min-width:78px;padding:6px 8px;min-height:44px;font-size:10px}body .form-handles span{font-size:10px}
  body #hud .dig-status{gap:6px}body #hud .dig-status span{font-size:10px;line-height:1.5}body #hud .dig-status button{font-size:10px;padding:6px}
@@ -120,6 +121,7 @@ body[data-stage="welcome"] #hud .welcome-copy h1{font-size:clamp(30px,4.2vw,62px
 .travel-party{position:relative;overflow:visible}
 .travel-vessel{position:absolute;height:94%;width:auto;max-width:none;left:50%;top:25%;transform:translate(-50%,-50%) rotate(90deg);pointer-events:none;filter:drop-shadow(0 5px 2px #58371520)}
 @media(max-height:430px) and (orientation:landscape){
+ body #hud .background-hint{display:none}
  body #hud .form-ranges{display:none}
  body #hud .firing-status .firing-note,body #hud .firing-status>span,body #hud .firing-status .kiln-note,body #hud .find-event p{display:none}
  body #hud .firing-status strong{font-size:15px}
@@ -147,9 +149,10 @@ body[data-stage="welcome"] #hud .welcome-copy h1{font-size:clamp(30px,4.2vw,62px
  body #hud .find-event{display:flex;align-items:center;gap:10px}body #hud .find-event button{width:auto;margin-left:auto}
  body #hud .firing-status{grid-template-columns:1fr 1fr;align-items:center}
  body #hud .firing-status .meter{grid-column:1/-1;grid-row:2}
- body #hud .drawing-actions{left:16px;bottom:140px;width:calc(100% - 32px)}
+ body #hud .guide-stack{left:16px;bottom:140px;width:calc(100% - 32px)}
  body #hud .drawing-actions .action-panel{left:0;bottom:calc(100% + 8px);width:100%;max-height:calc(100dvh - 220px);overflow:auto;box-sizing:border-box}
  body #hud .drawing-actions summary{justify-content:flex-start}
+ body #hud:has(.drawing-actions[open]) .scene-info{display:none}
  body #hud .context-label{top:auto;bottom:193px;max-width:calc(100% - 32px);font-size:9px}
  body #hud footer{left:16px;right:16px;bottom:max(12px,env(safe-area-inset-bottom))}
  body[data-stage="welcome"] #hud .welcome-copy{top:78px;left:20px;width:calc(100% - 40px);padding:16px 20px}

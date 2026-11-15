@@ -58,21 +58,21 @@
   {
     "id": "soft-brush",
     "file": "soft-brush-v2.glb",
-    "bytes": 69904,
+    "bytes": 69920,
     "vertices": 1098,
     "triangles": 740
   },
   {
     "id": "oval-rib",
     "file": "oval-rib-v2.glb",
-    "bytes": 70684,
+    "bytes": 70672,
     "vertices": 2160,
     "triangles": 720
   },
   {
     "id": "kidney-rib",
     "file": "kidney-rib-v2.glb",
-    "bytes": 37276,
+    "bytes": 37264,
     "vertices": 1116,
     "triangles": 372
   },
@@ -107,9 +107,9 @@
   {
     "id": "tool-tray",
     "file": "tool-tray-v2.glb",
-    "bytes": 56800,
-    "vertices": 1620,
-    "triangles": 540
+    "bytes": 68300,
+    "vertices": 1944,
+    "triangles": 648
   },
   {
     "id": "work-mat",
@@ -121,9 +121,9 @@
   {
     "id": "sherd-tray",
     "file": "sherd-tray-v2.glb",
-    "bytes": 22064,
-    "vertices": 379,
-    "triangles": 149
+    "bytes": 105260,
+    "vertices": 2844,
+    "triangles": 948
   },
   {
     "id": "craft-bench",
@@ -135,9 +135,9 @@
   {
     "id": "craft-tools",
     "file": "craft-tools-v2.glb",
-    "bytes": 579196,
-    "vertices": 13563,
-    "triangles": 15625
+    "bytes": 674508,
+    "vertices": 16352,
+    "triangles": 16532
   },
   {
     "id": "studio-room",
@@ -170,9 +170,9 @@
   {
     "id": "excavation-kit",
     "file": "excavation-kit-v2.glb",
-    "bytes": 586560,
-    "vertices": 15346,
-    "triangles": 6379
+    "bytes": 681816,
+    "vertices": 18135,
+    "triangles": 7286
   },
   {
     "id": "kiln-dressing",

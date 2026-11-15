@@ -1651,25 +1651,3 @@ dialog h2 {
   animation: none !important;
   transition: none !important;
 }
-
-@media (max-width: 760px), (orientation: portrait) {
-  .tool-coach[data-guide="carve"] {
-    padding-left: 142px;
-    min-height: 120px;
-  }
-  .tool-coach[data-guide="carve"] .drawing-modes {
-    position: absolute;
-    left: 10px;
-    top: 32px;
-    width: 120px;
-    margin: 0;
-    gap: 4px;
-  }
-  .drawing-modes button {
-    flex-direction: column;
-    gap: 3px;
-    padding: 6px;
-    font-size: 11px;
-    min-height: 56px;
-  }
-}

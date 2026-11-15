@@ -21,6 +21,11 @@ const darkClay=material('Smoke fired gray earthenware',0x929b99,'grayware',.94);
 const brownClay=material('Warm fired earthenware',0xcfb69b,'grayware',.95);
 const wood=material('Oiled oak',0xe4d5bd,'aged-oak',.67);
 const darkWood=material('Endgrain and worn timber',0x9b8062,'aged-oak',.82);
+const toolWood=material('Polished honey maple tools',0xd8a66e,null,.48);
+const trayFrame=material('Dark walnut tray frame',0x62483c,'aged-oak',.72);
+const toolLiner=material('Muted blue linen tool lining',0x728f98,'linen',1);
+const archiveFrame=material('Warm gray archival tray',0xc3c9c8,null,.88);
+const archiveLiner=material('Charcoal felt sherd lining',0x555f63,'linen',1);
 const plaster=material('Lime plaster',0xf3efe3,'plaster');
 const linen=material('Unbleached linen',0xf0e4cf,'linen',.99);
 const earth=material('Excavation soil',0xc6ad8c,'earth',1);
@@ -109,20 +114,35 @@ const lid=group('Conical lid with ring knop');lathe(lid,'Lid',[[.25,0],[.255,.01
 const tall=vessel('Slender flared neck vessel',[[.08,.15],[.2,.22],[.24,.4],[.18,.52],[.11,.58],[.1,.76],[.17,.86]],{foot:.15,mat:brownClay,rings:[[.104,.68,.005],[.11,.75,.005]]});pedestal(tall,{bottom:.19,top:.08,height:.17,holes:5,mat:brownClay});pottery.push(['flared-neck-jar',tall]);
 
 function brush(name='Soft excavation brush'){
-  const g=group(name);lathe(g,'Turned wooden handle',[[.004,0],[.015,.025],[.013,.19],[.018,.22]],wood,24);
+  const g=group(name);lathe(g,'Turned wooden handle',[[.004,0],[.015,.025],[.013,.19],[.018,.22]],trayFrame,24);
   mesh(g,'Brush ferrule',new T.CylinderGeometry(.022,.018,.06,24),bronze,0,.245,0);
   for(let i=0;i<25;i++){const a=i*2.4,r=.018*Math.sqrt(i/25);mesh(g,'Individual bristle tuft',new T.CylinderGeometry(.002,.0035,.075+(i%3)*.005,5),linen,Math.sin(a)*r,.31,Math.cos(a)*r);}
   return g;
 }
-function rib(name,points){const g=group(name),s=new T.Shape();points.forEach(([x,y],i)=>i?s.lineTo(x,y):s.moveTo(x,y));s.closePath();const hole=new T.Path();hole.absarc(0,0,.015,0,Math.PI*2,true);s.holes.push(hole);const m=mesh(g,name,new T.ExtrudeGeometry(s,{depth:.018,bevelEnabled:true,bevelSize:.007,bevelThickness:.004,bevelSegments:2,steps:1}),wood);m.rotation.x=-Math.PI/2;return g;}
+function rib(name,points){const g=group(name),s=new T.Shape();points.forEach(([x,y],i)=>i?s.lineTo(x,y):s.moveTo(x,y));s.closePath();const hole=new T.Path();hole.absarc(0,0,.015,0,Math.PI*2,true);s.holes.push(hole);const m=mesh(g,name,new T.ExtrudeGeometry(s,{depth:.018,bevelEnabled:true,bevelSize:.007,bevelThickness:.004,bevelSegments:2,steps:1}),toolWood);m.rotation.x=-Math.PI/2;return g;}
 const tools=[['soft-brush',brush()],['oval-rib',rib('Oval shaping rib',Array.from({length:36},(_,i)=>[Math.cos(i/36*Math.PI*2)*.095,Math.sin(i/36*Math.PI*2)*.16]))],['kidney-rib',rib('Kidney shaping rib',[[-.06,-.15],[.055,-.11],[.10,.02],[.06,.14],[-.03,.12],[-.065,.04],[-.03,-.03]])]];
 const bowl=vessel('Water bowl',[[.065,0],[.11,.012],[.16,.07],[.17,.12]],{mat:brownClay});const water=material('Water',0x466368,null,.18,.15);mesh(bowl,'Water surface',new T.CircleGeometry(.142,48),water,0,.085,0).rotation.x=-Math.PI/2;tools.push(['water-bowl',bowl]);
 const spool=group('Coiled cutting wire');for(let i=0;i<4;i++)ring(spool,'Wire coil',.065+i*.004,.012+i*.003,.0025,bronze);for(const x of [-.14,.14])mesh(spool,'Wooden wire grip',new T.CapsuleGeometry(.014,.09,4,12),wood,x,.018,0).rotation.z=Math.PI/2;tools.push(['wire-cutter',spool]);
 const roll=group('Clay coil');const path=new T.CatmullRomCurve3(Array.from({length:80},(_,i)=>{const a=i/79*Math.PI*4,r=.05+i/79*.09;return new T.Vector3(Math.cos(a)*r,.025,Math.sin(a)*r);}));mesh(roll,'Continuous soft clay coil',new T.TubeGeometry(path,96,.022,10,false),brownClay);tools.push(['clay-coil',roll]);
 const folded=group('Folded linen');for(let i=0;i<3;i++){const geo=new T.PlaneGeometry(.43,.34,14,12),p=geo.getAttribute('position');for(let j=0;j<p.count;j++){p.setZ(j,.005*Math.sin(p.getX(j)*35+p.getY(j)*21)+i*.008);}geo.computeVertexNormals();const m=mesh(folded,'Soft folded cloth',geo,linen,0,.008,0);m.rotation.x=-Math.PI/2;}tools.push(['folded-cloth',folded]);
-const tray=group('Wooden tool tray');box(tray,'Tray base',.70,.018,.44,wood);for(const x of [-.35,.35])box(tray,'Tray raised end',.025,.055,.45,wood,x,.022);for(const z of [-.22,.22])box(tray,'Tray raised side',.7,.055,.025,wood,0,.022,z);tools.push(['tool-tray',tray]);
+const tray=group('Lined walnut tool tray');box(tray,'Tray base',.70,.018,.44,trayFrame);
+box(tray,'Blue woven tool cushion',.65,.012,.39,toolLiner,0,.014,0,.004);
+for(const x of [-.35,.35])box(tray,'Tray raised end',.025,.055,.45,trayFrame,x,.022);
+for(const z of [-.22,.22])box(tray,'Tray raised side',.7,.055,.025,trayFrame,0,.022,z);
+tools.push(['tool-tray',tray]);
 const mat=group('Linen work mat');const matgeo=new T.PlaneGeometry(1.48,1.16,24,18),mp=matgeo.getAttribute('position');for(let i=0;i<mp.count;i++)mp.setZ(i,.003*Math.sin(mp.getX(i)*32)*Math.cos(mp.getY(i)*19));matgeo.computeVertexNormals();mesh(mat,'Woven mat with soft edge',matgeo,linen,0,.008,0).rotation.x=-Math.PI/2;tools.push(['work-mat',mat]);
-const slab=group('Terracotta sherd sorting tray');box(slab,'Archival tray',.50,.025,.36,wood);for(let i=0;i<7;i++){const g=new T.CircleGeometry(.04+i%3*.01,5+i%3);const m=mesh(slab,'Irregular pottery sherd',g,i%2?darkClay:brownClay,(i%4-1.5)*.1,.021+Math.floor(i/4)*.006,(Math.floor(i/4)-.5)*.13);m.rotation.x=-Math.PI/2;m.rotation.z=i*.9;}tools.push(['sherd-tray',slab]);
+const slab=group('Padded archaeological sherd tray');box(slab,'Archival tray',.56,.025,.39,archiveFrame);
+box(slab,'Dark felt backing',.51,.01,.34,archiveLiner,0,.018,0,.003);
+for(const x of [-.28,.28])box(slab,'Archival raised end',.018,.045,.4,archiveFrame,x,.026);
+for(const z of [-.195,.195])box(slab,'Archival raised side',.56,.045,.018,archiveFrame,0,.026,z);
+for(let i=0;i<7;i++){
+  const shape=new T.Shape(),n=5+i%3,r=.038+i%3*.007;
+  for(let j=0;j<n;j++){const a=j/n*Math.PI*2,rr=r*(.78+.22*Math.sin(i*3.7+j*2.2));const x=Math.cos(a)*rr,z=Math.sin(a)*rr;j?shape.lineTo(x,z):shape.moveTo(x,z);}shape.closePath();
+  const geo=new T.ExtrudeGeometry(shape,{depth:.012+i%3*.004,bevelEnabled:true,bevelSize:.002,bevelThickness:.002,bevelSegments:1,steps:1});
+  const m=mesh(slab,'Broken ceramic fragment',geo,i%2?clay:brownClay,(i%4-1.5)*.115,.025,(Math.floor(i/4)-.5)*.15);
+  m.rotation.x=-Math.PI/2;m.rotation.z=i*.9;
+}
+tools.push(['sherd-tray',slab]);
 function place(root,object,x,y,z,scale=1,rotation=0){const o=object.clone();o.position.set(x,y,z);o.scale.setScalar(scale);o.rotation.y=rotation;root.add(o);return o;}
 
 const bench=group('Craft bench with worn oak boards');
@@ -133,7 +153,7 @@ box(bench,'Back bench apron',3.55,.23,.10,darkWood,0,-.2,-.75);
 const dressing=group('Craft tools arranged for use');
 place(dressing,mat,0,0,0);place(dressing,tray,-1.15,.012,-.4,1,.12);
 place(dressing,tools[1][1],-1.34,.04,-.43,1,.8);place(dressing,tools[2][1],-1.06,.04,-.38,1,-.4);
-const lyingBrush=place(dressing,brush(),-1.22,.05,-.64,1,-.3);lyingBrush.rotation.x=Math.PI/2;
+const lyingBrush=place(dressing,brush(),-1.22,.05,-.58,1,-.3);lyingBrush.rotation.x=Math.PI/2;
 place(dressing,spool,-1.22,.015,.12);place(dressing,folded,1.16,.02,-.31,1,-.2);place(dressing,bowl,1.39,.01,.11);place(dressing,roll,.96,.015,.22,.85);place(dressing,slab,1.15,.016,-.8,1,-.1);
 
 const room=group('Museum craft studio architecture');

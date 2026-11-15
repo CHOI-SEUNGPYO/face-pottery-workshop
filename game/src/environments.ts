@@ -60,7 +60,8 @@ export function outdoorSite(level:number, excavation=true){
   if(excavation){
     const points=Array.from({length:129},(_,i)=>{const a=i*Math.PI/64;return new T.Vector3(Math.cos(a)*1.73,level+.008,Math.sin(a)*1.53);});
     const guide=new T.Line(new T.BufferGeometry().setFromPoints(points),new T.LineBasicMaterial({color:0xffffff}));guide.name='White excavation boundary';g.add(guide);
-    const wall=mesh(g,new T.CylinderGeometry(1,1,level+.24,96,1,true),new T.MeshStandardMaterial({color:0x8f6c46,roughness:1,side:T.DoubleSide}),0,(level-.24)/2,0);wall.scale.set(1.7,1,1.5);
+    const cutEarth=earth.clone();cutEarth.color.set(0x92816d);cutEarth.side=T.BackSide;
+    const wall=mesh(g,new T.CylinderGeometry(1,1,level+.24,96,1,true),cutEarth,0,(level-.24)/2,0);wall.name='Interior trench wall';wall.scale.set(1.7,1,1.5);
     for(let i=0;i<5;i++){
       const peg=mesh(g,new T.BoxGeometry(.035,.18,.035),wood,-2+i,level+.07,-1.95);peg.rotation.z=.08;
     }
@@ -77,13 +78,30 @@ function plaque(text:string){
 }
 export function museumRoom(){
   const g=new T.Group();
-  const glass=new T.MeshStandardMaterial({color:0xd8f2ed,transparent:true,opacity:.09,roughness:.12,metalness:0,side:T.DoubleSide,depthWrite:false});
+  const glass=new T.MeshStandardMaterial({color:0xd8f2ed,transparent:true,opacity:.035,roughness:.12,metalness:0,side:T.DoubleSide,depthWrite:false});
+  const edge=new T.MeshStandardMaterial({color:0xa7beb8,roughness:.3,transparent:true,opacity:.42});
   for(const [x,label] of [[-.78,'내가 만든 얼굴토기'],[.9,'실제 유물 사진']] as const){
     if(x<0){
-      const rim=mesh(g,new T.TorusGeometry(.62,.004,6,64),new T.MeshStandardMaterial({color:0xb7cdc5,roughness:.3,transparent:true,opacity:.35}),x,1.85,0);rim.rotation.x=Math.PI/2;rim.castShadow=false;
-      const tube=mesh(g,new T.CylinderGeometry(.62,.62,1.85,64,1,true),glass,x,.92,0);tube.castShadow=false;tube.renderOrder=3;
+      for(const z of [-.60,.60]){const pane=mesh(g,new T.PlaneGeometry(1.24,1.85),glass,x,.925,z);pane.castShadow=false;pane.renderOrder=3;}
+      for(const side of [-1,1]){
+        const pane=mesh(g,new T.PlaneGeometry(1.2,1.85),glass,x+side*.62,.925,0);pane.rotation.y=Math.PI/2;pane.castShadow=false;pane.renderOrder=3;
+        for(const z of [-.60,.60]){const corner=mesh(g,new T.BoxGeometry(.006,1.85,.006),edge,x+side*.62,.925,z);corner.castShadow=false;}
+      }
+      const lid=mesh(g,new T.PlaneGeometry(1.24,1.2),glass,x,1.85,0);lid.rotation.x=-Math.PI/2;lid.castShadow=false;
     }
-    const labelMesh=mesh(g,new T.PlaneGeometry(.68,.2),plaque(label),x,-.12,.78);labelMesh.rotation.x=-Math.PI/4;labelMesh.castShadow=false;
+    const labelMesh=mesh(g,new T.PlaneGeometry(.68,.2),plaque(label),x,-.15,.68);labelMesh.rotation.x=-.22;labelMesh.castShadow=false;
+  }
+  const signage=new T.Group();signage.name='Gyeongsan gallery signage';signage.userData.wallFixture=true;signage.position.z=-4.18;g.add(signage);
+  const c=document.createElement('canvas');c.width=1536;c.height=256;
+  const ctx=c.getContext('2d')!;
+  ctx.fillStyle='#f2eada';ctx.font='500 68px "Malgun Gothic",sans-serif';ctx.fillText('경산시립박물관',36,88);
+  ctx.font='32px "Malgun Gothic",sans-serif';ctx.fillText('토기에 담긴 압독의 생활',38,155);
+  const texture=new T.CanvasTexture(c);texture.colorSpace=T.SRGBColorSpace;
+  const title=mesh(signage,new T.PlaneGeometry(3.9,.65),new T.MeshBasicMaterial({map:texture,transparent:true,toneMapped:false}),.55,2.16,.04);title.castShadow=false;
+  for(const x of [-2.3,2.1]){
+    const spot=new T.SpotLight(0xffe5ba,9,7,.70,.75,2);
+    spot.position.set(x,2.7,-3.2);spot.target.position.set(x,.3,-3.9);
+    g.add(spot,spot.target);
   }
   return g;
 }

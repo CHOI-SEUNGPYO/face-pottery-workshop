@@ -64,7 +64,7 @@ function batchStatic(root: T.Object3D) {
   for (const { material, geometries } of batches.values()) {
     const merged = mergeGeometries(geometries)!;
     merged.computeBoundingSphere();
-    const mesh=new T.Mesh(merged,material);mesh.castShadow=!(material instanceof T.MeshBasicMaterial);mesh.receiveShadow=mesh.castShadow;root.add(mesh);
+    const mesh=new T.Mesh(merged,material);mesh.castShadow=!(material instanceof T.MeshBasicMaterial)&&!material.transparent;mesh.receiveShadow=mesh.castShadow;root.add(mesh);
     geometries.forEach((g) => g.dispose());
   }
   originals.forEach((g) => g.dispose());
@@ -118,6 +118,8 @@ export class World {
   private zoom = 1;
   private photoFraming = false;
   private key = new T.DirectionalLight(0xfff4e8, 3.2);
+  private ambient = new T.HemisphereLight(0xfff4e4, 0x676d67, 1.25);
+  private fill = new T.DirectionalLight(0xc6e1ed, 0.7);
   private target = new T.Vector3(0, 0.48, 0);
   private goalPos = new T.Vector3();
   private goalTarget = new T.Vector3();
@@ -160,7 +162,7 @@ export class World {
     host.append(this.renderer.domElement);
     this.scene.background = new T.Color("#ead4a9");
     this.scene.fog = new T.Fog("#ead4a9", 6, 16);
-    this.scene.add(new T.HemisphereLight(0xfff4e4, 0x676d67, 1.25));
+    this.scene.add(this.ambient);
     this.key.position.set(-3, 5, 2);
     this.key.castShadow = true;
     this.key.shadow.mapSize.set(2048, 2048);
@@ -171,9 +173,8 @@ export class World {
     this.key.shadow.bias = -0.00025;
     this.key.shadow.normalBias = 0.018;
     this.scene.add(this.key);
-    const fill = new T.DirectionalLight(0xc6e1ed, 0.7);
-    fill.position.set(3, 2, -2);
-    this.scene.add(fill);
+    this.fill.position.set(3, 2, -2);
+    this.scene.add(this.fill);
     const pmrem = new T.PMREMGenerator(this.renderer),
       room = new RoomEnvironment();
     this.scene.environment = pmrem.fromScene(room, 0.05).texture;
@@ -241,7 +242,9 @@ export class World {
     this.displayPots.clear();this.displayPots.add(this.art.model('studio-collection'));
     this.galleryArchitecture.add(this.art.model('gallery-shell'));
     this.galleryPots.add(this.art.model('gallery-collection'));
-    this.museumRoom.add(this.galleryArchitecture,this.art.model('gallery-fixtures'),this.galleryPots,museumRoom());
+    const galleryDetails=museumRoom();
+    galleryDetails.traverse(o=>{if(o.userData.wallFixture)this.wallFixtures.push(o);});
+    this.museumRoom.add(this.galleryArchitecture,this.art.model('gallery-fixtures'),this.galleryPots,galleryDetails);
     this.fieldProps.add(this.art.model('field-tools'));this.site.add(this.fieldProps);
     this.courtyard.add(this.art.model('courtyard'));
     this.assemblyBench.add(this.art.model('conservation-bench'));
@@ -412,6 +415,8 @@ export class World {
       sprite.position.set(stage==='welcome'?1.12:1.8,0,stage==='welcome'?.55:1.3);
     }
     this.key.intensity = museumStage?1.8:stage === "firing" ? 2.3 : 2.5;
+    this.ambient.intensity=museumStage?.65:1.25;
+    this.fill.intensity=museumStage?.35:.7;
     this.update();
     if (outdoors) {
       if (!s.excavationLayout) {
@@ -483,7 +488,7 @@ export class World {
     this.refresh();
   }
   tilt(delta: number) {
-    this.elevation = clamp(this.elevation + delta, 3, 86);
+    this.elevation += delta;
     this.viewPreset = "custom";
     this.compose(true);
     this.refresh();
@@ -498,6 +503,11 @@ export class World {
     this.refresh();
   }
   private compose(instant = false) {
+    // The trench is viewed from above its rim. A low orbit reveals the underside
+    // of the landscape and hides the very surface the player needs to brush.
+    const digging=this.stage==='excavation';
+    this.elevation=clamp(this.elevation,digging?45:this.stage==='assembly'?22:3,digging?82:86);
+    if(digging)this.zoom=clamp(this.zoom,.85,1);
     const width = this.photoFraming ? 1920 : this.host.clientWidth,
       height = this.photoFraming ? 1080 : this.host.clientHeight;
     this.camera.aspect = width / height;
@@ -535,7 +545,11 @@ export class World {
     if (this.siru.visible) bounds.expandByObject(this.siru);
     // Once found, frame the two artifacts rather than the full excavation pit.
     if (this.stage === "excavation") bounds.expandByObject(this.soil);
-    if(this.stage==='compare'||this.stage==='ending')bounds.expandByObject(this.referencePhoto);
+    if(this.stage==='compare'||this.stage==='ending'){
+      bounds.expandByObject(this.referencePhoto);
+      bounds.expandByPoint(new T.Vector3(-1.46,-.50,-.65));
+      bounds.expandByPoint(new T.Vector3(1.58,1.88,.65));
+    }
     if(this.stage==='firing')bounds.set(new T.Vector3(-2.15,-.12,-1.9),new T.Vector3(1.4,2.7,2.1));
     if(this.stage==='welcome'){bounds.expandByPoint(new T.Vector3(-1.15,-.55,-.3));bounds.expandByPoint(new T.Vector3(1.65,.4,.85));}
     if (this.stage==='welcome')
