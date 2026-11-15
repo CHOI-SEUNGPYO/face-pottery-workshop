@@ -6,11 +6,15 @@ import {checkMuseumEnding} from './museum-checks.mjs';
 
 // Isolated origins and fresh contexts never read the player's actual artwork.
 // Dev-only access supplies fixture state and projects targets; gestures use real pointer events.
+const sizes=[{width:1366,height:768},{width:740,height:360},{width:390,height:844}];
+const requested=process.env.TOGI_JOURNEY_WIDTH??'all';
+const viewports=requested==='all'?sizes:sizes.filter(v=>String(v.width)===requested);
+assert.ok(viewports.length,'TOGI_JOURNEY_WIDTH must be all, 1366, 740 or 390');
 const server=await createServer({server:{host:'127.0.0.1',port:0,strictPort:false}});
 await server.listen();
 let browser;
 const settle=page=>page.waitForFunction(()=>!window.togi.world.transitioning);
-const go=async(page,stage)=>{await page.evaluate(s=>window.togi.go(s),stage);await settle(page);};
+const go=async(page,stage)=>{console.log(`Journey ${page.viewportSize().width}: ${stage}`);await page.evaluate(s=>window.togi.go(s),stage);await settle(page);};
 async function drag(page,a,b){
  if(page.viewportSize().width>800){await page.mouse.move(a.x,a.y);await page.mouse.down();await page.mouse.move(b.x,b.y,{steps:20});await page.mouse.up();return;}
  const touch=await page.context().newCDPSession(page);
@@ -60,7 +64,8 @@ async function assertPhotoDisclosure(page,png){
 }
 try{
  browser=await chromium.launch({channel:'msedge',headless:true});
- for(const viewport of [{width:1366,height:768},{width:740,height:360},{width:390,height:844}]){
+ for(const viewport of viewports){
+  console.log(`Journey ${viewport.width}: loading`);
   const mobile=viewport.width<800;
   const context=await browser.newContext({viewport,reducedMotion:'reduce',hasTouch:mobile,isMobile:mobile,deviceScaleFactor:mobile?2:1});
   const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
@@ -203,6 +208,7 @@ try{
    await drag(page,ownTarget,{x:ownTarget.x-45,y:ownTarget.y});
    assert.ok(await page.evaluate(()=>window.togi.world.pottery.root.rotation.y)<ownBefore-.1,'own artwork remains rotatable on the ending screen');
    assert.deepEqual(errors,[]);
+   console.log(`PASS: ${viewport.width} complete journey and preserved artwork.`);
   }catch(error){await mkdir('asset/review',{recursive:true});await page.screenshot({path:`asset/review/journey-${viewport.width}-failure.png`});throw error;}
   finally{await context.close();}
  }

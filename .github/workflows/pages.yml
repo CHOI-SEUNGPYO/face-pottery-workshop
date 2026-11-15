@@ -41,14 +41,23 @@ jobs:
           retention-days: 7
 
   browser:
-    name: Browser check · ${{ matrix.suite }}
+    name: Browser check · ${{ matrix.suite }} · ${{ matrix.width }}
     needs: build
     runs-on: windows-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        suite: [ui, workshop, journey, art, performance]
+        include:
+          - {suite: ui, width: all}
+          - {suite: workshop, width: all}
+          - {suite: journey, width: '1366'}
+          - {suite: journey, width: '740'}
+          - {suite: journey, width: '390'}
+          - {suite: art, width: all}
+          - {suite: performance, width: all}
+    env:
+      TOGI_JOURNEY_WIDTH: ${{ matrix.width }}
     defaults:
       run:
         working-directory: game
@@ -70,7 +79,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: browser-check-failures-${{ matrix.suite }}
+          name: browser-check-failures-${{ matrix.suite }}-${{ matrix.width }}
           path: game/asset/review
           if-no-files-found: ignore
           retention-days: 7
