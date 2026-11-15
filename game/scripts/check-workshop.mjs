@@ -6,6 +6,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {chromium} from 'playwright';
 import {stages} from '../content/schema.mjs';
+import {checkMuseumWelcome} from './museum-checks.mjs';
 const review=process.env.TOGI_REVIEW==='1',processes=[];
 let browser,testRoot,activePage;
 async function serve(file,env){const process=spawn(globalThis.process.execPath,[file],{env:{...globalThis.process.env,...env},windowsHide:true,stdio:['ignore','pipe','pipe']});processes.push(process);const output=await Promise.race([once(process.stdout,'data').then(([chunk])=>String(chunk)),once(process,'exit').then(()=>{throw Error('Test server exited');})]);const url=output.match(/http:\/\/127\.0\.0\.1:\d+/)?.[0];assert.ok(url);return url;}
@@ -82,6 +83,7 @@ try{
    if(process.env.TOGI_DISCLOSURE_REVIEW==='1')await page.screenshot({path:'asset/review/ai-credits.png'});
    await page.locator('[data-action="close"]').click();
    await page.setViewportSize({width:1366,height:768});
+   await checkMuseumWelcome(page);
   }
   await page.locator('[data-action="new"]').click();
   for(const stage of ['body','mouth','faces','inspect','firing']){
@@ -90,6 +92,13 @@ try{
    if(stage==='faces'){
      await page.locator('.drawing-actions summary').click();await layout(page,'faces-open',width);
      await page.locator('.drawing-actions summary').click();
+   }
+   if(stage==='firing'){
+     await page.locator('[data-action="kiln-guide"]').click();
+     assert.match(await page.locator('.kiln-guide').textContent(),/실제로 가마 벽을 열어 둔 채 굽는다는 뜻은 아니에요/);
+     assert.ok(await page.locator('.kiln-flow').isVisible());
+     if(process.env.TOGI_MUSEUM_REVIEW==='1'&&width===1366)await page.screenshot({path:'asset/review/museum-kiln-guide.png'});
+     await page.locator('.modal-close').click();
    }
    if(width===1366){
      for(const viewport of [{width:1920,height:1080},{width:844,height:390},{width:390,height:844},{width:320,height:568},{width:740,height:360},{width:1024,height:768},{width:768,height:1024},{width:1180,height:820}]){
@@ -179,6 +188,7 @@ try{
  await editor.locator('#photo-upload').setInputFiles({name:'new.png',mimeType:'image/png',buffer:png});
  await editor.waitForFunction(()=>document.querySelector('#photo').options.length===2);
  const newPhoto=await editor.locator('#photo').inputValue();await editor.locator('#stage-photo').selectOption(newPhoto);await editor.locator('#caption').fill('직접 바꾼 사진');
+ await editor.locator('#photo-category').selectOption('siru');await editor.locator('#photo-title').fill('사진첩의 시루');
  const glb=await readFile('asset/runtime/models/siru.glb');
  await editor.locator('#model-upload').setInputFiles({name:'fixture.glb',mimeType:'model/gltf-binary',buffer:glb});
  await editor.waitForSelector('.exhibit');
@@ -186,6 +196,7 @@ try{
  const saved=JSON.parse(await readFile(join(testRoot,'content/museum.json'),'utf8'));
  assert.equal(saved.stages.faces.title,'내가 수정한 유물 이야기');assert.equal(saved.stages.faces.photo,newPhoto);
  assert.equal(saved.exhibits.length,1);
+ assert.equal(saved.photos.find(p=>p.id===newPhoto).category,'siru');assert.equal(saved.photos.find(p=>p.id===newPhoto).title,'사진첩의 시루');
  assert.deepEqual(JSON.parse(await readFile(join(testRoot,'dist/museum/catalog.json'),'utf8')),saved);
  assert.equal((await fetch(editorURL+'/api/catalog',{method:'POST',body:'{}'})).status,403);
  const token=await editor.evaluate(()=>window.editorToken);

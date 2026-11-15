@@ -1,0 +1,112 @@
+/* Museum-supplied marks keep their native colours, proportions and clear space. */
+.partner-marks{display:flex;align-items:center;gap:22px;max-width:560px}
+.partner-marks img{object-fit:contain;display:block;min-width:0}
+.partner-marks .huss-mark{width:72%;height:auto;max-height:68px}
+.partner-marks .museum-mark{width:100px;height:65px}
+.partner-marks>span{width:1px;height:32px;background:#c9c5bb;flex-shrink:0}
+.partner-marks.compact{gap:16px;margin-bottom:18px;justify-content:flex-start}
+.partner-marks.compact .huss-mark{width:64px;height:46px}
+.partner-marks.compact .museum-mark{width:85px;height:55px}
+body[data-stage="welcome"] #hud .welcome-copy{top:18%;padding:24px 28px}
+body[data-stage="welcome"] #hud .welcome-copy .eyebrow{font-size:10px;letter-spacing:.8px;margin-bottom:12px}
+body[data-stage="welcome"] #hud .welcome-copy h1{font-size:clamp(30px,4vw,58px);margin-bottom:20px}
+body[data-stage="welcome"] #hud .welcome-description{font-size:15px;line-height:1.7}
+.ending-links{display:grid;gap:10px}.ending-links button{width:100%;font-size:13px}
+.kiln-help{pointer-events:auto;min-height:44px;margin-top:12px;width:100%;padding:8px 10px;background:#e8dbc0;border-radius:10px;font-size:11px;line-height:1.5}
+.kiln-guide>p,.kiln-guide section p{font-size:14px;line-height:1.8}
+.kiln-flow{display:flex;align-items:center;gap:12px;margin:26px 0}
+.kiln-flow>div{flex:1;background:#eee3cf;border-radius:12px;text-align:center;padding:16px 10px}
+.kiln-flow span{display:block;font-size:11px;color:#926a42;margin-bottom:8px}.kiln-flow strong{font-size:14px}.kiln-flow p{font-size:12px;line-height:1.6;margin:8px 0 0}.kiln-flow>b{color:#926a42;font-size:20px}
+
+body dialog:has(.museum-album,.museum-credits,.museum-ending){width:min(1060px,calc(100vw - 32px));max-width:none;max-height:calc(100dvh - 32px);padding:0;overflow:hidden;border-radius:22px;background:#fbf7ee;border-color:#e1d7c4}
+body dialog:has(.museum-album,.museum-credits,.museum-ending) .modal-close{right:14px;top:14px;width:44px;height:44px;background:#fffaf0}
+.museum-credits,.museum-ending{max-height:calc(100dvh - 34px);overflow:auto;overscroll-behavior:contain;padding:36px 42px;scrollbar-gutter:stable}
+.museum-credits .credits-heading{padding-right:38px}
+.museum-credits h2,.museum-ending h2{font-size:34px;line-height:1.35;letter-spacing:-.5px;color:#263c3e;margin-bottom:22px}
+.museum-credits .eyebrow,.museum-ending .eyebrow,.museum-album .eyebrow{font-size:11px;letter-spacing:1.4px;color:#8b6344;margin:0 0 8px}
+.museum-credits .partner-marks{padding:18px 0;border-top:1px solid #e2d9c8;border-bottom:1px solid #e2d9c8}
+.credits-intro{max-width:640px}.support-credit{font-size:13px;line-height:1.8;color:#665b48}
+.creation-note{border-top:1px solid #ded4c2;margin-top:24px;padding-top:14px}
+.creation-note h3{font-size:16px;margin:8px 0 14px}.creation-note dl{display:grid;grid-template-columns:155px 1fr;gap:18px 24px;margin:24px 0 0}
+.creation-note dt,.creation-note dd{margin:0;font-size:13px;line-height:1.8}.creation-note dt{color:#445b58}
+
+.museum-album{height:min(780px,calc(100dvh - 34px));display:grid;grid-template-rows:auto auto minmax(0,1fr) auto;gap:16px;padding:28px 32px 18px}
+.album-heading{padding-right:42px}.album-heading h2{font-size:28px;line-height:1.3;color:#263c3e;margin:0 0 6px}
+.album-heading>p:last-child{font-size:13px;line-height:1.6;margin:0;color:#74664f}
+.album-tabs{display:flex;gap:8px;overflow-x:auto;flex-shrink:0;padding:2px}
+.album-tabs button{flex-shrink:0;background:#ede7da;color:#514b3d;border-radius:10px;padding:10px 16px;min-height:44px;font-size:13px;white-space:nowrap}
+.album-tabs button[aria-pressed="true"]{background:#304f4c;color:#fff9ec}
+.album-tabs small{font:11px Pretendard;margin-left:8px;opacity:.75}
+.album-body{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(240px,1fr);gap:28px;overflow:auto;overscroll-behavior:contain;min-height:0;padding-right:6px;align-content:start}
+.album-figure{margin:0;min-width:0}.album-image{height:clamp(150px,42dvh,390px);background:#e9e5db;border:1px solid #d8d0c2;border-radius:12px;position:relative;display:flex;align-items:center;justify-content:center;padding:14px}
+.album-image img{display:block;width:100%;height:100%;object-fit:contain}
+.real-photo-label{position:absolute;left:12px;top:12px;color:#fff;background:#243b38ed;font-size:10px;padding:5px 8px;border-radius:5px}
+.album-figure figcaption{font-size:11px;line-height:1.6;color:#766a57;padding:12px 3px}
+.album-figure figcaption strong,.album-figure figcaption span{display:block;margin-bottom:4px}.album-figure figcaption strong{font-size:13px;font-weight:600;color:#4e4739}
+.album-figure figcaption a{display:inline-flex;align-items:center;min-height:36px;color:#385852;text-underline-offset:4px;margin-right:14px}
+.album-info h3{font-size:19px;line-height:1.5;margin:0 0 10px;color:#304f4c}.album-info>p{font-size:13px;line-height:1.8;margin:0 0 18px;color:#6c604b;word-break:keep-all}
+.album-photo-list{display:grid;gap:5px}.album-photo-list button{border-radius:8px;background:transparent;border:1px solid transparent;padding:10px 12px;text-align:left;display:flex;align-items:baseline;gap:12px;font-size:12px;line-height:1.5;min-height:44px}
+.album-photo-list button>span{font-size:11px;color:#93714a}.album-photo-list button[aria-pressed="true"]{background:#eee5d4;border-color:#d7c8ac;font-weight:600}
+.album-photo-list button:hover{background:#f1eadf}
+.album-controls{display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px solid #ded4c2;padding-top:12px}
+.album-controls>button{min-height:44px;font-size:12px;padding:10px 16px}.album-controls>div{display:flex;align-items:center;gap:14px;font-size:12px;white-space:nowrap}
+.album-controls>div button{min-width:44px;min-height:44px;background:#e6ddc9;border-radius:50%;font-size:18px}
+.album-controls button:disabled{opacity:.4;cursor:default}
+.museum-album button:focus-visible,.museum-ending button:focus-visible{outline:3px solid #367d80;outline-offset:2px}
+
+.museum-ending .ending-intro{padding-right:34px;text-align:center}.museum-ending h2{margin:0 0 12px}.ending-intro>p:last-child{font-size:14px;line-height:1.8;margin:0 0 22px}
+.ending-photos{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:0 0 22px}
+.ending-photos button{display:grid;grid-template-rows:1fr auto;padding:10px;background:#ede7da;border:1px solid #ded4c2;border-radius:12px;text-align:left}
+.ending-photos img{height:clamp(100px,19dvh,170px);width:100%;object-fit:contain;display:block}
+.ending-photos span{font-size:12px;display:flex;justify-content:space-between;gap:4px;padding:12px 4px 2px}
+.ending-photos b{font-weight:400}.ending-partners{border-top:1px solid #ded4c2;padding-top:18px;text-align:center}
+.ending-partners .partner-marks{margin:auto;max-width:475px;justify-content:center}
+.ending-partners>p{font-size:11px;line-height:1.8;margin:12px 0 0}.ending-partners .support-credit{font-size:13px;margin:5px 0}
+.ending-disclosure{font-size:11px;line-height:1.7;text-align:center;color:#74664f;margin:14px 0}
+.ending-actions{display:flex;justify-content:center;flex-wrap:wrap;gap:8px}.ending-actions button{min-height:44px;font-size:13px;padding:12px 18px}
+
+@media(max-width:1099px),(max-height:599px){
+ .partner-marks.compact{margin-bottom:10px;gap:12px}.partner-marks.compact .huss-mark{width:45px;height:32px}.partner-marks.compact .museum-mark{width:65px;height:42px}.partner-marks.compact>span{height:26px}
+ body[data-stage="welcome"] #hud .welcome-copy{top:17%;padding:20px}
+ .museum-credits,.museum-ending{padding:28px}.museum-credits h2,.museum-ending h2{font-size:28px}
+}
+@media(max-height:600px) and (orientation:landscape){
+ .kiln-help{margin-top:8px;font-size:10px;padding:6px;min-height:44px}
+ body[data-stage="welcome"] #hud .welcome-copy{top:68px!important;padding:10px 16px}
+ body[data-stage="welcome"] #hud .welcome-copy h1{font-size:24px!important;margin-bottom:8px!important}
+ .partner-marks.compact{margin-bottom:7px}.partner-marks.compact .huss-mark{width:38px;height:27px}.partner-marks.compact .museum-mark{width:49px;height:32px}
+ body[data-stage="welcome"] #hud .welcome-copy .ai-notice{font-size:10px;line-height:1.5;margin-bottom:8px}
+ .museum-album{gap:7px;padding:14px 20px 10px;height:calc(100dvh - 26px)}
+ body dialog:has(.museum-album,.museum-credits,.museum-ending){max-height:calc(100dvh - 24px)}
+ .album-heading h2{font-size:20px}.album-heading>p:last-child{display:none}.museum-album .eyebrow{font-size:9px;margin-bottom:3px}
+ .album-tabs button{padding:7px 12px}.album-image{height:180px}.album-controls{padding-top:6px}
+ .album-info h3{font-size:16px}.album-info>p{font-size:12px}.album-body{gap:18px}
+ .ending-intro>p:last-child{font-size:12px}.ending-photos img{height:100px}
+}
+@media(max-width:600px) and (orientation:portrait){
+ .kiln-help{width:auto;margin-top:8px}.kiln-flow{gap:6px}.kiln-flow>div{padding:12px 5px}.kiln-flow strong{font-size:11px}.kiln-flow p{font-size:10px}.kiln-flow>b{font-size:14px}
+ body[data-stage="welcome"] #hud .welcome-copy{top:78px;padding:14px 20px}
+ body[data-stage="welcome"] #hud .welcome-copy h1{font-size:32px;margin-bottom:12px}
+ .partner-marks.compact{margin-bottom:8px}
+ body #hud .story-button{width:44px;height:44px;min-width:44px;padding:10px}body #hud .story-button span{display:none}
+ body dialog:has(.museum-album,.museum-credits,.museum-ending){width:calc(100vw - 20px);max-height:calc(100dvh - 20px);border-radius:16px}
+ .museum-credits,.museum-ending{padding:24px 18px;max-height:calc(100dvh - 22px)}
+ .partner-marks{gap:12px}.partner-marks .huss-mark{width:68%}.partner-marks .museum-mark{width:68px;height:50px}
+ .museum-credits h2,.museum-ending h2{font-size:25px}.credits-copy p{font-size:13px}
+ .creation-note dl{grid-template-columns:1fr;gap:5px}.creation-note dd{margin-bottom:15px}
+ .museum-album{height:calc(100dvh - 22px);padding:20px 14px 12px;gap:12px}
+ .album-heading h2{font-size:21px}.album-heading>p:last-child{font-size:11px}.museum-album .eyebrow{font-size:9px;letter-spacing:.6px}
+ .album-tabs{gap:6px}.album-tabs button{font-size:12px;padding:8px 11px}.album-tabs small{margin-left:5px}
+ .album-body{grid-template-columns:1fr;gap:16px;padding-right:3px}.album-image{height:min(33dvh,300px);padding:10px}
+ .album-info h3{font-size:17px}.album-info>p{font-size:12px}.album-figure figcaption{font-size:10px}
+ .album-controls>button{font-size:11px;padding:8px 10px}.album-controls>div{gap:8px}
+ .ending-photos{gap:8px}.ending-photos button{padding:6px}.ending-photos img{height:100px}.ending-photos span{font-size:10px;padding:8px 0 2px}
+ .museum-ending .ending-intro{text-align:left;padding-right:25px}.ending-intro>p:last-child{font-size:12px}.ending-partners .support-credit{font-size:12px}
+ .ending-actions{gap:6px}.ending-actions button{font-size:12px;padding:10px 12px}
+}
+@media(max-width:600px) and (max-height:650px) and (orientation:portrait){
+ body[data-stage="welcome"] #hud .welcome-copy h1{font-size:27px}
+ body[data-stage="welcome"] #hud .welcome-copy .ai-notice{font-size:11px;line-height:1.5;margin-bottom:8px}
+ .partner-marks.compact .huss-mark{height:25px;width:35px}.partner-marks.compact .museum-mark{height:30px;width:48px}
+}
+@media(max-width:360px){.album-tabs small{display:none}.album-tabs button{padding:8px 10px;font-size:11px}}

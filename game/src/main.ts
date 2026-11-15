@@ -1,5 +1,6 @@
 import "./style.css";
 import "./layout.css";
+import "./museum-presentation.css";
 import {firingFrame} from './firing';
 import * as T from "three";
 import {
@@ -53,6 +54,9 @@ import { characterImage, asset } from "./assets";
 import {PhotoEditor} from './photo-editor';
 import {AI_CONTENT_LABEL,museumHomeLink} from './disclosure';
 import { museum, loadMuseum, museumAsset, photoFor, storyCard, escapeHTML as e, factLabels } from './museum';
+import {partnerMarks,creditsMarkup,collectionMarkup,endingMarkup,photosIn,availableGroups} from './museum-presentation';
+import type {PhotoCategory} from './museum';
+import {kilnGuide} from './kiln-guide';
 
 const app = document.querySelector<HTMLDivElement>("#app")!;
 app.innerHTML =
@@ -238,11 +242,11 @@ function updateUI() {
           )
           .join("")}</div>`
       : ""
-  }${stage==="welcome"?button("story", "유물 이야기", "story", "story-button"):""}${button("sound", audio.muted ? "소리 켜기" : "소리 끄기", audio.muted ? "muted" : "sound", "round icon-only")}${button("help", "도움말", "help", "round icon-only")}</nav></header>`;
+  }${stage==="welcome"?button("collection", "실제 유물 사진", "story", "story-button"):""}${button("sound", audio.muted ? "소리 켜기" : "소리 끄기", audio.muted ? "muted" : "sound", "round icon-only")}${button("help", "도움말", "help", "round icon-only")}</nav></header>`;
   if (stage === "welcome") {
     hud.innerHTML =
       header +
-      `<div class="work-area" aria-hidden="true"></div><section class="welcome-copy"><p class="eyebrow">손끝에서 피어나는 작은 발견</p><h1>흙에서 만나는<br><em>나의 얼굴</em></h1><p class="welcome-description">만지고, 빚고, 표정을 담아.<br>나만의 토기가 들려주는 이야기를 만나 보세요.</p><p class="ai-notice"><strong>AI(인공지능) 활용 제작</strong><br>일부 배경·캐릭터는 AI로 생성·편집했어요.</p><div class="welcome-actions">${button("new", "만들러 가기", "next", "primary large")}${saved ? button("continue", "이어 만들기", "play", "secondary") : ""}</div></section><nav class="welcome-foot" aria-label="박물관과 제작 안내">${museumHomeLink()}<button data-action="credits" class="credits-link">제작·출처 안내</button></nav>`;
+      `<div class="work-area" aria-hidden="true"></div><section class="welcome-copy">${partnerMarks(true)}<p class="eyebrow">2026 YU Digital HUSS · 디지털 뮤지엄</p><h1>흙에서 만나는<br><em>나의 얼굴</em></h1><p class="welcome-description">경산시립박물관의 유물에서 시작하는 이야기.<br>만지고, 빚고, 나만의 표정을 담아 보세요.</p><p class="ai-notice"><strong>AI(인공지능) 활용 제작</strong><br>게임 속 장면과 재현은 실제 유물과 다를 수 있어요.</p><div class="welcome-actions">${button("new", "만들러 가기", "next", "primary large")}${saved ? button("continue", "이어 만들기", "play", "secondary") : ""}</div></section><nav class="welcome-foot" aria-label="박물관과 제작 안내">${museumHomeLink()}<button data-action="credits" class="credits-link">게임 소개·제작</button></nav>`;
     layoutUI();
     return;
   }
@@ -269,7 +273,7 @@ function updateUI() {
   if (stage === "assembly")
     extras = `<div class="find-event"><strong>${save.assembledRevision===save.document.revision?'함께 놓았어요!':'흙 속에서 만난 두 유물'}</strong><p>토기를 끌거나 아래 버튼을 눌러 시루 위에 얹어 보세요.</p>${button("place", "시루에 얹기", "place", "secondary",save.assembledRevision===save.document.revision)}</div>`;
   if (stage === "ending")
-    extras = button("new", "새 작품 만들기", "plus", "secondary");
+    extras = `<div class="ending-links">${button("ending-credits", "유물 사진·마무리", "story", "secondary")}${button("new", "새 작품 만들기", "plus", "secondary")}</div>`;
   hud.innerHTML =
     header +
     `<div class="work-area" aria-hidden="true"></div><div class="scene-info"><section class="scene-heading"><p class="eyebrow">${c.eyebrow}</p><h1>${c.title}</h1><p>${instruction}</p></section>
@@ -284,6 +288,7 @@ function updateUI() {
     ${stage==='faces'?actionbar(drawingLabel,`<div class="tools" role="toolbar" aria-label="작업 도구">${c.tools.map((t) => `<button data-tool="${t}" class="tool ${tool === t ? "selected" : ""}" aria-pressed="${tool === t}" aria-label="${toolLabels[t]}">${icon(t)}<span>${t==='refine'?'구멍 다듬기':toolLabels[t]}</span></button>`).join("")}</div>${toolGuide(tool,carveMode)}`,'drawing-actions'):''}
     ${button("next", primaryLabel, stage === "ending" ? "photo" : "next", "primary next-button")}</footer>`;
   arrangeHUD();
+  if(stage==='firing')hud.querySelector('.scene-heading')?.insertAdjacentHTML('beforeend','<button data-action="kiln-guide" class="kiln-help">가마와 이 장면 알아보기 ↗</button>');
   if(stage==='firing')hud.querySelector('.firing-status')?.insertAdjacentHTML('beforeend',`${fireStart?'':`<button data-action="kiln-inside" class="small-button" aria-pressed="${world.kilnCutaway}">${world.kilnCutaway?'외부로 보기':'내부 보기'}</button>`}<small class="kiln-note">${fireStart?'가마 안쪽을 펼쳐 보여주는 장면이에요.':'당시 가마 자료를 참고한 장면 · 내부는 설명용 단면'}</small>`);
   if(stage==='excavation')hud.querySelector<HTMLButtonElement>('[data-action="next"]')!.disabled=!digComplete;
   if(stage==='assembly')hud.querySelector<HTMLButtonElement>('[data-action="next"]')!.disabled=save.assembledRevision!==save.document.revision;
@@ -311,12 +316,14 @@ function modal(html: string) {
   photoEditor?.dispose();photoEditor=null;world.paused = true;
   fireLast = performance.now();
   dialog.innerHTML = `${button("close", "닫기", "close", "round icon-only modal-close")}${html}`;
+  dialog.scrollTop=0;
   if(!dialog.open) dialog.showModal();
   dialog.querySelector<HTMLElement>("button")?.focus();
 }
 function closeModal() {
   photoEditor?.dispose();photoEditor=null;
   dialog.close();
+  dialog.replaceChildren();
   syncPause();
   fireLast = performance.now();
   world.refresh();
@@ -327,6 +334,18 @@ dialog.addEventListener("cancel", (e) => {
   closeModal();
 });
 let storyPage=0,storyPhoto='',storyScene:SceneId='welcome';
+let albumCategory:PhotoCategory='face',albumIndex=0,albumReturn='close';
+function showCollection(category=albumCategory,index=0){
+  albumCategory=availableGroups().includes(category)?category:availableGroups()[0];
+  albumIndex=clamp(index,0,photosIn(albumCategory).length-1);
+  const focusAction=dialog.querySelector('.museum-album')?(document.activeElement as HTMLElement)?.dataset.action:undefined;
+  modal(collectionMarkup(albumCategory,albumIndex,albumReturn==='ending-credits'?'마무리로 돌아가기':albumReturn==='close'?'공방으로 돌아가기':'이전 안내로'));
+  if(focusAction)Array.from(dialog.querySelectorAll<HTMLButtonElement>('button')).find(b=>b.dataset.action===focusAction&&!b.disabled)?.focus({preventScroll:true});
+}
+dialog.addEventListener('keydown',event=>{
+  if(!dialog.querySelector('.museum-album')||!['ArrowLeft','ArrowRight'].includes(event.key))return;
+  event.preventDefault();showCollection(albumCategory,albumIndex+(event.key==='ArrowRight'?1:-1));
+});
 function showStory(page=0,photoId=photoFor(stage).id,target:SceneId=stage) {
   storyScene=target;
   const entry=museum.stages[target],photo=museum.photos.find(p=>p.id===photoId)??photoFor(target);
@@ -336,7 +355,8 @@ function showStory(page=0,photoId=photoFor(stage).id,target:SceneId=stage) {
   });
   storyPage=clamp(page,0,pages.length-1);storyPhoto=photo.id;
   const block=pages[storyPage];
-  modal(`<div class="story-layout"><div class="story-photo"><img src="${museumAsset(photo.file)}" alt="${e(photo.alt)}"><p>${e(photo.caption)}</p><p>${e(photo.credit)}</p><div class="photo-picker">${museum.photos.map((p,i)=>`<button data-action="story-photo-${i}" aria-pressed="${photo.id===p.id}">사진 ${i+1}</button>`).join('')}</div></div><div class="story-copy"><p class="eyebrow">실제 유물에서 찾아보기</p><h2>${e(entry.title)}</h2><section><span class="fact-badge ${block.kind}">${factLabels[block.kind]}</span><p>${e(block.text)}</p></section><nav class="story-pages"><button data-action="story-previous" ${storyPage===0?'disabled':''}>이전 이야기</button><span>${storyPage+1} / ${pages.length}</span><button data-action="story-next" ${storyPage===pages.length-1?'disabled':''}>다음 이야기</button></nav><div class="credits-actions">${photo.source?`<a href="${e(photo.source)}" target="_blank" rel="noopener noreferrer">자료 출처 보기 ↗</a>`:''}${museumHomeLink()}</div></div></div>`);
+  const related=museum.photos.filter(p=>p.id===photo.id||(p.category??'other')===(photo.category??'other'));
+  modal(`<div class="story-layout"><div class="story-photo"><img src="${museumAsset(photo.file)}" alt="${e(photo.alt)}"><p>${e(photo.caption)}</p><p>${e(photo.credit)}</p><div class="photo-picker">${related.map((p,i)=>`<button data-action="story-photo-${museum.photos.indexOf(p)}" aria-pressed="${photo.id===p.id}">사진 ${i+1}</button>`).join('')}</div></div><div class="story-copy"><p class="eyebrow">실제 유물에서 찾아보기</p><h2>${e(entry.title)}</h2><section><span class="fact-badge ${block.kind}">${factLabels[block.kind]}</span><p>${e(block.text)}</p></section><nav class="story-pages"><button data-action="story-previous" ${storyPage===0?'disabled':''}>이전 이야기</button><span>${storyPage+1} / ${pages.length}</span><button data-action="story-next" ${storyPage===pages.length-1?'disabled':''}>다음 이야기</button></nav><div class="credits-actions"><button data-action="collection" class="secondary">유물 사진첩 전체 보기</button>${photo.source?`<a href="${e(photo.source)}" target="_blank" rel="noopener noreferrer">자료 출처 보기 ↗</a>`:''}${museumHomeLink()}</div></div></div>`);
 }
 function go(next: SceneId) {
   cancelGesture();
@@ -497,7 +517,24 @@ document.addEventListener("click", async (e) => {
     return;
   }
   const a = el.dataset.action!;
-  if(a==='finish-photo'){closeModal();go('ending');return;}
+  if(a==='finish-photo'){closeModal();go('ending');modal(endingMarkup());return;}
+  if(a==='kiln-guide'){modal(kilnGuide());return;}
+  if(a==='ending-credits'){modal(endingMarkup());return;}
+  if(a==='collection'||a.startsWith('collection-')){
+    albumReturn=dialog.querySelector('.museum-ending')?'ending-credits':dialog.querySelector('.museum-credits')?'credits':dialog.querySelector('.story-layout')?'story':'close';
+    const group=a.startsWith('collection-')?a.slice(11) as PhotoCategory:dialog.querySelector('.story-layout')?museum.photos.find(p=>p.id===storyPhoto)?.category??'face':'face';
+    showCollection(group);return;
+  }
+  if(a.startsWith('album-group-')){showCollection(a.slice(12) as PhotoCategory);return;}
+  if(a.startsWith('album-photo-')){showCollection(albumCategory,Number(a.slice(12)));return;}
+  if(a==='album-next'||a==='album-previous'){showCollection(albumCategory,albumIndex+(a==='album-next'?1:-1));return;}
+  if(a==='album-back'){
+    if(albumReturn==='ending-credits')modal(endingMarkup());
+    else if(albumReturn==='credits')modal(creditsMarkup());
+    else if(albumReturn==='story')showStory(storyPage,storyPhoto,storyScene);
+    else closeModal();
+    return;
+  }
   if(a==='kiln-inside'){world.toggleKiln();el.setAttribute('aria-pressed',String(world.kilnCutaway));el.textContent=world.kilnCutaway?'외부로 보기':'내부 보기';return;}
   if(a==='settings'){
     const opened=hud.classList.toggle('settings-open');el.setAttribute('aria-expanded',String(opened));return;
@@ -526,7 +563,7 @@ document.addEventListener("click", async (e) => {
     return;
   }
   if (a === "credits") {
-    modal(`<div class="credits-copy"><p class="eyebrow">AI 제작 안내</p><h2>제작과 자료 출처</h2><p class="ai-content-label">${AI_CONTENT_LABEL}</p><p>이 게임은 개발과 콘텐츠 제작에 생성형 AI를 활용했어요.</p><dl><dt>배경·캐릭터와 3D 재현</dt><dd>일부 배경·재질·캐릭터 이미지를 AI로 생성·편집했고, 코드와 3D 모델 제작에도 AI의 도움을 받았어요. 유물 모형은 사진과 공개 영상을 참고한 재현이며 실측 스캔은 아니에요.</dd><dt>직접 만드는 내 토기</dt><dd>내 토기의 모양과 표정은 플레이어가 직접 조절해요. 플레이 중 AI가 자동으로 작품을 생성하는 방식은 아니에요.</dd><dt>실제 유물 사진과 자료</dt><dd>‘유물 이야기’의 실제 사진은 AI 생성 이미지가 아니에요. 각 사진의 제공자와 출처를 따로 표시했어요.</dd><dt>저장하는 기념 이미지</dt><dd>AI 생성·편집 콘텐츠가 포함됐다는 문구를 이미지 안에 함께 저장해요. 스티커를 옮기거나 지워도 이 표시는 유지돼요.</dd></dl><div class="credits-actions">${museumHomeLink()}<button data-action="story" class="secondary">실제 유물과 출처 보기</button></div></div>`);
+    modal(creditsMarkup());
     return;
   }
   if (a === "help") {
@@ -964,10 +1001,8 @@ function sample(e: PointerEvent) {
       g.moved = true;
     }
   } else if (g.kind === "brush") {
-    const steps = Math.max(1, Math.ceil(Math.hypot(dx, dy) / 5));
-    for (let i = 1; i <= steps; i++)
-      if (world.brushAt(g.lastX + (dx * i) / steps, g.lastY + (dy * i) / steps))
-        g.moved = true;
+    // SoilTerrain already fills the world-space path between samples.
+    if(world.brushAt(e.clientX,e.clientY))g.moved=true;
   } else if (g.kind === "place") {
     const p = world.groundHit(e.clientX, e.clientY, world.assemblyHeight);
     if (p) {
@@ -1129,7 +1164,7 @@ function bindPointer() {
         previousView=next;return;
       }
     }
-    if (stage === "excavation") world.moveBrush(e.clientX, e.clientY);
+    if (stage === "excavation"&&!gesture&&!world.paused) world.moveBrush(e.clientX, e.clientY);
     if (!gesture || e.pointerId !== gesture.pointer) return;
     const coalesced = e.getCoalescedEvents?.() ?? [];
     pending.push(...(coalesced.length ? coalesced : [e]));

@@ -12,7 +12,7 @@ function photos(){
  $('photo').value=photoId;showPhoto();preview();
 }
 function preview(){if(!catalog)return;const entry=catalog.stages[stage],photo=catalog.photos.find(p=>p.id===entry.photo);$('title-preview').textContent=entry.title;$('summary-preview').textContent=entry.summary;$('summary-count').textContent=entry.summary.length+'/140';$('card-photo').src='/media/'+photo.file;}
-function showPhoto(){const p=catalog.photos.find(p=>p.id===photoId);$('photo-preview').src='/media/'+p.file;for(const key of ['caption','alt','credit','source'])$(key).value=p[key];}
+function showPhoto(){const p=catalog.photos.find(p=>p.id===photoId);$('photo-preview').src='/media/'+p.file;for(const key of ['caption','alt','credit','source','photo-title'])$(key).value=p[key==='photo-title'?'title':key]??'';$('photo-category').value=p.category??'other';}
 function showStage(){
  const entry=catalog.stages[stage];$('title').value=entry.title;$('summary').value=entry.summary;
  $('blocks').replaceChildren();
@@ -47,6 +47,8 @@ for(const id of ['title','summary'])$(id).oninput=()=>{catalog.stages[stage][id]
 $('stage-photo').onchange=()=>{catalog.stages[stage].photo=$('stage-photo').value;mark();};
 $('photo').onchange=()=>{photoId=$('photo').value;showPhoto();};
 for(const key of ['caption','alt','credit','source'])$(key).oninput=()=>{catalog.photos.find(p=>p.id===photoId)[key]=$(key).value;mark();};
+$('photo-title').oninput=()=>{catalog.photos.find(p=>p.id===photoId).title=$('photo-title').value;mark();};
+$('photo-category').onchange=()=>{catalog.photos.find(p=>p.id===photoId).category=$('photo-category').value;mark();};
 $('add-block').onclick=()=>{catalog.stages[stage].blocks.push({kind:'imagination',text:''});showStage();mark();};
 $('photo-upload').onchange=()=>action(async()=>{const file=$('photo-upload').files[0];if(!file)return;const filename=await upload(file);photoId=crypto.randomUUID();catalog.photos.push({id:photoId,file:filename,alt:file.name,caption:file.name,credit:'',source:''});photos();mark();$('photo-upload').value='';});
 $('replace-photo').onclick=()=>$('replace-file').click();

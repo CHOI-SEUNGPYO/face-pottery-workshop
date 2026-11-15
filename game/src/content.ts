@@ -75,9 +75,9 @@ export const scenes: Record<
   firing: {
     title: "흙이 토기가 되는 시간",
     eyebrow: "05 · 말리고 굽기",
-    instruction: "가마에 넣어 굽고, 식혀 꺼내는 과정을 안쪽까지 살펴봐요.",
+    instruction: "가마는 흙으로 빚은 그릇을 굽는 시설이에요. 안에서 굽고 식히는 과정을 살펴봐요.",
     character: "경산이",
-    speech: "우리가 만든 모양 그대로!\n짧은 변화의 시간을 지켜보자.",
+    speech: "안쪽을 볼 수 있게 벽을 열어 보여줄게!\n실제로는 벽을 닫고 구워.",
     next: "발굴하러 가기",
     tools: [],
     elevation: 24,

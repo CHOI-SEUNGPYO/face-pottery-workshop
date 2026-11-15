@@ -2,6 +2,7 @@ import * as T from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
+import {MeshBVH,acceleratedRaycast} from 'three-mesh-bvh';
 import { asset, characterImage } from "./assets";
 import { PotteryView } from "./pottery-view";
 import {ArtAssets} from './art-assets';
@@ -138,6 +139,9 @@ export class World {
     new T.MeshStandardMaterial({ color: 0x95734b, roughness: 1 }),
   );
   private brushScreen: [number, number] | null = null;
+  private brushHover: [number,number] | null = null;
+  private brushShadowsPending=false;
+  private lastBrushShadow=0;
   mask: Uint8Array = new Uint8Array(65536);
   constructor(
     private host: HTMLElement,
@@ -234,6 +238,9 @@ export class World {
       if(part)batchStatic(part);
     }
     const siru=this.art.model('siru'),siruBounds=new T.Box3().setFromObject(siru);
+    // The detailed siru is static. Index it once instead of testing every
+    // triangle for every brush sample, including the still-buried surface.
+    siru.traverse(o=>{if(o instanceof T.Mesh){o.geometry.boundsTree=new MeshBVH(o.geometry);o.raycast=acceleratedRaycast;}});
     siru.position.y-=siruBounds.min.y;this.siruHeight=siruBounds.max.y-siruBounds.min.y;
     this.siru.add(siru);
     const stand=await loader.loadAsync(asset('models/display-stand.glb'));
@@ -736,10 +743,11 @@ export class World {
   private brushHit(x: number, y: number) {
     if (this.stage !== "excavation") return null;
     const ray = this.pointer(x, y);
-    this.scene.updateMatrixWorld(true);
+    this.pottery.root.updateWorldMatrix(true,true);
+    this.siru.updateWorldMatrix(true,true);
     const ground = this.terrain.hit(ray.ray);
     if (!ground) return null;
-    const potteryHit = this.hit(x, y);
+    const potteryHit = ray.intersectObject(this.pottery.body,false).find(h=>h.uv&&!isHole(this.getSave().document,h.uv.x,h.uv.y));
     const siruHit = ray.intersectObject(this.siru, true)[0];
     const objectHit = [potteryHit, siruHit]
       .filter((h) => h && h.distance < ground.distance)
@@ -757,16 +765,19 @@ export class World {
     return ground;
   }
   moveBrush(x: number, y: number) {
-    const hit = this.brushHit(x, y),
-      cursor = this.terrain.cursor;
+    // Mouse/pen hardware may deliver several moves per rendered frame.
+    this.brushHover=[x,y];this.refresh();
+  }
+  private showBrush(hit:ReturnType<World['brushHit']>){
+    const cursor = this.terrain.cursor;
     cursor.visible = !!hit;
     if (hit) {
       cursor.position.copy(hit.point).addScaledVector(hit.normal, 0.008);
       cursor.quaternion.setFromUnitVectors(new T.Vector3(0, 0, 1), hit.normal);
     }
-    this.refresh();
   }
   hideBrush() {
+    this.brushHover=null;
     this.terrain.cursor.visible = false;
     this.refresh();
   }
@@ -777,6 +788,7 @@ export class World {
   endBrush() {
     this.terrain.end();
     this.brushScreen = null;
+    if(this.brushShadowsPending){this.brushShadowsPending=false;this.refresh(true);}
   }
   brushAt(x: number, y: number) {
     if (
@@ -792,8 +804,9 @@ export class World {
     }
     this.terrain.dig(hit.point);
     this.brushScreen = [x, y];
-    this.moveBrush(x, y);
-    this.refresh(true);
+    this.showBrush(hit);this.brushHover=null;
+    this.brushShadowsPending=true;
+    this.refresh();
     return true;
   }
   assistBrush() {
@@ -851,11 +864,15 @@ export class World {
       this.target.copy(this.goalTarget);
     }
     this.camera.lookAt(this.target);
-    if(this.firingProgress!==null&&!this.reduced){
-      const t=this.firingProgress,zoom=Math.sin(Math.PI*t)*.09;
-      this.camera.position.lerp(this.target,zoom);this.camera.lookAt(this.target);
+    if (this.stage === "excavation") {
+      this.terrain.update();
+      if(this.brushHover){this.showBrush(this.brushHit(...this.brushHover));this.brushHover=null;}
+      // Soil geometry follows every frame; the expensive shadow pass can run
+      // at 12.5 Hz during a stroke and once more when the brush is released.
+      if(this.brushShadowsPending&&now-this.lastBrushShadow>=80){
+        this.renderer.shadowMap.needsUpdate=true;this.lastBrushShadow=now;this.brushShadowsPending=false;
+      }
     }
-    if (this.stage === "excavation") this.terrain.update();
     for (const s of this.sprites.values()) {
       s.material.rotation =
         !this.reduced && now < this.reactionUntil

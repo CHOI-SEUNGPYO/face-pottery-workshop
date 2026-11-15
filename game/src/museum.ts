@@ -1,7 +1,8 @@
 import {validCatalog} from '../content/schema.mjs';
 import type {SceneId} from './model';
 import type {StoryBlock} from './content';
-export interface MuseumPhoto {id:string;file:string;alt:string;caption:string;credit:string;source:string}
+export type PhotoCategory='face'|'siru'|'background'|'other';
+export interface MuseumPhoto {id:string;file:string;alt:string;caption:string;credit:string;source:string;title?:string;category?:PhotoCategory}
 export interface MuseumCatalog {
   version:number;title:string;photos:MuseumPhoto[];
   stages:Record<SceneId,{title:string;summary:string;photo:string;blocks:StoryBlock[]}>;

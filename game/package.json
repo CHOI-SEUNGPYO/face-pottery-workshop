@@ -15,8 +15,9 @@
     "check:workshop": "node scripts/check-workshop.mjs",
     "check:journey": "node scripts/check-journey.mjs",
     "check:art": "node scripts/check-art.mjs",
+    "check:performance": "node scripts/check-excavation-performance.mjs",
     "build:art": "node scripts/build-art-assets.mjs",
-    "verify": "npm run build && npm run check:openings && npm test && npm run check:ui && npm run check:workshop && npm run check:journey && npm run check:art",
+    "verify": "npm run build && npm run check:openings && npm test && npm run check:ui && npm run check:workshop && npm run check:journey && npm run check:art && npm run check:performance",
     "test": "node --test scripts/check.mjs"
   },
   "engines": {

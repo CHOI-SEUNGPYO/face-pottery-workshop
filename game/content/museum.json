@@ -4,14 +4,18 @@
   "photos": [
     {
       "id": "artifact",
+      "title": "발견 당시의 얼굴토기와 시루",
+      "category": "face",
       "file": "artifact.png",
       "alt": "소월리 얼굴 장식 토기와 시루",
       "caption": "경산 소월리 출토 자료 사진",
-      "credit": "제공된 출토 자료 · assets/CREDITS.md 참조",
+      "credit": "제공된 출토 자료 · 문화유산채널 소개 자료",
       "source": "https://www.kculture.or.kr/brd/board/399/L/menu/498?bbIdx=11513&brdType=R"
     },
     {
       "id": "user-face-reference",
+      "title": "전시장에서 본 얼굴토기",
+      "category": "face",
       "file": "face-reference.jpg",
       "alt": "사용자가 제공한 소월리 얼굴토기 전시 참고 사진",
       "caption": "제공받은 전시 사진 · 사진 속 전시물의 모습",
@@ -20,6 +24,8 @@
     },
     {
       "id": "museum-face-photo",
+      "title": "얼굴토기와 시루를 함께 놓은 모습",
+      "category": "face",
       "file": "face-museum-photo.jpg",
       "alt": "경산시 제공 얼굴모양토기와 시루의 실물 사진",
       "caption": "얼굴모양토기와 시루 · 경산시 제공 사진",
@@ -28,11 +34,103 @@
     },
     {
       "id": "face-three-sides",
+      "title": "서로 다른 세 얼굴",
+      "category": "face",
       "file": "face-three-sides.jpg",
       "alt": "하나의 얼굴모양토기에 있는 서로 다른 세 얼굴",
       "caption": "실제 유물의 세 얼굴을 각각 촬영한 사진",
       "credit": "문화재청 제공으로 기록된 경향신문 사진 · 영상 제작자 전달 자료 04_목록",
       "source": "https://www.khan.co.kr/article/202301211337001/"
+    },
+    {
+      "id": "siru-actual",
+      "title": "소뿔 모양 손잡이가 달린 시루",
+      "category": "siru",
+      "file": "siru-actual.jpg",
+      "alt": "바닥이 제거되고 몸통 양옆에 소뿔 모양 손잡이가 붙은 소월리 출토 시루",
+      "caption": "얼굴모양토기와 함께 출토된 시루의 실제 모습",
+      "credit": "문화재청 2019년 12월 3일 보도자료 첨부 사진 · 현재 국가유산청 누리집 제공",
+      "source": "https://www.khs.go.kr/newsBbz/selectNewsBbzView.do?newsItemId=155701798&sectionId=b_sec_1"
+    },
+    {
+      "id": "background-shelves",
+      "title": "전시실의 토기 선반",
+      "category": "background",
+      "file": "background-6.jpg",
+      "alt": "나무 선반의 각 칸에 여러 토기가 나란히 놓인 박물관 전시 사진",
+      "caption": "선반마다 서로 다른 크기와 형태의 토기가 놓여 있어요.",
+      "credit": "사용자 제공 전시 참고 사진 6 · 공방과 박물관 배경 제작에 참고",
+      "source": ""
+    },
+    {
+      "id": "background-round-jar",
+      "title": "넓은 입구와 둥근 몸체",
+      "category": "background",
+      "file": "background-1.jpg",
+      "alt": "입구가 바깥으로 벌어지고 몸체가 둥근 밝은 색 토기 전시 사진",
+      "caption": "넓게 벌어진 입구 아래로 둥근 몸체가 이어져요.",
+      "credit": "사용자 제공 전시 참고 사진 1 · 설명은 형태를 살펴보기 위한 안내",
+      "source": ""
+    },
+    {
+      "id": "background-two-jars",
+      "title": "크기가 다른 두 항아리",
+      "category": "background",
+      "file": "background-2.jpg",
+      "alt": "큰 목 긴 항아리 앞에 작은 둥근 항아리가 놓인 전시 사진",
+      "caption": "목이 긴 큰 항아리와 입구가 짧은 작은 항아리를 비교해 보세요.",
+      "credit": "사용자 제공 전시 참고 사진 2 · 설명은 형태를 살펴보기 위한 안내",
+      "source": ""
+    },
+    {
+      "id": "background-banded-neck",
+      "title": "줄무늬 목과 낮은 받침",
+      "category": "background",
+      "file": "background-5.jpg",
+      "alt": "목에 가로줄 무늬가 있고 낮은 굽 받침 위에 놓인 회색 토기",
+      "caption": "목을 두른 가로줄과 아래쪽 받침의 구멍을 살펴보세요.",
+      "credit": "사용자 제공 전시 참고 사진 5 · 설명은 형태를 살펴보기 위한 안내",
+      "source": ""
+    },
+    {
+      "id": "background-shoulder-pot",
+      "title": "어깨가 벌어진 받침 토기",
+      "category": "background",
+      "file": "background-7.jpg",
+      "alt": "목 아래 어깨가 튀어나오고 둥근 배 아래에 낮은 받침이 있는 토기",
+      "caption": "몸체 가운데 튀어나온 선과 목·받침의 모양이 눈에 띄어요.",
+      "credit": "사용자 제공 전시 참고 사진 7 · 설명은 형태를 살펴보기 위한 안내",
+      "source": ""
+    },
+    {
+      "id": "background-long-neck",
+      "title": "긴 목의 토기와 받침",
+      "category": "background",
+      "file": "background-8.jpg",
+      "alt": "가로줄이 여러 개 있는 긴 목의 회색 토기와 네모 구멍이 있는 낮은 받침",
+      "caption": "긴 목의 가로줄과 받침의 네모난 구멍을 찾아보세요.",
+      "credit": "사용자 제공 전시 참고 사진 8 · 설명은 형태를 살펴보기 위한 안내",
+      "source": ""
+    },
+    {
+      "id": "background-open-bowl",
+      "title": "넓은 그릇과 뚫린 받침",
+      "category": "background",
+      "file": "background-9.jpg",
+      "alt": "가장자리 일부가 깨진 넓은 그릇과 삼각형 구멍이 있는 굽 높은 받침",
+      "caption": "넓게 열린 그릇과 아래 받침에 뚫린 삼각형 구멍을 볼 수 있어요.",
+      "credit": "사용자 제공 전시 참고 사진 9 · 설명은 형태를 살펴보기 위한 안내",
+      "source": ""
+    },
+    {
+      "id": "background-tall-stand",
+      "title": "높은 받침 위의 토기",
+      "category": "background",
+      "file": "background-10.jpg",
+      "alt": "여러 단의 네모 구멍이 있는 긴 받침 위에 둥근 토기가 놓인 모습",
+      "caption": "키가 큰 받침에는 여러 단으로 구멍이 나 있어요.",
+      "credit": "사용자 제공 전시 참고 사진 10 · 설명은 형태를 살펴보기 위한 안내",
+      "source": ""
     }
   ],
   "stages": {
@@ -112,17 +210,21 @@
       ]
     },
     "firing": {
-      "title": "토기는 어떻게 구웠을까요?",
+      "title": "가마는 토기를 굽는 시설이에요",
       "photo": "artifact",
-      "summary": "당시 영남 지역 가마 자료를 참고한 체험 장면이에요. 이 유물을 구운 특정 가마는 확인되지 않았어요.",
+      "summary": "흙으로 만든 그릇을 불과 열로 구워요. 옆면이 열리는 것은 안쪽을 보여주기 위한 설명용 연출이에요.",
       "blocks": [
         {
           "kind": "fact",
-          "text": "삼국시대 영남 지역에서는 경사진 지형에 만든 반지하식 토기가마 등이 사용되었어요."
+          "text": "가마는 그릇을 구워 완성하는 시설이에요. 벽과 천장을 갖춘 가마에는 불을 피우는 곳, 토기를 놓는 굽는 공간, 열과 연기가 빠져나가는 통로가 있어요. 국립문화유산연구원 한국고고학 전문사전의 ‘토기 가마의 구조’를 참고했어요."
         },
         {
           "kind": "imagination",
-          "text": "이 장면은 당시 지역의 가마 구조를 참고해 구성했어요. 소월리 얼굴토기를 구운 특정 가마와 정확한 소성 과정은 현재 확인한 자료로 알 수 없어요. 내부 보기는 설명을 위한 단면이에요."
+          "text": "덮인 굽는 공간과 불길의 흐름을 쉽게 보여주려고 흙으로 덮인 가마를 재구성했어요. 옆면이 투명해지는 것은 안쪽을 보여주기 위한 연출이며, 실제로 벽을 열어 둔 채 굽는다는 뜻은 아니에요. 시간·온도·색 변화를 실제 소성 과정 그대로 재현한 것은 아니에요."
+        },
+        {
+          "kind": "interpretation",
+          "text": "삼국시대 영남 지역에는 반지하식 토기가마 등이 있었어요. 다만 소월리 얼굴모양토기를 구운 특정 가마와 정확한 소성 과정은 현재 확인한 자료로 알 수 없어요. 게임의 모양과 크기, 주변 풍경은 체험에 맞게 단순화했어요."
         }
       ]
     },

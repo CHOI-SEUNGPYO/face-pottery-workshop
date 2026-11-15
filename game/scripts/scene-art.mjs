@@ -145,8 +145,10 @@ export function buildScenes(c){
   for(const side of [-1,1]){
     const fence=group('Stone courtyard boundary');yard.add(fence);
     const mortar=material('Recessed stone wall joints',0x4e5147,'earth',1);
-    box(fence,'Continuous rear stone wall core',14,.64,.28,mortar,0,.32,side>0?-5:7,.02);
-    box(fence,'Continuous side stone wall core',.28,.64,12,mortar,side*7,.32,1,.02);
+    // Keep mortar below the top stones: coplanar top faces caused moving
+    // dark patches (depth fighting) when the firing camera moved slightly.
+    box(fence,'Continuous rear stone wall core',14,.54,.28,mortar,0,.27,side>0?-5:7,.02);
+    box(fence,'Continuous side stone wall core',.28,.54,12,mortar,side*7,.27,1,.02);
     for(let row=0;row<3;row++)for(let j=0;j<25;j++){
       const p=-6.7+j*.55+(row%2)*.26;
       const rock=box(fence,'Bonded fieldstone',.53,.21,.40,gravel,p,.105+row*.215,side>0?-5:7,.055);

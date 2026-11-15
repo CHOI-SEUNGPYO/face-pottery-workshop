@@ -2,6 +2,7 @@ node_modules/
 dist/
 game/asset/review/
 reference/video/*.mp4
+reference/museum/*.pptx
 04_목록/
 game/content/museum.previous.json
 game/content/*.tmp

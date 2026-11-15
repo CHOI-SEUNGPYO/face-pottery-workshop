@@ -3,6 +3,15 @@ import { spawn } from "node:child_process";
 import { readdir, readFile } from "node:fs/promises";
 import { once } from "node:events";
 import test from "node:test";
+import {validCatalog} from '../content/schema.mjs';
+
+test('museum photo categories remain optional for existing editor catalogs',async()=>{
+ const catalog=JSON.parse(await readFile('content/museum.json','utf8'));
+ assert.ok(validCatalog(catalog));
+ for(const photo of catalog.photos){assert.ok((await readFile('asset/runtime/museum/'+photo.file)).length>0);delete photo.category;delete photo.title;}
+ assert.ok(validCatalog(catalog));
+ catalog.photos[0].category='invalid';assert.equal(validCatalog(catalog),false);
+});
 
 test(
   "prototype serves its build and assets without exposing source or accepting writes",

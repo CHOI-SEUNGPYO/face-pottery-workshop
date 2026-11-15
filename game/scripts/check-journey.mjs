@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {mkdir,writeFile} from 'node:fs/promises';
 import {createServer} from 'vite';
 import {chromium} from 'playwright';
+import {checkMuseumEnding} from './museum-checks.mjs';
 
 // Isolated origins and fresh contexts never read the player's actual artwork.
 // Dev-only access supplies fixture state and projects targets; gestures use real pointer events.
@@ -60,7 +61,8 @@ async function assertPhotoDisclosure(page,png){
 try{
  browser=await chromium.launch({channel:'msedge',headless:true});
  for(const viewport of [{width:1366,height:768},{width:740,height:360},{width:390,height:844}]){
-  const context=await browser.newContext({viewport,reducedMotion:'reduce',hasTouch:viewport.width<800});
+  const mobile=viewport.width<800;
+  const context=await browser.newContext({viewport,reducedMotion:'reduce',hasTouch:mobile,isMobile:mobile,deviceScaleFactor:mobile?2:1});
   const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
   try{
    await page.goto(`http://127.0.0.1:${server.httpServer.address().port}/`);
@@ -192,6 +194,9 @@ try{
    if(process.env.TOGI_DISCLOSURE_REVIEW==='1'&&viewport.width===1366)await writeFile('asset/review/ai-disclosure-export.png',png);
    assert.deepEqual(await page.evaluate(()=>Array.from(window.togi.save.document.outerXYZ)),placed.doc,'photo editing preserves pottery');
    await page.locator('[data-action="finish-photo"]').click();
+   const beforeOutro=await page.evaluate(()=>Array.from(window.togi.save.document.outerXYZ));
+   await checkMuseumEnding(page);
+   assert.deepEqual(await page.evaluate(()=>Array.from(window.togi.save.document.outerXYZ)),beforeOutro,'museum photos and outro preserve the finished artwork');
    assert.equal(await page.locator('body').getAttribute('data-stage'),'ending','photo editor leads to the completed artwork');
    await settle(page);
    const ownBefore=await page.evaluate(()=>window.togi.world.pottery.root.rotation.y),ownTarget=await project(page,[-.78,.7,.3]);
