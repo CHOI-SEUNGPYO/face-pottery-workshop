@@ -19,7 +19,7 @@ export class ArtAssets {
       if(name==='siru-clay')texture.repeat.set(3,2);
     }));
     await Promise.all(artModels.map(async name=>{
-      const version=name==='face-artifact'?'v4':name==='craft-tools'?'v2':'v3';
+      const version=name==='face-artifact'||name==='siru'?'v4':name==='craft-tools'?'v2':'v3';
       const {scene}=await models.loadAsync(asset(`models/${name}-${version}.glb`));
       scene.traverse(o=>{
         if(!(o instanceof T.Mesh))return;

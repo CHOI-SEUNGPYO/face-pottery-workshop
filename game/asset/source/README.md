@@ -9,6 +9,7 @@
 - `characters/party-back-volume-v2.png`: 이전 가마 장면용 세 캐릭터 뒷모습 원본. 현재는 안내 캐릭터를 장면별로 분리했으며, 세 명이 함께 운반하는 이동용 아틀라스는 유지한다.
 - `model-manifest.json`: GLB 28개의 파일 크기와 면 수. 토기 8개·도구 10개·이를 배치한 공간 및 주변 요소 10개다. 공간 파일에는 같은 소품이 재사용되므로 서로 다른 28종의 유물을 만들었다는 의미는 아니다.
 - `../../scripts/build-art-assets.mjs`, `../../scripts/scene-art.mjs`: UV, 속이 빈 토기 몸체, 구멍 있는 받침, 도구, 가구, 가마, 식생의 편집 가능한 제작 코드. `game/`에서 `npm run build:art`로 GLB를 다시 만든다.
+- `../../scripts/siru-artifact.mjs`, `../../scripts/siru-artifact-material.mjs`: 공식 발굴 보도자료의 단독·결합 사진을 참고한 시루 v4. 바닥이 제거된 속 빈 몸체, 깨진 가장자리, 넓은 소뿔 모양 손잡이와 회갈색 찍힘 재질을 만든다. 원본 스캔이나 실측 모델은 아니다. `ceramic-glb.mjs`는 얼굴토기·시루의 자체 색상·요철 이미지를 GLB에 함께 넣는 공통 도구다.
 - `scene-layout-v3.json`: 분리된 벽·가구·전시대·작업대·야외 주변·시루 등 새 GLB 13개와 선반 유물의 바닥 접촉·간격 기록. 이전 v2 파일은 보존한다.
 - `../../scripts/prepare-art-textures.py`: 이 폴더의 원본에서 게임용 JPG·WebP를 인코딩한다. Python과 Pillow가 필요하다. 게임 실행·일반 빌드에는 Python이 필요 없다.
 - 실행 파일은 `asset/runtime/materials/`, `asset/runtime/characters/`, `asset/runtime/models/`에 있다. 브라우저는 사전 제작한 GLB를 읽으며 공간 모델을 실행 중에 다시 만들지 않는다.

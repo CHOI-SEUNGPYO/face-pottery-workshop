@@ -4,6 +4,7 @@ import {createServer} from 'vite';
 import {chromium} from 'playwright';
 import * as T from 'three';
 import {buildFaceArtifact} from './face-artifact.mjs';
+import {buildSiruArtifact} from './siru-artifact.mjs';
 // Probe the actual geometry, not material colour: every face has open eyes,
 // nostrils and mouth. A painted black disk cannot satisfy this check.
 const model=buildFaceArtifact();model.updateMatrixWorld(true);
@@ -19,9 +20,29 @@ assert.ok(underside[0]?.distance>1,'the open base leads into the vessel, not a s
 const dimensions=new T.Box3().setFromObject(model,true).getSize(new T.Vector3());
 assert.ok(dimensions.x/dimensions.y>.65&&dimensions.x/dimensions.y<.76,'broad shoulders match the scan-video silhouette');
 model.traverse(o=>{if(o.isMesh){o.geometry.dispose();o.material.dispose();}});
+const steamer=buildSiruArtifact();steamer.updateMatrixWorld(true);
+const steamerBody=steamer.getObjectByName('Impressed tapering body'),bodySize=new T.Box3().setFromObject(steamerBody,true).getSize(new T.Vector3());
+assert.ok(bodySize.y/bodySize.x>.93&&bodySize.y/bodySize.x<1.04,'siru body is tall like the excavation photograph');
+assert.equal(steamer.children.filter(o=>o.userData.siruHandle).length,2,'two distinct mid-body ox-horn lugs');
+for(const lug of steamer.children.filter(o=>o.userData.siruHandle)){
+  const box=new T.Box3().setFromObject(lug,true),size=box.getSize(new T.Vector3());
+  assert.ok(size.z>.14&&size.y>.10,'handles have broad clay roots, not thin pipe sections');
+  const p=box.getCenter(new T.Vector3()),hit=new T.Raycaster(new T.Vector3(p.x,p.y,1),new T.Vector3(0,0,-1)).intersectObject(lug);
+  assert.ok(hit.length>0&&hit[0].point.z>0,'the lug has an outward-facing solid surface');
+}
+for(const x of [-.16,0,.16]){
+  const holes=new T.Raycaster(new T.Vector3(x,-.1,0),new T.Vector3(0,1,0)).intersectObject(steamer,true);
+  assert.equal(holes.length,0,'the removed bottom is an open passage, with no invented sieve plate');
+}
+const {u:chipU,v:chipV}=steamer.userData.missingSherd;
+const chipStart=new T.Vector3(Math.sin(chipU)*.7,chipV*.88,Math.cos(chipU)*.7);
+const chipHits=new T.Raycaster(chipStart,new T.Vector3(-Math.sin(chipU),0,-Math.cos(chipU))).intersectObject(steamer,true);
+assert.ok(!chipHits.length||chipHits[0].distance>.75,'the documented missing sherd pierces both walls');
+steamer.traverse(o=>{if(o.isMesh){o.geometry.dispose();o.material.dispose();}});
 const server=await createServer({server:{host:'127.0.0.1',port:0,strictPort:false}});
 const review=process.env.TOGI_REVIEW==='1'||process.env.TOGI_ART_REVIEW==='1';
 const artifactReview=process.env.TOGI_ARTIFACT_REVIEW==='1';
+const siruReview=process.env.TOGI_SIRU_REVIEW==='1';
 await server.listen();let browser;
 try{
   browser=await chromium.launch({channel:'msedge',headless:true});
@@ -38,7 +59,7 @@ try{
     assert.ok(start&&start.x>=0&&start.y>=0&&start.x+start.width<=viewport.width&&start.y+start.height<=viewport.height,'welcome start button fits phone and tablet screens');
   }
   await page.setViewportSize({width:1366,height:768});
-  if(review||artifactReview)await mkdir('asset/review',{recursive:true});
+  if(review||artifactReview||siruReview)await mkdir('asset/review',{recursive:true});
   await page.locator('[data-action="new"]').click();
   const before=await page.evaluate(()=>JSON.stringify(window.togi.save.document));
   for(const stage of ['body','compare','excavation','assembly','firing']){
@@ -132,6 +153,11 @@ try{
       await page.setViewportSize({width:1366,height:768});await page.evaluate(()=>window.togi.world.setView('stage'));
     }
     if(stage==='assembly'){
+      assert.equal(await page.evaluate(()=>{
+        const materials=new Set();window.togi.world.siru.traverse(o=>{if(o.isMesh&&o.material.userData.siruSurface==='exterior')materials.add(o.material);});
+        return materials.size>0&&[...materials].every(m=>m.map&&m.normalMap&&!m.bumpMap&&m.map.image.width===1024);
+      }),true,'siru keeps its own grey-brown colour and impressed relief maps');
+      if(siruReview)await page.screenshot({path:'asset/review/siru-v4-before-assembly.png'});
       await page.locator('[data-action="place"]').click();
       const contact=await page.evaluate(()=>{
         const w=window.togi.world;
@@ -146,6 +172,28 @@ try{
       });
       assert.ok(Math.abs(contact.pot-contact.siruTop)<.001,'pot contacts the actual steamer rim');
       assert.ok(Math.abs(contact.table-contact.bench)<.001,'steamer rests on the conservation table');
+      if(siruReview){
+        await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
+        await page.screenshot({path:'asset/review/siru-v4-assembly.png'});
+        const plates=await page.evaluate(()=>{
+          const w=window.togi.world,scene=new w.scene.constructor(),siru=w.siru.clone(true);
+          siru.position.set(0,0,0);scene.add(siru);scene.environment=w.scene.environment;scene.environmentIntensity=w.scene.environmentIntensity;
+          const key=w.key.clone(),fill=w.fill.clone(),ambient=w.ambient.clone();
+          key.position.set(-3,4,5);key.intensity=2.4;fill.position.set(4,2,3);fill.intensity=.75;ambient.intensity=1.1;scene.add(key,fill,ambient);
+          const renderer=new w.renderer.constructor({antialias:true,preserveDrawingBuffer:true});renderer.setSize(640,700);renderer.setClearColor(0xe8e6e1,1);renderer.outputColorSpace=w.renderer.outputColorSpace;renderer.toneMapping=w.renderer.toneMapping;renderer.toneMappingExposure=w.renderer.toneMappingExposure;
+          const camera=w.camera.clone();camera.fov=28;camera.aspect=640/700;camera.zoom=1;camera.near=.01;camera.far=100;camera.updateProjectionMatrix();
+          const out=[];
+          for(const eye of [[0,.60,2.6],[1.1,2.3,1.6]]){
+            camera.position.set(...eye);camera.lookAt(0,.44,0);camera.updateMatrixWorld();renderer.render(scene,camera);out.push(renderer.domElement.toDataURL('image/png'));
+          }
+          renderer.dispose();return out;
+        });
+        for(let i=0;i<plates.length;i++)await writeFile(`asset/review/siru-v4-${i?'interior':'front'}.png`,Buffer.from(plates[i].split(',')[1],'base64'));
+        await page.setViewportSize({width:390,height:844});
+        await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
+        await page.screenshot({path:'asset/review/siru-v4-assembly-portrait.png'});
+        await page.setViewportSize({width:1366,height:768});
+      }
     }
     if(stage==='firing'){
       const motion=await page.evaluate(()=>{

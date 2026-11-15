@@ -7,6 +7,7 @@ import {mkdir,writeFile} from 'node:fs/promises';
 import {buildScenes} from './scene-art.mjs';
 import {buildFaceArtifact} from './face-artifact.mjs';
 import {finishFaceArtifactGlb} from './face-artifact-material.mjs';
+import {finishSiruArtifactGlb} from './siru-artifact-material.mjs';
 
 globalThis.FileReader=class{
   async readAsArrayBuffer(blob){this.result=await blob.arrayBuffer();this.onloadend?.();}
@@ -280,10 +281,11 @@ const scenes=buildScenes({T,group,mesh,box,lathe,ring,place,material,pottery,too
 scenes.assets.push(['face-artifact',buildFaceArtifact()]);
 const sceneManifest=[];
 for(const [id,root]of scenes.assets){
-  if(id!=='face-artifact')root.userData.provenance='Photo-informed game environment; not a measured artifact scan';
+  if(!['face-artifact','siru'].includes(id))root.userData.provenance='Photo-informed game environment; not a measured artifact scan';
   let data=await new GLTFExporter().parseAsync(root,{binary:true,onlyVisible:false});
   if(id==='face-artifact')data=finishFaceArtifactGlb(data);
-  const version=id==='face-artifact'?'v4':'v3';
+  if(id==='siru')data=finishSiruArtifactGlb(data);
+  const version=['face-artifact','siru'].includes(id)?'v4':'v3';
   await writeFile(new URL(`${id}-${version}.glb`,out),Buffer.from(data));
   sceneManifest.push({id,file:`${id}-${version}.glb`,bytes:data.byteLength});
 }

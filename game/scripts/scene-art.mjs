@@ -1,5 +1,6 @@
 // V3 scene composition: architectural boundaries, permanent supports and
 // individual exhibit clearances are authored separately from removable walls.
+import {buildSiruArtifact} from './siru-artifact.mjs';
 export function buildScenes(c){
   const {T,group,mesh,box,lathe,ring,place,material,pottery,tools,wood,darkWood,plaster,linen,bronze,lamp,clay,darkClay,vault,kiln,brush}=c;
   const stone=material('Honed warm limestone',0xe7e4dd,'limestone',.9);
@@ -229,15 +230,7 @@ export function buildScenes(c){
   for(let i=0;i<8;i++)box(shed,'Shelter partial back slats',.25,1.1,.055,wood,-1.12+i*.32,.75,-.65);
   place(shed,tools.find(t=>t[0]==='tool-tray')[1],0,.6,0,1.3);
   box(shed,'Shelter worktop',2.3,.07,.7,wood,0,.56,0);
-  const siru=group('Light weathered steamer support');
-  const siruMat=material('Siru ash gray clay',0xbac7cc,'siru-clay',.92);
-  lathe(siru,'Hollow flared steamer body',[[.46,0],[.48,.035],[.45,.075],[.39,.14],[.34,.36],[.27,.62],[.25,.70],[.225,.70],[.245,.61],[.315,.35],[.365,.13],[.425,.045],[.43,0]],siruMat,64);
-  ring(siru,'Steamer foot rim',.465,.025,.009,siruMat);ring(siru,'Steamer mouth rim',.239,.695,.011,siruMat);
-  for(const side of [-1,1]){
-    const curve=new T.CatmullRomCurve3([new T.Vector3(side*.36,.28,0),new T.Vector3(side*.49,.31,0),new T.Vector3(side*.61,.23,0)]);
-    mesh(siru,'Downward ceramic lug',new T.TubeGeometry(curve,14,.025,10,false),siruMat);
-  }
-  siru.userData.supportHeight=.70;
+  const siru=buildSiruArtifact();
   // Validate authored exhibit spacing before exporting; this is geometry, not a screenshot guess.
   for(let i=0;i<records.length;i++)for(let j=i+1;j<records.length;j++)if(records[i].collection===records[j].collection){
     const a=records[i],b=records[j];if([0,1,2].every(k=>Math.min(a.max[k],b.max[k])-Math.max(a.min[k],b.min[k])>.004))throw Error(`Intersecting ${a.collection} exhibits ${i}/${j}`);
