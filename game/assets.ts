@@ -1,9 +1,13 @@
 const files = import.meta.glob(
   [
     "../asset/runtime/characters/*.png",
+    "../asset/runtime/characters/*.webp",
     "../asset/runtime/models/*.glb",
     "../asset/runtime/audio/*.wav",
     "../asset/runtime/animations/*.png",
+    "../asset/runtime/animations/*.webp",
+    "../asset/runtime/materials/*.jpg",
+    "../asset/runtime/materials/*.webp",
   ],
   {
     eager: true,
@@ -23,4 +27,4 @@ const characterNames: Record<string, string> = {
   소월이: "sowoli",
 };
 export const characterImage = (name: string) =>
-  asset(`characters/${characterNames[name]}.png`);
+  asset(`characters/${characterNames[name]}${name==='소월이'?'.png':'-volume-v2.webp'}`);

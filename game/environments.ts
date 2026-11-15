@@ -3,6 +3,10 @@ import * as T from 'three';
 const clay = new T.MeshStandardMaterial({color:0x8c8171,roughness:.98});
 const wood = new T.MeshStandardMaterial({color:0x805735,roughness:.9});
 const earth = new T.MeshStandardMaterial({color:0xab8b64,roughness:1});
+export function setEnvironmentMaterials(soil:T.Texture,timber:T.Texture){
+  earth.map=earth.bumpMap=soil;earth.bumpScale=.012;earth.color.set(0xc7b596);earth.needsUpdate=true;
+  wood.map=wood.bumpMap=timber;wood.bumpScale=.003;wood.color.set(0xd6bea0);wood.needsUpdate=true;
+}
 export function mesh(parent:T.Object3D, geometry:T.BufferGeometry, material:T.Material, x=0,y=0,z=0){
   const m=new T.Mesh(geometry,material);m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m;
 }
@@ -50,7 +54,7 @@ export function workshopTools(){
   return g;
 }
 export function outdoorSite(level:number, excavation=true){
-  const g=new T.Group(),shape=new T.Shape();shape.absarc(0,0,14,0,Math.PI*2,false);
+  const g=new T.Group(),shape=new T.Shape();shape.absarc(0,0,40,0,Math.PI*2,false);
   if(excavation){const hole=new T.Path();hole.absellipse(0,0,1.69,1.49,0,Math.PI*2,true,0);shape.holes.push(hole);}
   const floor=mesh(g,new T.ShapeGeometry(shape,80),earth,0,level,0);floor.rotation.x=-Math.PI/2;
   if(excavation){
@@ -60,12 +64,6 @@ export function outdoorSite(level:number, excavation=true){
     for(let i=0;i<5;i++){
       const peg=mesh(g,new T.BoxGeometry(.035,.18,.035),wood,-2+i,level+.07,-1.95);peg.rotation.z=.08;
     }
-  }
-  const green=new T.MeshStandardMaterial({color:0x647956,roughness:1}),trunk=new T.MeshStandardMaterial({color:0x705039,roughness:1});
-  for(let i=0;i<11;i++){
-    const a=i*2.399,x=Math.cos(a)*(4+i*.3),z=Math.sin(a)*(4+i*.25)-1;
-    mesh(g,new T.CylinderGeometry(.08,.13,1.4,7),trunk,x,level+.65,z);
-    const leaves=mesh(g,new T.IcosahedronGeometry(.85,1),green,x,level+1.7,z);leaves.scale.y=1.3;
   }
   return g;
 }
@@ -78,13 +76,10 @@ function plaque(text:string){
   return new T.MeshBasicMaterial({map:texture});
 }
 export function museumRoom(){
-  const g=new T.Group(),back=new T.MeshStandardMaterial({color:0x8e432d,roughness:1}),dark=new T.MeshStandardMaterial({color:0x363c3a,roughness:.9});
-  mesh(g,new T.PlaneGeometry(30,30),dark,0,-.32,0).rotation.x=-Math.PI/2;
-  mesh(g,new T.BoxGeometry(10,5,.12),back,0,1.8,-2);
+  const g=new T.Group();
   const glass=new T.MeshStandardMaterial({color:0xd8f2ed,transparent:true,opacity:.09,roughness:.12,metalness:0,side:T.DoubleSide,depthWrite:false});
   for(const [x,label] of [[-.78,'내가 만든 얼굴토기'],[.9,'유물 형태 재현']] as const){
-    mesh(g,new T.CylinderGeometry(.62,.64,.26,56),dark,x,-.15,0);
-    const rim=mesh(g,new T.TorusGeometry(.62,.012,6,64),new T.MeshStandardMaterial({color:0xb7cdc5,roughness:.3}),x,1.85,0);rim.rotation.x=Math.PI/2;
+    const rim=mesh(g,new T.TorusGeometry(.62,.012,6,64),new T.MeshStandardMaterial({color:0xb7cdc5,roughness:.3}),x,1.85,0);rim.rotation.x=Math.PI/2;rim.castShadow=false;
     const tube=mesh(g,new T.CylinderGeometry(.62,.62,1.85,64,1,true),glass,x,.92,0);tube.castShadow=false;tube.renderOrder=3;
     const labelMesh=mesh(g,new T.PlaneGeometry(.68,.2),plaque(label),x,-.04,.7);labelMesh.rotation.x=-Math.PI/4;labelMesh.castShadow=false;
   }

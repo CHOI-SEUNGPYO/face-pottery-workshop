@@ -111,6 +111,12 @@ export class SoilTerrain {
     this.cursor.visible = false;
     this.cursor.renderOrder = 4;
   }
+  setSurface(texture:T.Texture){
+    this.mesh.material.map=texture;this.mesh.material.bumpMap=texture;this.mesh.material.bumpScale=.009;
+    const uv=this.mesh.geometry.getAttribute('uv');
+    for(let i=0;i<uv.count;i++)uv.setXY(i,uv.getX(i)/3,uv.getY(i)/3);
+    this.mesh.material.needsUpdate=true;
+  }
   configure(mask: Uint8Array, targets: FindBounds[]) {
     this.mask = mask;
     this.targets = targets;

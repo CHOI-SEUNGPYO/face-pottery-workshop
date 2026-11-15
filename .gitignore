@@ -1,6 +1,7 @@
 node_modules/
 dist/
 asset/review/
+asset/reference/video/*.mp4
 content/museum.previous.json
 content/*.tmp
 *.log

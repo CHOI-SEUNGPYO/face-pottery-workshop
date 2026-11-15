@@ -1,0 +1,198 @@
+[
+  {
+    "id": "ring-neck-jar",
+    "file": "ring-neck-jar-v2.glb",
+    "bytes": 323316,
+    "vertices": 7337,
+    "triangles": 13248
+  },
+  {
+    "id": "lug-pedestal-jar",
+    "file": "lug-pedestal-jar-v2.glb",
+    "bytes": 305520,
+    "vertices": 6937,
+    "triangles": 12432
+  },
+  {
+    "id": "pierced-high-bowl",
+    "file": "pierced-high-bowl-v2.glb",
+    "bytes": 277500,
+    "vertices": 6308,
+    "triangles": 11640
+  },
+  {
+    "id": "round-storage-jar",
+    "file": "round-storage-jar-v2.glb",
+    "bytes": 164496,
+    "vertices": 3724,
+    "triangles": 7104
+  },
+  {
+    "id": "small-neck-jar",
+    "file": "small-neck-jar-v2.glb",
+    "bytes": 149020,
+    "vertices": 3381,
+    "triangles": 6528
+  },
+  {
+    "id": "low-foot-cup",
+    "file": "low-foot-cup-v2.glb",
+    "bytes": 149004,
+    "vertices": 3381,
+    "triangles": 6528
+  },
+  {
+    "id": "ring-knop-lid",
+    "file": "ring-knop-lid-v2.glb",
+    "bytes": 31508,
+    "vertices": 686,
+    "triangles": 1152
+  },
+  {
+    "id": "flared-neck-jar",
+    "file": "flared-neck-jar-v2.glb",
+    "bytes": 291460,
+    "vertices": 6651,
+    "triangles": 11952
+  },
+  {
+    "id": "soft-brush",
+    "file": "soft-brush-v2.glb",
+    "bytes": 69904,
+    "vertices": 1098,
+    "triangles": 740
+  },
+  {
+    "id": "oval-rib",
+    "file": "oval-rib-v2.glb",
+    "bytes": 70684,
+    "vertices": 2160,
+    "triangles": 720
+  },
+  {
+    "id": "kidney-rib",
+    "file": "kidney-rib-v2.glb",
+    "bytes": 37276,
+    "vertices": 1116,
+    "triangles": 372
+  },
+  {
+    "id": "water-bowl",
+    "file": "water-bowl-v2.glb",
+    "bytes": 152020,
+    "vertices": 3431,
+    "triangles": 6576
+  },
+  {
+    "id": "wire-cutter",
+    "file": "wire-cutter-v2.glb",
+    "bytes": 75732,
+    "vertices": 1632,
+    "triangles": 2736
+  },
+  {
+    "id": "clay-coil",
+    "file": "clay-coil-v2.glb",
+    "bytes": 47256,
+    "vertices": 1067,
+    "triangles": 1920
+  },
+  {
+    "id": "folded-cloth",
+    "file": "folded-cloth-v2.glb",
+    "bytes": 28700,
+    "vertices": 585,
+    "triangles": 1008
+  },
+  {
+    "id": "tool-tray",
+    "file": "tool-tray-v2.glb",
+    "bytes": 56800,
+    "vertices": 1620,
+    "triangles": 540
+  },
+  {
+    "id": "work-mat",
+    "file": "work-mat-v2.glb",
+    "bytes": 22088,
+    "vertices": 475,
+    "triangles": 864
+  },
+  {
+    "id": "sherd-tray",
+    "file": "sherd-tray-v2.glb",
+    "bytes": 22064,
+    "vertices": 379,
+    "triangles": 149
+  },
+  {
+    "id": "craft-bench",
+    "file": "craft-bench-v2.glb",
+    "bytes": 158444,
+    "vertices": 4536,
+    "triangles": 1512
+  },
+  {
+    "id": "craft-tools",
+    "file": "craft-tools-v2.glb",
+    "bytes": 579196,
+    "vertices": 13563,
+    "triangles": 15625
+  },
+  {
+    "id": "studio-room",
+    "file": "studio-room-v2.glb",
+    "bytes": 563308,
+    "vertices": 16200,
+    "triangles": 5400
+  },
+  {
+    "id": "studio-collection",
+    "file": "studio-collection-v2.glb",
+    "bytes": 1695436,
+    "vertices": 90334,
+    "triangles": 167280
+  },
+  {
+    "id": "gallery-room",
+    "file": "gallery-room-v2.glb",
+    "bytes": 448468,
+    "vertices": 12516,
+    "triangles": 5700
+  },
+  {
+    "id": "gallery-collection",
+    "file": "gallery-collection-v2.glb",
+    "bytes": 1399884,
+    "vertices": 42415,
+    "triangles": 78168
+  },
+  {
+    "id": "excavation-kit",
+    "file": "excavation-kit-v2.glb",
+    "bytes": 586560,
+    "vertices": 15346,
+    "triangles": 6379
+  },
+  {
+    "id": "kiln-dressing",
+    "file": "kiln-dressing-v2.glb",
+    "bytes": 214952,
+    "vertices": 5976,
+    "triangles": 2160
+  },
+  {
+    "id": "kiln-vault",
+    "file": "kiln-vault-v2.glb",
+    "bytes": 625324,
+    "vertices": 17316,
+    "triangles": 10540
+  },
+  {
+    "id": "garden-grove",
+    "file": "garden-grove-v2.glb",
+    "bytes": 516972,
+    "vertices": 4950,
+    "triangles": 6540
+  }
+]

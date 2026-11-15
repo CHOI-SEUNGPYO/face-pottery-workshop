@@ -4,13 +4,14 @@ import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { asset, characterImage } from "./assets";
 import { PotteryView } from "./pottery-view";
+import {ArtAssets} from './art-assets';
 import { StrokePreview } from "./stroke-preview";
 import { SoilTerrain, migrateSoilMask } from "./soil";
 import { scenes } from "./content";
 import { surfaceFrame } from "./surface-path";
 import { FiringView, firingFrame } from './firing';
 import {museum,museumAsset} from './museum';
-import {referencePots,workshopTools,outdoorSite,museumRoom} from './environments';
+import {outdoorSite,museumRoom,setEnvironmentMaterials} from './environments';
 import {createSoftDocument,applyForm} from './form';
 import {
   clamp,
@@ -40,7 +41,7 @@ const stageYaw: Record<SceneId, number> = {
 
 // The furniture never animates. One mesh per material avoids submitting every
 // leaf, plank and vase separately, without changing their shapes or materials.
-function batchStatic(root: T.Group) {
+function batchStatic(root: T.Object3D) {
   root.updateMatrixWorld(true);
   const inverse = root.matrixWorld.clone().invert();
   const batches = new Map<
@@ -65,10 +66,18 @@ function batchStatic(root: T.Group) {
   for (const { material, geometries } of batches.values()) {
     const merged = mergeGeometries(geometries)!;
     merged.computeBoundingSphere();
-    root.add(new T.Mesh(merged, material));
+    const mesh=new T.Mesh(merged,material);mesh.castShadow=true;mesh.receiveShadow=true;root.add(mesh);
     geometries.forEach((g) => g.dispose());
   }
   originals.forEach((g) => g.dispose());
+}
+function separateFloor(root:T.Group){
+  const floor=new T.Group(),parts:T.Object3D[]=[];
+  root.updateMatrixWorld(true);
+  root.traverse(object=>{if(object instanceof T.Mesh&&/floor/i.test(object.name))parts.push(object);});
+  for(const part of parts)floor.attach(part);
+  batchStatic(root);batchStatic(floor);
+  return floor;
 }
 
 export class World {
@@ -77,6 +86,10 @@ export class World {
   camera = new T.PerspectiveCamera(35, 1, 0.02, 35);
   pottery = new PotteryView();
   workshop = new T.Group();
+  private art = new ArtAssets();
+  private studioArchitecture = new T.Group();
+  private galleryArchitecture = new T.Group();
+  private fieldProps = new T.Group();
   private firingView=new FiringView();
   private firingProgress:number|null=null;
   private displayPots=new T.Group();
@@ -134,7 +147,7 @@ export class World {
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = T.PCFSoftShadowMap;
     this.renderer.shadowMap.autoUpdate = false;
-    this.renderer.toneMappingExposure = 0.92;
+    this.renderer.toneMappingExposure = 0.95;
     this.renderer.domElement.setAttribute(
       "aria-label",
       "손으로 만드는 3차원 얼굴토기",
@@ -143,10 +156,10 @@ export class World {
     host.append(this.renderer.domElement);
     this.scene.background = new T.Color("#ead4a9");
     this.scene.fog = new T.Fog("#ead4a9", 6, 16);
-    this.scene.add(new T.HemisphereLight(0xfff2d5, 0x947058, 2));
+    this.scene.add(new T.HemisphereLight(0xfff4e4, 0x676d67, 1.25));
     this.key.position.set(-3, 5, 2);
     this.key.castShadow = true;
-    this.key.shadow.mapSize.set(1024, 1024);
+    this.key.shadow.mapSize.set(2048, 2048);
     this.key.shadow.camera.left = -3;
     this.key.shadow.camera.right = 3;
     this.key.shadow.camera.top = 3;
@@ -201,24 +214,25 @@ export class World {
   }
   async load() {
     const loader = new GLTFLoader();
+    await this.art.load(this.renderer);
+    this.pottery.setSurface(this.art.texture('grayware'));
+    this.referencePot.setSurface(this.art.texture('stamped-clay'));
+    setEnvironmentMaterials(this.art.texture('earth'),this.art.texture('aged-oak'));
+    for(const [name,root] of this.art.models)if(name!=='studio-room'&&name!=='gallery-room'&&name!=='kiln-vault')batchStatic(root);
+    for(const name of ['Cutaway_shell','Permanent_half']){
+      const part=this.art.model('kiln-vault').getObjectByName(name);
+      if(part)batchStatic(part);
+    }
+    const studioFloor=separateFloor(this.art.model('studio-room'));
+    const galleryFloor=separateFloor(this.art.model('gallery-room'));
     await Promise.all(
       (
         [
-          ["workshop", this.workshop],
           ["siru", this.siru],
           ["display-stand", this.stand],
         ] as const
       ).map(async ([name, group]) => {
         const gltf = await loader.loadAsync(asset("models/" + name + ".glb"));
-        if(name==='workshop'){
-          gltf.scene.updateMatrixWorld(true);
-          const pots:T.Object3D[]=[];
-          gltf.scene.traverse(o=>{if(o.name.startsWith('Shelf_pottery')||o.name.startsWith('Shelf pottery'))pots.push(o);});
-          for(const pot of pots)this.displayPots.attach(pot);
-          const props:T.Object3D[]=[];
-          gltf.scene.traverse(o=>{if(/^(Plant pot|Plant stem|Soft leaf|Brush cup|Resting brush)/.test(o.name.replaceAll('_',' ')))props.push(o);});
-          props.forEach(o=>o.removeFromParent());
-        }
         if(name==='siru'){
           const handles:T.Mesh[]=[];
           gltf.scene.traverse(o=>{if(o instanceof T.Mesh&&o.name.replaceAll('_',' ').startsWith('Horn handle'))handles.push(o);});
@@ -234,13 +248,25 @@ export class World {
           if (o instanceof T.Mesh) {
             o.castShadow = true;
             o.receiveShadow = true;
+            for(const material of Array.isArray(o.material)?o.material:[o.material])if(material instanceof T.MeshStandardMaterial){
+              material.map=material.bumpMap=this.art.texture('grayware');material.bumpScale=.002;material.needsUpdate=true;
+            }
           }
         });
       }),
     );
-    this.displayPots.clear();this.displayPots.add(referencePots());
-    this.workshop.add(workshopTools());
-    this.museumRoom.add(museumRoom());
+    this.studioArchitecture.add(this.art.model('studio-room'),this.art.garden());
+    this.workshop.add(this.studioArchitecture,studioFloor,this.art.model('craft-bench'),this.art.model('craft-tools'));
+    this.displayPots.clear();this.displayPots.add(this.art.model('studio-collection'));
+    this.galleryArchitecture.add(this.art.model('gallery-room'),this.art.model('gallery-collection'));
+    this.museumRoom.add(this.galleryArchitecture,galleryFloor,museumRoom());
+    this.fieldProps.add(this.art.model('excavation-kit'));
+    this.site.add(this.fieldProps);
+    this.firingView.applyArt(this.art.model('kiln-vault'),this.art.model('kiln-dressing'));
+    const kilnGrove=this.art.model('garden-grove').clone();kilnGrove.position.y=-.12;this.firingView.group.add(kilnGrove);
+    this.terrain.setSurface(this.art.texture('earth'));
+    this.earth.material.map=this.art.texture('earth');this.earth.material.color.set(0xb7a58d);
+    const groundUV=this.earth.geometry.getAttribute('uv');for(let i=0;i<groundUV.count;i++)groundUV.setXY(i,groundUV.getX(i)*18,groundUV.getY(i)*18);
     const ref=createSoftDocument();
     applyForm(ref,{height:1.45,width:1,radii:[.36,.32,.32,.36,.43,.29,.085]});
     const opening=(u:number,v:number,rx:number,ry:number,kind:SurfaceFeature['kind']='hole'):SurfaceFeature=>({id:`reference-${u}-${v}`,kind,width:.004,points:Array.from({length:40},(_,i)=>[u+Math.cos(i*Math.PI/20)*rx,v+Math.sin(i*Math.PI/20)*ry])});
@@ -249,6 +275,13 @@ export class World {
       ref.features.push(opening(u-.048,.79,.028,.014),opening(u+.048,.79,.028,.014),opening(u-.017,.715,.008,.016),opening(u+.017,.715,.008,.016),opening(u,.64,.042,.012+face*.003),opening(u+1/6,.76,.014,.027,'raised-hole'));
     }
     this.referencePot.update(ref);this.referencePot.appearance(1);this.referencePot.floor.visible=false;
+    this.referencePot.material.color.set(0x555f5c);this.referencePot.plain.color.set(0x555f5c);
+    const stamped=this.art.texture('stamped-clay').clone();stamped.repeat.set(2,3);stamped.needsUpdate=true;
+    for(const material of [this.referencePot.material,this.referencePot.plain,this.referencePot.tunnel]){
+      material.map=material.bumpMap=stamped;material.bumpScale=.003;material.color.set(0xb7bcb7);material.needsUpdate=true;
+    }
+    this.referencePot.material.roughness=this.referencePot.plain.roughness=.95;
+    this.referencePot.interior.color.set(0x192322);this.referencePot.tunnel.color.set(0x34413e);
     this.referencePot.root.position.set(.9,.01,0);this.referencePhoto.add(this.referencePot.root);
     for(const entry of museum.exhibits){
       try{
@@ -263,10 +296,10 @@ export class World {
       }catch{console.warn('전시 모델을 불러오지 못했어요:',entry.name);}
     }
     this.displayPots.visible=museum.exhibits.length===0;
-    const atlas=await new T.TextureLoader().loadAsync(asset('animations/party-travel.png'));
-    atlas.colorSpace=T.SRGBColorSpace;atlas.repeat.set(1/3,1/2);atlas.offset.set(0,0);
+    const atlas=await new T.TextureLoader().loadAsync(asset('animations/party-back-volume-v2.webp'));
+    atlas.colorSpace=T.SRGBColorSpace;
     const backs=new T.Sprite(new T.SpriteMaterial({map:atlas,transparent:true,toneMapped:false,depthWrite:false}));
-    backs.center.set(.5,0);backs.scale.set(2.1,2.1,1);backs.position.set(.25,-.02,2.05);this.audience.add(backs);
+    backs.center.set(.5,0);backs.scale.set(1.65,1.5,1);backs.position.set(1.45,-.02,1.65);this.audience.add(backs);
     this.renderer.domElement.addEventListener('click',event=>{
       if(this.paused||this.firingProgress!==null)return;
       this.scene.updateMatrixWorld(true);
@@ -397,7 +430,7 @@ export class World {
     for (const [name, sprite] of this.sprites) {
       sprite.material.depthTest = stage !== "excavation";
       sprite.visible = stage === "welcome"&&name!=='소월이';
-      const size = stage === "welcome" ? 0.3 : 0.34;
+      const size = stage === "welcome" ? 0.40 : 0.34;
       const im = sprite.material.map!.image;
       sprite.scale.set((size * im.width) / im.height, size, 1);
       const idx = ["압이", "독이", "경산이"].indexOf(name);
@@ -409,7 +442,7 @@ export class World {
       if (stage === "welcome") sprite.position.set(.05+idx*.38, 0, .85+Math.sin(idx)*.12);
       if (stage === "excavation") sprite.position.set(-1.04, 0.61, 0.75);
     }
-    this.key.intensity = stage === "firing" ? 2.4 : 3.2;
+    this.key.intensity = stage === "firing" ? 2.4 : 2.7;
     this.update();
     if (outdoors) {
       if (!s.excavationLayout) {
@@ -430,9 +463,12 @@ export class World {
       });
       this.terrain.configure(this.mask, targets);
       this.digLevel=this.terrain.surfaceLevel;
-      if(!this.site.children.length)this.site.add(outdoorSite(this.digLevel));
-      else this.site.position.y=this.digLevel-(this.site.userData.level??this.digLevel);
-      this.site.userData.level??=this.digLevel;
+      if(!this.site.userData.ground){
+        const grove=this.art.model('garden-grove').clone();grove.position.y=this.digLevel;
+        this.site.add(outdoorSite(this.digLevel),grove);this.fieldProps.position.y=this.digLevel;
+        this.site.userData.ground=true;this.site.userData.level=this.digLevel;
+      }
+      this.site.position.y=this.digLevel-this.site.userData.level;
     }
     if(stage==='assembly'){
       const placed=s.assembledRevision===s.document.revision;
@@ -440,9 +476,9 @@ export class World {
       this.siru.position.set(0,this.digLevel+.01,0);
       this.pottery.root.position.set(placed?0:-.8,this.digLevel+(placed?.62:.01),placed?0:.35);
     }
-    const color=museumStage?0x8a5540:outdoors||stage==='firing'?0xd5c7a5:0xead4a9;
-    this.scene.background=new T.Color(color);this.scene.fog=new T.Fog(color,8,22);
-    this.scene.environmentIntensity=museumStage?.65:1;
+    const color=museumStage?0x253941:outdoors||stage==='firing'?0xc1d0ca:0xdcd5c8;
+    this.scene.background=new T.Color(color);this.scene.fog=new T.Fog(color,12,30);
+    this.scene.environmentIntensity=museumStage?.55:.65;
     if(stage==='firing')this.firingView.update(0,this.reduced);
     this.compose(instant);
   }
@@ -540,6 +576,11 @@ export class World {
     bounds.getCenter(this.goalTarget);
     const pitch = T.MathUtils.degToRad(this.elevation),
       yaw = T.MathUtils.degToRad(this.azimuth);
+    // Dollhouse cutaway: orbiting behind a wall must never hide the editable pot.
+    const behind=Math.cos(yaw)<-.05;
+    this.studioArchitecture.visible=!behind;
+    this.galleryArchitecture.visible=!behind;
+    this.displayPots.visible=this.workshop.visible&&this.exhibits.children.length===0&&!behind;
     const away = new T.Vector3(
       Math.sin(yaw) * Math.cos(pitch),
       Math.sin(pitch),
@@ -565,7 +606,7 @@ export class World {
       .copy(this.goalTarget)
       .addScaledVector(
         away,
-        (distance * 1.09) / (this.photoFraming ? 1 : this.zoom),
+        (distance * 1.025) / (this.photoFraming ? 1 : this.zoom),
       );
     // Render the room edge to edge, but frame the artwork inside the space left
     // by real DOM controls. This also handles the portrait and comparison views.

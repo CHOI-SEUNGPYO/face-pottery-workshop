@@ -1,4 +1,9 @@
 /* Fixed docks reserve a clear working area; only contextual action bars expand. */
+.vignette{background:radial-gradient(ellipse at 50% 45%,transparent 58%,#19251e22)}
+body #hud .scene-heading{padding:12px;border-radius:12px;background:#fff9eee8;box-shadow:0 3px 18px #35291712}
+body #hud .background-hint{display:inline-block;background:#fff9eee8;border-radius:8px;padding:7px 10px}
+body #hud .character-dock p{background:#fff9eee8;border-radius:10px;padding:9px 11px}
+body #hud .brand{background:#fff9eef0;border-radius:12px;padding:5px 9px 5px 0;filter:none}
 body #hud header{position:fixed;top:max(16px,env(safe-area-inset-top));left:max(24px,env(safe-area-inset-left));right:max(24px,env(safe-area-inset-right))}
 body:not([data-stage="welcome"]) #hud .scene-info{position:fixed;top:100px;left:24px;width:208px;max-height:none;overflow:visible;padding:0;pointer-events:none}
 body #hud .scene-heading h1{font-size:27px;line-height:1.25;margin:0 0 10px}
@@ -9,7 +14,7 @@ body #hud footer{position:fixed;left:24px;right:24px;bottom:max(18px,env(safe-ar
 body #hud footer>*{pointer-events:auto}
 body #hud .next-button{min-width:176px;padding:13px 20px;min-height:52px;font-size:14px}
 body #hud .character-dock{position:fixed;left:24px;bottom:90px;width:205px;margin:0;gap:9px;pointer-events:none}
-body #hud .character-dock img{width:40px;height:52px;object-fit:contain}
+body #hud .character-dock img{width:60px;height:88px;object-fit:contain}
 body #hud .character-dock p{font-size:11px;line-height:1.6}
 body #hud .settings-dock{position:fixed;right:24px;bottom:96px;width:220px;margin:0;padding:16px;box-sizing:border-box;background:#fff9eef2;border:1px solid #dfcaa7;border-radius:20px;pointer-events:auto;box-shadow:0 8px 30px #604c2610}
 body #hud .settings-dock:empty{display:none}
@@ -40,6 +45,7 @@ body #hud .actionbar summary{list-style:none;display:flex;gap:8px;align-items:ce
 body #hud .action-panel{position:absolute;bottom:calc(100% + 9px);left:0;width:230px;padding:12px;background:#fffaf0fa;border:1px solid #dfc59c;border-radius:18px;box-shadow:0 10px 35px #503c2726;animation:unfold .16s ease-out}
 @keyframes unfold{from{opacity:0;transform:translateY(8px) scale(.97)}to{opacity:1;transform:none}}
 body #hud .drawing-actions{position:fixed;left:24px;bottom:175px;width:205px}
+body #hud .drawing-actions .action-panel{left:calc(100% + 9px);bottom:0}
 body #hud .tools{position:static;display:grid;grid-template-columns:1fr 1fr;gap:6px;width:auto;transform:none;margin:0;padding:0}
 body #hud .tool{min-width:0;min-height:48px;padding:7px;border-radius:12px;display:flex;flex-direction:row;gap:6px;font-size:11px}
 body #hud .tool span{font-size:11px}.tool small{display:none}body #hud .tool svg{width:19px;height:19px}

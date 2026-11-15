@@ -56,9 +56,9 @@ grainTexture.magFilter = T.LinearFilter;
 grainTexture.minFilter = T.LinearMipmapLinearFilter;
 grainTexture.generateMipmaps = true;
 grainTexture.needsUpdate = true;
-function grain(m: T.MeshStandardMaterial) {
+function grain(m: T.MeshStandardMaterial,surface:{value:T.Texture}) {
   m.onBeforeCompile = (s) => {
-    s.uniforms.clayGrain = { value: grainTexture };
+    s.uniforms.clayGrain = surface;
     s.vertexShader = s.vertexShader
       .replace("#include <common>", "#include <common>\nvarying vec3 clayP;")
       .replace(
@@ -75,21 +75,23 @@ uniform sampler2D clayGrain;`,
       .replace(
         "#include <color_fragment>",
         `#include <color_fragment>
-float claySample=texture2D(clayGrain,clayP.xy*2.0+clayP.z*.37).r;
+float claySample=texture2D(clayGrain,clayP.xy*1.3+clayP.z*.37).r;
 vec2 stampUV=vec2(atan(clayP.x,clayP.z)*14.3,clayP.y*48.0);
 stampUV.x+=mod(floor(stampUV.y),2.0)*.5;
 vec2 cell=fract(stampUV)-.5;
 float stamp=1.0-smoothstep(.22,.49,length(cell*vec2(1.35,.88)));
-diffuseColor.rgb*=.955+.06*claySample-.035*stamp;`,
+diffuseColor.rgb*=.72+.65*claySample-.025*stamp;`,
       )
       .replace(
         "#include <normal_fragment_maps>",
-        "#include <normal_fragment_maps>\nfloat h=claySample*.0003+stamp*.0013; normal=perturbNormalArb(-vViewPosition,normal,vec2(dFdx(h),dFdy(h)),faceDirection);",
+        "#include <normal_fragment_maps>\nfloat h=claySample*.004+stamp*.0013; normal=perturbNormalArb(-vViewPosition,normal,vec2(dFdx(h),dFdy(h)),faceDirection);",
       );
   };
-  m.customProgramCacheKey = () => "togi-shell-stamped-clay-v4";
+  m.customProgramCacheKey = () => "togi-shell-textured-clay-v5";
 }
 export class PotteryView {
+  private surface={value:grainTexture as T.Texture};
+  setSurface(texture:T.Texture){this.surface.value=texture;}
   root = new T.Group();
   body: T.Mesh;
   inner: T.Mesh;
@@ -132,10 +134,10 @@ export class PotteryView {
     this.maskTexture.wrapS = T.RepeatWrapping;
     this.maskTexture.colorSpace = T.NoColorSpace;
     this.bumpTexture.wrapS = T.RepeatWrapping;
-    grain(this.material);
-    grain(this.plain);
-    grain(this.interior);
-    grain(this.tunnel);
+    grain(this.material,this.surface);
+    grain(this.plain,this.surface);
+    grain(this.interior,this.surface);
+    grain(this.tunnel,this.surface);
     this.body = new T.Mesh(geometry(false), this.material);
     this.body.raycast = acceleratedRaycast;
     this.inner = new T.Mesh(geometry(true), this.interior);
