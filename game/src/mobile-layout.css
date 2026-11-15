@@ -1,0 +1,107 @@
+/* Mobile controls share two rails; the artwork owns the space between them. */
+body #hud .scene-instruction{font-size:13px;line-height:1.65;margin:0;color:#725239}
+body #hud .story-compact-icon,.kiln-help-brief,.instruction-brief{display:none}
+.sticker-controls[hidden]{display:none!important}
+.photo-editor .photo-icon{flex:none;width:44px;min-width:44px;height:44px;padding:10px}
+.photo-icon svg{width:20px;height:20px}
+.sticker-picker .photo-icon{align-self:center;background:transparent}
+
+@media(max-width:1099px),(max-height:599px){
+ body #hud .scene-instruction{font-size:11px;line-height:1.5}
+}
+
+@media(max-width:600px) and (orientation:portrait){
+ body{--mobile-bottom:max(8px,env(safe-area-inset-bottom));--mobile-top:max(8px,env(safe-area-inset-top))}
+ body #hud header{top:var(--mobile-top);left:12px;right:12px;gap:6px;height:44px}
+ body #hud .brand{font-size:16px;gap:5px;padding:3px 7px 3px 0;border-radius:10px}
+ body #hud .brand-pot{width:30px;height:34px;border-radius:8px}
+ body #hud .brand-pot svg{width:22px;height:22px}
+ body #hud .brand small.ai-mark{font-size:10px;line-height:1.5}
+ body #hud header nav{gap:4px}
+ body #hud header .round{height:44px;width:44px;min-width:44px;padding:11px;border-radius:14px;box-shadow:0 2px 0 #a7854c66}
+ body #hud header .round svg{width:21px;height:21px}
+ body #hud .story-dock{top:var(--mobile-top);right:108px;left:auto;bottom:auto;width:44px;height:44px;z-index:3}
+ body #hud .story-teaser{width:44px;height:44px;min-height:44px;padding:11px;border-radius:14px;justify-content:center;box-shadow:0 2px 0 #a7854c66}
+ body #hud .story-teaser>img,body #hud .story-teaser-copy{display:none}
+ body #hud .story-compact-icon{display:flex;align-items:center;justify-content:center}
+ body #hud .story-compact-icon svg{width:21px;height:21px}
+ body:not([data-stage="welcome"]) #hud .scene-info{left:12px;right:12px;top:calc(var(--mobile-top) + 52px);width:auto}
+ body #hud .scene-heading{position:relative;padding:8px 12px;border-radius:12px;box-shadow:0 2px 10px #3529170c}
+ .instruction-full{display:none}.instruction-brief{display:inline}
+ body #hud .scene-heading .eyebrow{font-size:10px;line-height:1.3;letter-spacing:0;margin:0 0 4px}
+ body #hud .scene-heading h1{font-size:18px;line-height:1.25;letter-spacing:-.6px;margin:0 0 5px;text-wrap:pretty}
+ body #hud .scene-instruction,body #hud .scene-heading>p:last-child{font-size:12px;line-height:1.45;margin:0}
+ body #hud .background-hint{display:none}
+ body #hud:has(.drawing-actions[open]) .scene-info{display:block}
+ body #hud .scene-heading:has(.kiln-help) h1{padding-right:46px}
+ body #hud .kiln-help{position:absolute;top:6px;right:6px;width:48px;min-height:44px;margin:0;padding:6px 3px;background:transparent;border-radius:8px;font-size:11px;text-decoration:underline;text-underline-offset:3px}
+ .kiln-help-full{display:none}.kiln-help-brief{display:inline}
+
+ body #hud footer{left:12px;right:12px;bottom:var(--mobile-bottom);gap:8px;height:44px}
+ body #hud .left-actions{gap:4px;flex:none}
+ body #hud .left-actions .round{width:44px;min-width:44px;height:44px;padding:10px;border-radius:14px;box-shadow:0 2px 0 #a7854c66}
+ body #hud .left-actions svg{width:20px;height:20px}
+ body #hud .next-button{min-width:0;min-height:44px;height:auto;max-width:calc(100% - 144px);padding:8px 11px;font-size:12px;border-radius:14px;gap:5px;box-shadow:0 2px 0 #a7854c66;line-height:1.25}
+ body #hud .next-button svg{width:18px;height:18px;flex-shrink:0}
+ body #hud .next-button span{white-space:normal;text-wrap:pretty}
+ body #hud .guide-stack{left:12px;right:12px;width:auto;bottom:calc(var(--mobile-bottom) + 56px);gap:0}
+ body #hud .character-dock{display:none}
+ body #hud .drawing-actions>summary{display:none}
+ body #hud .drawing-actions .action-panel{position:static;width:100%;max-height:none;overflow:visible;padding:5px;border-radius:14px;box-shadow:0 3px 14px #503c2718;animation:none}
+ body #hud .tools{grid-template-columns:repeat(4,minmax(0,1fr));gap:3px}
+ body #hud .tool{flex-direction:column;gap:3px;min-height:48px;max-width:none;padding:5px 2px;border-radius:10px;box-shadow:none;border-color:transparent}
+ body #hud .tool svg{width:18px;height:18px}
+ body #hud .tool span{font-size:10px;white-space:nowrap}
+ body #hud .tool.selected{border-color:#c39b50;background:#ffe6a5}
+ body #hud .tool-coach{margin:0}
+ body #hud .tool-coach h2,body #hud .tool-coach p{display:none}
+ body #hud .drawing-modes{margin:4px 0 0;gap:3px;border-top:1px solid #dfcaa788;padding-top:3px}
+ body #hud .drawing-modes button{min-height:44px;padding:5px;font-size:12px;background:transparent;box-shadow:none;border-radius:9px}
+ body #hud .drawing-modes button[aria-pressed="true"]{background:#eadfc7}
+ body #hud .settings-dock{left:12px;right:12px;width:auto;bottom:calc(var(--mobile-bottom) + 56px);padding:6px 10px;border-radius:14px;box-shadow:0 3px 14px #503c2718}
+ body #hud .settings-dock:has(.edit-actions){width:132px;left:auto;padding:0}
+ body #hud .settings-dock button{min-height:44px;padding:7px 10px;font-size:12px;border-radius:10px;box-shadow:none}
+ body #hud .settings-dock .smooth-button{min-height:44px}
+ body #hud .firing-status{gap:3px 10px;grid-template-columns:1fr auto}
+ body #hud .firing-status{padding:0;background:transparent;border-radius:0}
+ body #hud .firing-status strong{font-size:14px}
+ body #hud .firing-status .small-button{min-width:94px}
+ body #hud .firing-status .meter{height:4px;margin:0 0 3px;grid-row:2;grid-column:1/-1}
+ body #hud .find-event{gap:8px;margin:0}
+ body #hud .find-event strong{font-size:12px!important}
+ body #hud .find-event button{white-space:nowrap;flex-shrink:0;gap:5px}
+ body #hud .find-event button svg{width:18px;height:18px}
+ body #hud .ending-links{display:flex;gap:6px}
+ body #hud .ending-links button{flex:1;min-width:0;padding:6px;font-size:12px;background:transparent;white-space:nowrap;gap:6px}
+ body #hud .ending-links button+button{border-left:1px solid #dfcaa7;border-radius:0}
+ body #hud .ending-links svg{width:18px;height:18px}
+ body #hud .dig-status span{font-size:12px}
+ body #hud .context-label{position:static;transform:none;max-width:none;margin-top:4px;padding:3px 8px;font-size:10px;line-height:1.4;display:inline-block;background:#fff9eef2;border-radius:6px;color:#634a30}
+ body #toast{top:158px;padding:8px 12px;font-size:12px;border-radius:10px}
+
+ /* Photo controls only appear when a sticker is selected. */
+ body dialog:has(.photo-editor){width:calc(100vw - 16px);max-width:none;max-height:calc(100dvh - 16px);padding:12px;border-radius:18px}
+ body dialog:has(.photo-editor) .modal-close{top:6px;right:6px;width:44px;height:44px;min-width:44px;border-radius:12px;padding:10px;box-shadow:none}
+ .photo-editor .eyebrow{font-size:10px;line-height:1.4;padding-right:36px;margin:0 0 4px}
+ .photo-editor h2{font-size:17px;line-height:1.3;margin:0 34px 10px 0}
+ .photo-editor canvas{width:calc(100% + 24px);max-width:none;margin-inline:-12px;border-radius:0;max-height:none}
+ .sticker-picker{display:flex;flex-wrap:nowrap;gap:4px;margin:8px 0 0;justify-content:stretch}
+ .sticker-picker button[data-sticker]{flex:1;min-width:0;min-height:44px;padding:4px;font-size:11px;border-radius:10px;gap:4px;background:#f1e7d4}
+ .sticker-picker img{height:32px;width:22px}
+ .photo-editor .photo-icon{width:44px;min-width:44px;min-height:44px;padding:10px;border-radius:10px}
+ .sticker-controls{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 44px;gap:6px;margin:6px 0 0;padding:4px 0;border-block:1px solid #dfcaa777}
+ .sticker-controls label{min-width:0;display:flex;gap:4px;font-size:11px;white-space:nowrap}
+ .sticker-controls input{min-width:0;flex:1;width:0;height:44px;margin:0;accent-color:#95723d}
+ .sticker-controls button{background:transparent}
+ .photo-actions{display:grid;grid-template-columns:1fr 1.2fr .8fr;gap:6px;margin:8px 0 0}
+ .photo-actions button{min-width:0;min-height:44px;padding:8px 6px;border-radius:11px;font-size:12px;box-shadow:none}
+ .photo-actions .secondary{background:transparent;border:1px solid #dfcaa7}
+ .photo-status{font-size:11px;line-height:1.5;margin:8px 0 0}
+}
+
+@media(max-height:599px) and (orientation:landscape){
+ .sticker-picker{padding-right:32px;gap:3px}
+ .sticker-picker button[data-sticker]{padding:4px;font-size:10px;gap:3px}
+ .sticker-picker button[data-sticker] img{width:18px;height:26px}
+ .sticker-picker .photo-icon{width:36px;min-width:36px;padding:8px}
+}

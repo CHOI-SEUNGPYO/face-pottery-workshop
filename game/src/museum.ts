@@ -1,4 +1,5 @@
 import {validCatalog} from '../content/schema.mjs';
+import {icon} from './icons';
 import type {SceneId} from './model';
 import type {StoryBlock} from './content';
 export type PhotoCategory='face'|'siru'|'background'|'other';
@@ -23,5 +24,5 @@ export async function loadMuseum(){
 }
 export function storyCard(stage:SceneId){
   const entry=museum.stages[stage],photo=photoFor(stage),e=escapeHTML;
-  return `<aside class="story-dock" aria-label="유물 이야기"><button class="story-teaser" data-action="story"><img src="${museumAsset(photo.file)}" alt="${e(photo.alt)}"><span><small>유물 이야기 · ${factLabels[entry.blocks[0].kind]}</small><strong>${e(entry.title)}</strong><span>${e(entry.summary)}</span><em>사진과 이야기 보기 ↗</em></span></button></aside>`;
+  return `<aside class="story-dock" aria-label="유물 이야기"><button class="story-teaser" data-action="story" aria-label="유물 사진과 이야기: ${e(entry.title)}" title="유물 사진과 이야기"><span class="story-compact-icon" aria-hidden="true">${icon('story')}</span><img src="${museumAsset(photo.file)}" alt="${e(photo.alt)}"><span class="story-teaser-copy"><small>유물 이야기 · ${factLabels[entry.blocks[0].kind]}</small><strong>${e(entry.title)}</strong><span>${e(entry.summary)}</span><em>사진과 이야기 보기 ↗</em></span></button></aside>`;
 }

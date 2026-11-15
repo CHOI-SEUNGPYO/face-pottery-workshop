@@ -1,6 +1,7 @@
 import "./style.css";
 import "./layout.css";
 import "./museum-presentation.css";
+import "./mobile-layout.css";
 import {firingFrame} from './firing';
 import {advanceFiring} from './firing-progress.mjs';
 import * as T from "three";
@@ -90,7 +91,8 @@ const history = new History(),
 let world: World;
 let photoEditor:PhotoEditor|null=null,returnToInspect=false,travelling=false,digComplete=false;
 function syncPause(){if(!world)return;world.paused=dialog.open;fireLast=performance.now();if(!world.paused)world.refresh();}
-function closeActions(){hud.querySelectorAll<HTMLDetailsElement>('details[open]').forEach(d=>d.open=false);}
+const portraitPhone=()=>matchMedia('(max-width:600px) and (orientation:portrait)').matches;
+function closeActions(){hud.querySelectorAll<HTMLDetailsElement>('details[open]').forEach(d=>{if(!portraitPhone()||!d.classList.contains('drawing-actions'))d.open=false;});}
 document.addEventListener('pointerdown',event=>{if(!(event.target as HTMLElement).closest('details.actionbar'))closeActions();});
 document.addEventListener('toggle',event=>{const el=event.target;if(el instanceof HTMLDetailsElement&&el.open&&el.classList.contains('actionbar'))hud.querySelectorAll<HTMLDetailsElement>('details[open]').forEach(d=>{if(d!==el)d.open=false;});},true);
 document.addEventListener('keydown',event=>{if(event.key==='Escape')closeActions();});
@@ -127,6 +129,13 @@ function layoutUI() {
   const w = innerWidth,
     h = innerHeight,
     compact = w < 1100 || h < 600;
+  const drawing=hud.querySelector<HTMLDetailsElement>('.drawing-actions');
+  if(drawing){
+    const phone=portraitPhone();
+    if(phone)drawing.open=true;
+    else if(drawing.dataset.phone==='true')drawing.open=false;
+    drawing.dataset.phone=String(phone);
+  }
   let left = 28,
     top = 140,
     right = w - 28,
@@ -145,10 +154,13 @@ function layoutUI() {
     top = compact ? 62 : 90;
     bottom = compact ? h-72 : h-96;
     if(w<=600&&h>w){
-      left=16;right=w-16;
-      top=Math.max(155,(hud.querySelector('.scene-info')?.getBoundingClientRect().bottom??140)+12);
-      const settings=hud.querySelector<HTMLElement>('.settings-dock');
-      bottom=settings&&settings.getClientRects().length?settings.getBoundingClientRect().top-16:h-205;
+      left=12;right=w-12;
+      top=(hud.querySelector('.scene-info')?.getBoundingClientRect().bottom??130)+12;
+      // Fit the artwork to the space actually left by the current tools, including
+      // the browser's shorter viewport when its address bar is visible.
+      const docks=[...hud.querySelectorAll<HTMLElement>('.settings-dock,.guide-stack,footer')]
+        .filter(el=>el.getClientRects().length&&el.getBoundingClientRect().height>0);
+      bottom=Math.min(...docks.map(el=>el.getBoundingClientRect().top))-12;
     }
   }
   area.style.cssText = `left:${left}px;top:${top}px;width:${Math.max(120, right - left)}px;height:${Math.max(120, bottom - top)}px`;
@@ -156,6 +168,7 @@ function layoutUI() {
   positionFormHandles();
 }
 window.addEventListener("resize", () => requestAnimationFrame(layoutUI));
+window.visualViewport?.addEventListener('resize',()=>requestAnimationFrame(layoutUI));
 function formControls() {
   const f = readForm(save.document);
   return `<section class="form-controls" aria-label="몸체 모양 조절"><div class="form-ranges"><label>높이 <output id="height-value">${Math.round(f.height * 100)}%</output><input aria-label="토기 높이" data-form-range="height" type="range" min="65" max="165" value="${Math.round(f.height * 100)}"></label><label>전체 넓이 <output id="width-value">${Math.round(f.width * 100)}%</output><input aria-label="토기 전체 넓이" data-form-range="width" type="range" min="65" max="140" value="${Math.round(f.width * 100)}"></label></div>${button("smooth-form", "매끈하게 정리", "shape", "smooth-button")}</section>`;
@@ -227,6 +240,7 @@ function updateUI() {
     fired = save.firedRevision === save.document.revision;
   const drawingLabel=tool==='carve'?(carveMode==='opening'?'눈·입 · 구멍':'눈·입 · 선'):toolLabels[tool];
   const instruction=stage==='faces'?(tool==='carve'?(carveMode==='opening'?'톡 찍으면 작은 구멍, 그려서 닫으면 원하는 모양으로 뚫려요.':'토기 위에 선을 그어 눈썹이나 입을 새겨요. 닫지 않아도 돼요.'):toolHelp[tool].instruction):c.instruction;
+  const briefInstruction=stage==='faces'?(tool==='carve'?(carveMode==='opening'?'톡 찍거나, 모양을 그려 닫아 보세요.':'선을 그어 눈썹이나 입을 새겨요.'):tool==='pierce'?'톡 찍거나 그려 닫아 옆 구멍을 만들어요.':tool==='erase'?'지울 구멍이나 선을 톡 누르세요.':'다듬고 싶은 구멍을 톡 누르세요.'):stage==='firing'?'흙을 굽는 가마 안에서 변화를 살펴봐요.':stage==='ending'?'각 토기를 돌려 보고 사진으로 남겨요.':instruction;
   document.body.dataset.stage = stage;
   host.dataset.tool = tool;
   world.renderer.domElement.setAttribute(
@@ -277,7 +291,7 @@ function updateUI() {
     extras = `<div class="ending-links">${button("ending-credits", "유물 사진·마무리", "story", "secondary")}${button("new", "새 작품 만들기", "plus", "secondary")}</div>`;
   hud.innerHTML =
     header +
-    `<div class="work-area" aria-hidden="true"></div><div class="scene-info"><section class="scene-heading"><p class="eyebrow">${c.eyebrow}</p><h1>${c.title}</h1><p>${instruction}</p></section>
+    `<div class="work-area" aria-hidden="true"></div><div class="scene-info"><section class="scene-heading"><p class="eyebrow">${c.eyebrow}</p><h1>${c.title}</h1><p class="scene-instruction"><span class="instruction-full">${instruction}</span><span class="instruction-brief">${briefInstruction}</span></p></section>
     ${['body','mouth','faces','inspect','compare','ending'].includes(stage) ? `<p class="background-hint">${world.inGallery?'각 토기를 끌면 따로 돌아가요':'빈 곳을 끌거나 두 손가락으로 돌려요'}</p>` : ''}
     <div class="scene-extras">${extras}</div>
     <aside class="guide-bubble"><img class="guide-character" src="${characterImage(c.character)}" alt="${c.character}"><p>${c.speech.replaceAll("\n", "<br>")}</p></aside>
@@ -289,7 +303,7 @@ function updateUI() {
     ${stage==='faces'?actionbar(drawingLabel,`<div class="tools" role="toolbar" aria-label="작업 도구">${c.tools.map((t) => `<button data-tool="${t}" class="tool ${tool === t ? "selected" : ""}" aria-pressed="${tool === t}" aria-label="${toolLabels[t]}">${icon(t)}<span>${t==='refine'?'구멍 다듬기':toolLabels[t]}</span></button>`).join("")}</div>${toolGuide(tool,carveMode)}`,'drawing-actions'):''}
     ${button("next", primaryLabel, stage === "ending" ? "photo" : "next", "primary next-button")}</footer>`;
   arrangeHUD();
-  if(stage==='firing')hud.querySelector('.scene-heading')?.insertAdjacentHTML('beforeend','<button data-action="kiln-guide" class="kiln-help">가마와 이 장면 알아보기 ↗</button>');
+  if(stage==='firing')hud.querySelector('.scene-heading')?.insertAdjacentHTML('beforeend','<button data-action="kiln-guide" class="kiln-help" aria-label="가마와 이 장면 알아보기"><span class="kiln-help-full">가마와 이 장면 알아보기 ↗</span><span class="kiln-help-brief">가마란?</span></button>');
   if(stage==='firing')hud.querySelector('.firing-status')?.insertAdjacentHTML('beforeend',`${fireStart?'':`<button data-action="kiln-inside" class="small-button" aria-pressed="${world.kilnCutaway}">${world.kilnCutaway?'외부로 보기':'내부 보기'}</button>`}<small class="kiln-note">${fireStart?'가마 안쪽을 펼쳐 보여주는 장면이에요.':'당시 가마 자료를 참고한 장면 · 내부는 설명용 단면'}</small>`);
   if(stage==='excavation')hud.querySelector<HTMLButtonElement>('[data-action="next"]')!.disabled=!digComplete;
   if(stage==='assembly')hud.querySelector<HTMLButtonElement>('[data-action="next"]')!.disabled=save.assembledRevision!==save.document.revision;

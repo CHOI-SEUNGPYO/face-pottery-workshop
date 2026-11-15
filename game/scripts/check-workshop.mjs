@@ -11,6 +11,25 @@ const review=process.env.TOGI_REVIEW==='1',processes=[];
 let browser,testRoot,activePage;
 async function serve(file,env){const process=spawn(globalThis.process.execPath,[file],{env:{...globalThis.process.env,...env},windowsHide:true,stdio:['ignore','pipe','pipe']});processes.push(process);const output=await Promise.race([once(process.stdout,'data').then(([chunk])=>String(chunk)),once(process,'exit').then(()=>{throw Error('Test server exited');})]);const url=output.match(/http:\/\/127\.0\.0\.1:\d+/)?.[0];assert.ok(url);return url;}
 async function shot(page,name){if(review||(process.env.TOGI_FIRING_REVIEW==='1'&&name.startsWith('firing-'))){await mkdir('asset/review',{recursive:true});await page.screenshot({path:`asset/review/${name}.png`});}}
+async function photoLayout(page){
+ const problems=await page.evaluate(()=>{
+   const errors=[],dialog=document.querySelector('#dialog');
+   if(dialog.scrollWidth>dialog.clientWidth+1)errors.push('photo editor overflows horizontally');
+   const canvas=document.querySelector('.photo-editor canvas').getBoundingClientRect();
+   if(Math.abs(canvas.width/canvas.height-16/9)>.02)errors.push('photo preview is distorted');
+   for(const el of document.querySelectorAll('.photo-editor button,.photo-editor input,.modal-close')){
+     if(!el.getClientRects().length)continue;
+     const r=el.getBoundingClientRect();
+     if(r.left<0||r.top<0||r.right>innerWidth+1||r.bottom>innerHeight+1)errors.push(`photo control outside screen: ${el.getAttribute('aria-label')||el.textContent}`);
+     if(innerWidth<=600&&innerHeight>innerWidth&&el.tagName==='BUTTON'&&(r.width<43||r.height<43))errors.push('photo touch target too small');
+     const hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);
+     if(!el.contains(hit))errors.push(`photo control obstructed: ${el.getAttribute('aria-label')||el.textContent}`);
+   }
+   if(innerWidth<=600&&innerHeight>innerWidth&&canvas.width<innerWidth*.9)errors.push('photo preview too narrow');
+   return errors;
+ });
+ assert.deepEqual(problems,[],`${page.viewportSize().width} photo layout`);
+}
 async function layout(page,stage,width){
  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
  const problems=await page.evaluate(()=>{
@@ -28,6 +47,18 @@ async function layout(page,stage,width){
    for(let i=0;i<buttons.length;i++)for(const b of buttons.slice(i+1)){
      const a=buttons[i],r=a.rect,s=b.rect;
      if(Math.min(r.right,s.right)-Math.max(r.left,s.left)>2&&Math.min(r.bottom,s.bottom)-Math.max(r.top,s.top)>2)errors.push({toolOverlap:[a.name,b.name]});
+   }
+   if(innerWidth<=600&&innerHeight>innerWidth){
+     const area=document.querySelector('.work-area').getBoundingClientRect();
+     if(area.height<innerHeight*.40)errors.push({workingSpace:area.height,screen:innerHeight});
+     for(const box of boxes){
+       if(Math.min(area.right,box.right)-Math.max(area.x,box.x)>2&&Math.min(area.bottom,box.bottom)-Math.max(area.y,box.y)>2)errors.push({artworkCoveredBy:box.selector});
+     }
+     for(const el of document.querySelectorAll('header button,.story-teaser,footer button,.drawing-actions button,.settings-dock button')){
+       if(!el.checkVisibility())continue;
+       const r=el.getBoundingClientRect();
+       if(r.width<43||r.height<43)errors.push({smallTouchTarget:el.getAttribute('aria-label')||el.textContent,width:r.width,height:r.height});
+     }
    }
    return errors;
  });
@@ -102,9 +133,9 @@ try{
      await page.locator('.modal-close').click();
    }
    if(width===1366){
-     for(const viewport of [{width:1920,height:1080},{width:844,height:390},{width:390,height:844},{width:320,height:568},{width:740,height:360},{width:1024,height:768},{width:768,height:1024},{width:1180,height:820}]){
+     for(const viewport of [{width:1920,height:1080},{width:844,height:390},{width:390,height:844},{width:390,height:696},{width:320,height:568},{width:740,height:360},{width:1024,height:768},{width:768,height:1024},{width:1180,height:820}]){
        await page.setViewportSize(viewport);await layout(page,stage,viewport.width);
-       if(stage==='faces'){
+       if(stage==='faces'&&await page.locator('.drawing-actions summary').isVisible()){
          await page.locator('.drawing-actions summary').click();await layout(page,'faces-open',viewport.width);
          await page.locator('.drawing-actions summary').click();
        }
@@ -152,7 +183,7 @@ try{
   }else await page.locator('[data-action="next"]').click();
   await page.locator('[data-action="next"]').click();await layout(page,'excavation',width);
   console.log(`PASS: ${width} firing phases and pause/resume.`);
-  if(width===1366){for(const viewport of [{width:740,height:360},{width:390,height:844},{width:320,height:568},{width:1024,height:768},{width:768,height:1024}]){await page.setViewportSize(viewport);await layout(page,'excavation',viewport.width);}await page.setViewportSize({width:1366,height:768});}
+  if(width===1366){for(const viewport of [{width:740,height:360},{width:390,height:844},{width:390,height:696},{width:320,height:568},{width:1024,height:768},{width:768,height:1024}]){await page.setViewportSize(viewport);await layout(page,'excavation',viewport.width);}await page.setViewportSize({width:1366,height:768});}
   // Let the player inspect the find before explicitly leaving the trench.
   for(let i=0;i<12&&await page.locator('body').getAttribute('data-stage')==='excavation';i++){await page.locator('[data-action="assist"]').click();if(await page.locator('[data-action="next"]').isEnabled())break;}
   assert.equal(await page.locator('body').getAttribute('data-stage'),'excavation');
@@ -160,17 +191,20 @@ try{
   await page.waitForFunction(()=>document.body.dataset.stage==='assembly');
   assert.equal(await page.locator('body').getAttribute('data-stage'),'assembly');
   await layout(page,'assembly',width);
-  if(width===1366){for(const viewport of [{width:740,height:360},{width:390,height:844},{width:320,height:568},{width:1024,height:768},{width:768,height:1024}]){await page.setViewportSize(viewport);await layout(page,'assembly',viewport.width);}await page.setViewportSize({width:1366,height:768});}
+  if(width===1366){for(const viewport of [{width:740,height:360},{width:390,height:844},{width:390,height:696},{width:320,height:568},{width:1024,height:768},{width:768,height:1024}]){await page.setViewportSize(viewport);await layout(page,'assembly',viewport.width);}await page.setViewportSize({width:1366,height:768});}
   await page.locator('[data-action="place"]').click();await page.locator('[data-action="next"]').click();
   await page.waitForFunction(()=>document.body.dataset.stage==='compare');
   await layout(page,'compare',width);
-  if(width===1366){for(const viewport of [{width:740,height:360},{width:390,height:844},{width:320,height:568},{width:1024,height:768},{width:768,height:1024}]){await page.setViewportSize(viewport);await layout(page,'compare',viewport.width);}await page.setViewportSize({width:1366,height:768});}
+  if(width===1366){for(const viewport of [{width:740,height:360},{width:390,height:844},{width:390,height:696},{width:320,height:568},{width:1024,height:768},{width:768,height:1024}]){await page.setViewportSize(viewport);await layout(page,'compare',viewport.width);}await page.setViewportSize({width:1366,height:768});}
   await page.locator('.story-teaser').click();assert.ok(await page.locator('.story-photo img').isVisible());
   await page.locator('[data-action="story-next"]').click();assert.equal(await page.locator('.fact-badge').textContent(),'게임 속 상상');
   assert.ok((await page.locator('.story-copy').textContent()).includes('3D 스캔은 아니며'),'the model is described as a photo-informed reconstruction');
   await page.locator('[data-action="story-next"]').click();assert.equal(await page.locator('.fact-badge').textContent(),'연구자의 해석');
   await page.locator('[data-action="close"]').click();await page.locator('[data-action="next"]').click();await page.waitForSelector('.photo-editor canvas');
+  assert.ok(await page.locator('.sticker-controls').isHidden(),'unselected sticker controls do not take photo space');
+  if(width===1366){for(const viewport of [{width:390,height:696},{width:320,height:568},{width:740,height:360},{width:768,height:1024}]){await page.setViewportSize(viewport);await photoLayout(page);}await page.setViewportSize({width:1366,height:768});}
   assert.equal(await page.locator('[data-sticker]').count(),3);await page.locator('[data-sticker="경산이"]').click();
+  if(width===1366){for(const viewport of [{width:390,height:696},{width:320,height:568},{width:740,height:360},{width:768,height:1024}]){await page.setViewportSize(viewport);await photoLayout(page);}await page.setViewportSize({width:1366,height:768});}
   await page.locator('[data-photo="size"]').fill('340');await page.locator('[data-photo="angle"]').fill('25');
   const download=page.waitForEvent('download');await page.locator('[data-photo="download"]').click();assert.ok((await download).suggestedFilename().endsWith('.png'));
   await page.locator('[data-action="close"]').click();

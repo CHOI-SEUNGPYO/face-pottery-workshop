@@ -1,4 +1,5 @@
 import {characterImage} from './assets';
+import {icon} from './icons';
 import {AI_CONTENT_LABEL,drawPhotoDisclosure} from './disclosure';
 
 type Sticker={name:string;x:number;y:number;size:number;angle:number};
@@ -13,7 +14,7 @@ export class PhotoEditor {
   private events=new AbortController();
   private drag:{pointer:number;x:number;y:number;ox:number;oy:number}|null=null;
   constructor(private root:HTMLElement,url:string){
-    root.innerHTML=`<div class="photo-editor"><p class="eyebrow">${AI_CONTENT_LABEL}</p><h2>친구들과 사진을 꾸며요</h2><canvas width="1920" height="1080" tabindex="0" aria-label="사진 꾸미기: 스티커를 끌어 옮기거나 방향키로 이동하세요. AI 생성·편집 콘텐츠 포함 표시도 함께 저장됩니다."></canvas><div class="sticker-picker" aria-label="캐릭터 스티커">${['경산이','독이','압이'].map(name=>`<button data-sticker="${name}" aria-label="${name} 스티커 추가"><img src="${characterImage(name)}" alt="">${name}</button>`).join('')}</div><div class="sticker-controls"><label>크기<input data-photo="size" aria-label="스티커 크기" type="range" min="90" max="650" value="250"></label><label>회전<input data-photo="angle" aria-label="스티커 회전" type="range" min="-180" max="180" value="0"></label><button data-photo="delete">선택 삭제</button><button data-photo="undo">꾸미기 되돌리기</button></div><div class="photo-actions"><button data-action="retake" class="secondary">다시 찍기</button><button data-photo="download" class="primary">사진 저장</button><button data-action="finish-photo" class="secondary">꾸미기 완료</button></div><p role="status" class="photo-status">캐릭터를 고른 뒤 사진 위에서 옮겨 보세요.</p></div>`;
+    root.innerHTML=`<div class="photo-editor"><p class="eyebrow">${AI_CONTENT_LABEL}</p><h2>친구들과 사진을 꾸며요</h2><canvas width="1920" height="1080" tabindex="0" aria-label="사진 꾸미기: 스티커를 끌어 옮기거나 방향키로 이동하세요. AI 생성·편집 콘텐츠 포함 표시도 함께 저장됩니다."></canvas><div class="sticker-picker" aria-label="캐릭터 스티커">${['경산이','독이','압이'].map(name=>`<button data-sticker="${name}" aria-label="${name} 스티커 추가"><img src="${characterImage(name)}" alt="">${name}</button>`).join('')}<button data-photo="undo" class="photo-icon" aria-label="꾸미기 되돌리기" title="꾸미기 되돌리기">${icon('undo')}</button></div><div class="sticker-controls"><label>크기<input data-photo="size" aria-label="스티커 크기" type="range" min="90" max="650" value="250"></label><label>회전<input data-photo="angle" aria-label="스티커 회전" type="range" min="-180" max="180" value="0"></label><button data-photo="delete" class="photo-icon" aria-label="선택한 스티커 삭제" title="선택한 스티커 삭제">${icon('erase')}</button></div><div class="photo-actions"><button data-action="retake" class="secondary">다시 찍기</button><button data-photo="download" class="primary">사진 저장</button><button data-action="finish-photo" class="secondary" aria-label="꾸미기 완료">완료</button></div><p role="status" class="photo-status">캐릭터를 고른 뒤 사진 위에서 옮겨 보세요.</p></div>`;
     this.canvas=root.querySelector('canvas')!;
     this.sync();
     this.base.onload=()=>this.draw();this.base.src=url;
@@ -39,7 +40,9 @@ export class PhotoEditor {
         return Math.abs(dx*Math.cos(a)-dy*Math.sin(a))<=s.size*(im?.naturalWidth||1)/(im?.naturalHeight||1)/2&&Math.abs(dx*Math.sin(a)+dy*Math.cos(a))<=s.size/2;
       });
       this.selected=i;this.sync();this.draw();if(i<0)return;
-      event.preventDefault();this.remember();const s=this.stickers[i];this.drag={pointer:event.pointerId,x:p.x,y:p.y,ox:s.x,oy:s.y};this.canvas.setPointerCapture(event.pointerId);
+      // Selecting a sticker reveals its controls and may move the dialog.
+      // Start the drag from the canvas's new position so the sticker stays put.
+      event.preventDefault();this.remember();const s=this.stickers[i],start=this.point(event);this.drag={pointer:event.pointerId,x:start.x,y:start.y,ox:s.x,oy:s.y};this.canvas.setPointerCapture(event.pointerId);
     },options);
     this.canvas.addEventListener('pointermove',event=>{const d=this.drag,s=this.stickers[this.selected];if(!d||d.pointer!==event.pointerId||!s)return;const p=this.point(event);s.x=Math.max(0,Math.min(1920,d.ox+p.x-d.x));s.y=Math.max(0,Math.min(1080,d.oy+p.y-d.y));this.draw();},options);
     for(const type of ['pointerup','pointercancel','lostpointercapture'])this.canvas.addEventListener(type,()=>this.drag=null,options);
@@ -52,7 +55,7 @@ export class PhotoEditor {
   }
   private remember(){this.history.push(structuredClone(this.stickers));if(this.history.length>40)this.history.shift();}
   private point(event:PointerEvent){const r=this.canvas.getBoundingClientRect();return{x:(event.clientX-r.left)*1920/r.width,y:(event.clientY-r.top)*1080/r.height};}
-  private sync(){const s=this.stickers[this.selected];for(const key of ['size','angle'] as const){const input=this.root.querySelector<HTMLInputElement>(`[data-photo="${key}"]`)!;input.disabled=!s;if(s)input.value=String(s[key]);}this.root.querySelector<HTMLButtonElement>('[data-photo="delete"]')!.disabled=!s;this.root.querySelector<HTMLButtonElement>('[data-photo="undo"]')!.disabled=!this.history.length;}
+  private sync(){const s=this.stickers[this.selected];this.root.querySelector<HTMLElement>('.sticker-controls')!.hidden=!s;for(const key of ['size','angle'] as const){const input=this.root.querySelector<HTMLInputElement>(`[data-photo="${key}"]`)!;input.disabled=!s;if(s)input.value=String(s[key]);}this.root.querySelector<HTMLButtonElement>('[data-photo="delete"]')!.disabled=!s;this.root.querySelector<HTMLButtonElement>('[data-photo="undo"]')!.disabled=!this.history.length;}
   private remove(){if(this.selected<0)return;this.remember();this.stickers.splice(this.selected,1);this.selected=-1;this.sync();this.draw();}
   private draw(selection=true){
     const c=this.canvas.getContext('2d')!;c.clearRect(0,0,1920,1080);if(this.base.complete&&this.base.naturalWidth)c.drawImage(this.base,0,0,1920,1080);

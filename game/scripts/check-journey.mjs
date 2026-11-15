@@ -125,13 +125,13 @@ try{
    const faceArea=await page.locator('.work-area').boundingBox(),face={x:faceArea.x+faceArea.width/2,y:faceArea.y+faceArea.height/2};
    await page.mouse.click(face.x,face.y);assert.equal(await page.evaluate(()=>window.togi.save.document.features.length),1);
    if(viewport.width<800){
-    await page.locator('.drawing-actions summary').click();await page.locator('[data-tool="erase"]').click();
+    if(await page.locator('.drawing-actions summary').isVisible())await page.locator('.drawing-actions summary').click();await page.locator('[data-tool="erase"]').click();
     const features=await page.evaluate(()=>JSON.stringify(window.togi.save.document.features));
     await pinch(page,face);
     assert.equal(await page.evaluate(()=>JSON.stringify(window.togi.save.document.features)),features,'orbiting with erase selected preserves features');
     await page.evaluate(()=>window.togi.world.setView('stage'));await settle(page);
    }
-   await page.locator('.drawing-actions summary').click();await page.locator('[data-tool="pierce"]').click();
+   if(await page.locator('.drawing-actions summary').isVisible())await page.locator('.drawing-actions summary').click();await page.locator('[data-tool="pierce"]').click();
    await page.mouse.click(face.x,face.y);assert.equal(await page.evaluate(()=>window.togi.save.document.features.length),1,'different tools reject actual overlap');
    assert.ok((await page.locator('#toast').textContent()).includes('겹치는'));
    await page.mouse.click(face.x,face.y-50);assert.equal(await page.evaluate(()=>window.togi.save.document.features.length),2,'separated holes remain allowed');
