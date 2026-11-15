@@ -3,7 +3,7 @@ import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {asset} from './assets';
 
 export type Surface = 'grayware'|'aged-oak'|'earth'|'plaster'|'linen'|'garden'|'foliage'|'stamped-clay'|'limestone'|'siru-clay'|'woodland';
-export const artModels = ['craft-bench','craft-tools','studio-shell','studio-furniture','studio-collection','gallery-shell','gallery-fixtures','gallery-collection','field-tools','conservation-bench','kiln-dressing','kiln-vault','courtyard','siru'] as const;
+export const artModels = ['craft-bench','craft-tools','studio-shell','studio-furniture','studio-collection','gallery-shell','gallery-fixtures','gallery-collection','field-tools','conservation-bench','kiln-dressing','kiln-vault','courtyard','siru','face-artifact'] as const;
 export type ArtModel = typeof artModels[number];
 export class ArtAssets {
   textures = new Map<Surface,T.Texture>();

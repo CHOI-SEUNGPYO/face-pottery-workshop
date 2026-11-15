@@ -5,6 +5,7 @@ import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js'
 import {GLTFExporter} from 'three/addons/exporters/GLTFExporter.js';
 import {mkdir,writeFile} from 'node:fs/promises';
 import {buildScenes} from './scene-art.mjs';
+import {buildFaceArtifact} from './face-artifact.mjs';
 
 globalThis.FileReader=class{
   async readAsArrayBuffer(blob){this.result=await blob.arrayBuffer();this.onloadend?.();}
@@ -275,6 +276,7 @@ for(const [id,root]of assets){
 await writeFile(new URL('../asset/source/model-manifest.json',import.meta.url),JSON.stringify(manifest,null,2)+'\n');
 console.log(`Authored ${manifest.length} GLB assets; ${(manifest.reduce((n,a)=>n+a.bytes,0)/1024/1024).toFixed(2)} MiB including reusable standalone props.`);
 const scenes=buildScenes({T,group,mesh,box,lathe,ring,place,material,pottery,tools,wood,darkWood,plaster,linen,bronze,lamp,clay,darkClay,vault,kiln,brush});
+scenes.assets.push(['face-artifact',buildFaceArtifact()]);
 const sceneManifest=[];
 for(const [id,root]of scenes.assets){
   root.userData.provenance='Photo-informed game environment; not a measured artifact scan';

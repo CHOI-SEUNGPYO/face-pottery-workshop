@@ -101,7 +101,8 @@ export class World {
   private displayPots=new T.Group();
   private exhibits=new T.Group();
   private museumRoom=new T.Group();
-  private referencePhoto=new T.Group();
+  private referenceArtifact=new T.Group();
+  selectedArtifact:'own'|'reference'='own';
   private site=new T.Group();
   private digLevel=.8;
   onExhibit?:(stage:SceneId)=>void;
@@ -171,7 +172,7 @@ export class World {
     this.key.shadow.camera.top = 3;
     this.key.shadow.camera.bottom = -3;
     this.key.shadow.bias = -0.00025;
-    this.key.shadow.normalBias = 0.018;
+    this.key.shadow.normalBias = 0.007;
     this.scene.add(this.key);
     this.fill.position.set(3, 2, -2);
     this.scene.add(this.fill);
@@ -189,7 +190,7 @@ export class World {
       this.firingView.group,
       this.displayPots,
       this.exhibits,
-      this.museumRoom,this.referencePhoto,this.site,this.courtyard,this.assemblyBench,
+      this.museumRoom,this.referenceArtifact,this.site,this.courtyard,this.assemblyBench,
     );
     this.excavation.position.y = 0.45;
     this.stroke.renderOrder = 9;
@@ -255,16 +256,9 @@ export class World {
     this.terrain.setSurface(this.art.texture('earth'));
     this.earth.material.map=this.art.texture('earth');this.earth.material.color.set(0xb7a58d);
     const groundUV=this.earth.geometry.getAttribute('uv');for(let i=0;i<groundUV.count;i++)groundUV.setXY(i,groundUV.getX(i)*2,groundUV.getY(i)*2);
-    // Keep the original photograph's colour and proportions. This is a photo
-    // exhibit, not a procedural stand-in labelled as the authentic artifact.
-    const reference=await new T.TextureLoader().loadAsync(museumAsset('face-museum-photo.jpg'));
-    reference.colorSpace=T.SRGBColorSpace;
-    const photoHeight=1.5,photoWidth=photoHeight*reference.image.width/reference.image.height;
-    const frame=new T.Mesh(new T.BoxGeometry(photoWidth+.055,photoHeight+.055,.045),new T.MeshStandardMaterial({color:0x383b37,roughness:.7}));
-    frame.position.set(.9,photoHeight/2+.035,0);frame.castShadow=true;frame.receiveShadow=true;
-    const photo=new T.Mesh(new T.PlaneGeometry(photoWidth,photoHeight),new T.MeshBasicMaterial({map:reference,toneMapped:false}));
-    photo.name='Actual artifact photograph';photo.userData.storyStage='compare';photo.position.set(.9,photoHeight/2+.035,.024);
-    this.referencePhoto.add(frame,photo);
+    this.referenceArtifact.name='Photo informed three face artifact';
+    this.referenceArtifact.add(this.art.model('face-artifact'));
+    this.referenceArtifact.position.set(.9,0,0);
     for(const entry of museum.exhibits){
       try{
         const gltf=await loader.loadAsync(museumAsset(entry.file));
@@ -335,6 +329,7 @@ export class World {
       Math.min(devicePixelRatio, 1.5, Math.sqrt(1800000 / Math.max(1, w * h))),
     );
     this.renderer.setSize(w, h);
+    this.pottery.outlineSize(w,h);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     this.compose(true);
@@ -356,7 +351,8 @@ export class World {
     this.excavation.visible = false;
     this.earth.visible = outdoors;
     this.soil.visible = outdoors;
-    this.site.visible=outdoors;this.museumRoom.visible=museumStage;this.referencePhoto.visible=museumStage;
+    this.site.visible=outdoors;this.museumRoom.visible=museumStage;this.referenceArtifact.visible=museumStage;
+    this.pottery.outline.visible=stage==='body'||stage==='mouth';
     this.firingView.group.visible=stage==='firing';
     this.courtyard.visible=outdoors;this.assemblyBench.visible=stage==='assembly';
     this.soil.position.x=this.site.position.x=this.earth.position.x=0;
@@ -404,8 +400,8 @@ export class World {
       this.pottery.root.position.set(-.58,.13,.47);
       this.siru.position.set(.62,.1,.3);
     }
-    if(museumStage)this.pottery.root.position.set(-.78,.01,0);
-    if(stage==='firing')this.pottery.root.position.set(-1.65,0,1);
+    if(museumStage)this.pottery.root.position.set(-.78,0,0);
+    if(stage==='firing')this.pottery.root.position.set(-1.95,.12,1.65);
     // Guides take turns in the physical scene; the three-carrier travel animation is separate.
     for (const [name, sprite] of this.sprites) {
       sprite.material.depthTest=true;
@@ -418,6 +414,7 @@ export class World {
     this.ambient.intensity=museumStage?.65:1.25;
     this.fill.intensity=museumStage?.35:.7;
     this.update();
+    if(stage==='firing')this.setFiringProgress(null);
     if (outdoors) {
       if (!s.excavationLayout) {
         s.excavationMask = migrateSoilMask(s.excavationMask);
@@ -494,9 +491,30 @@ export class World {
     this.refresh();
   }
   orbit(dx:number,dy:number){
-    this.azimuth+=dx*.35;
+    this.azimuth-=dx*.35;
     this.tilt(dy*.3);
   }
+  get inGallery(){return this.stage==='compare'||this.stage==='ending';}
+  artifactAt(x:number,y:number):'own'|'reference'|null{
+    if(!this.inGallery)return null;
+    this.scene.updateMatrixWorld(true);
+    const hits=this.pointer(x,y).intersectObjects([this.pottery.body,this.referenceArtifact],true);
+    let object=hits[0]?.object;
+    if(object===this.pottery.body)return 'own';
+    while(object){if(object===this.referenceArtifact)return 'reference';object=object.parent!;}
+    return null;
+  }
+  rotateArtifact(which:'own'|'reference',dx:number,dy=0){
+    if(!this.inGallery)return;
+    this.selectedArtifact=which;
+    const root=which==='own'?this.pottery.root:this.referenceArtifact;
+    root.rotation.y+=dx*.008;
+    if(which==='own')this.getSave().rotation=root.rotation.y;
+    // Keep both objects on their plinths; vertical drags change viewing height.
+    if(dy)this.tilt(dy*.22);
+    this.refresh(true);
+  }
+  highlightPot(active:boolean){this.pottery.highlight(active);this.refresh();}
   zoomBy(factor: number) {
     this.zoom = clamp(this.zoom * factor, 0.65, 1.65);
     this.compose(true);
@@ -507,6 +525,7 @@ export class World {
     // of the landscape and hides the very surface the player needs to brush.
     const digging=this.stage==='excavation';
     this.elevation=clamp(this.elevation,digging?45:this.stage==='assembly'?22:3,digging?82:86);
+    if(this.inGallery){this.azimuth=clamp(this.azimuth,-32,32);this.elevation=clamp(this.elevation,8,48);}
     if(digging)this.zoom=clamp(this.zoom,.85,1);
     const width = this.photoFraming ? 1920 : this.host.clientWidth,
       height = this.photoFraming ? 1080 : this.host.clientHeight;
@@ -546,11 +565,11 @@ export class World {
     // Once found, frame the two artifacts rather than the full excavation pit.
     if (this.stage === "excavation") bounds.expandByObject(this.soil);
     if(this.stage==='compare'||this.stage==='ending'){
-      bounds.expandByObject(this.referencePhoto);
+      bounds.expandByObject(this.referenceArtifact);
       bounds.expandByPoint(new T.Vector3(-1.46,-.50,-.65));
       bounds.expandByPoint(new T.Vector3(1.58,1.88,.65));
     }
-    if(this.stage==='firing')bounds.set(new T.Vector3(-2.15,-.12,-1.9),new T.Vector3(1.4,2.7,2.1));
+    if(this.stage==='firing')bounds.set(new T.Vector3(-2.65,-.12,-1.9),new T.Vector3(1.4,2.7,2.3));
     if(this.stage==='welcome'){bounds.expandByPoint(new T.Vector3(-1.15,-.55,-.3));bounds.expandByPoint(new T.Vector3(1.65,.4,.85));}
     if (this.stage==='welcome')
       for (const sprite of this.sprites.values()) {
@@ -604,9 +623,21 @@ export class World {
     }
     const studioBack=this.goalPos.z>-3.7,galleryBack=this.goalPos.z>-4.4;
     for(const sector of this.forestSectors)sector.visible=away.dot(new T.Vector3(...sector.userData.outward as [number,number,number]))<.15;
-    for(const fixture of this.wallFixtures)fixture.visible=fixture.getWorldPosition(new T.Vector3()).z<-3.6?galleryBack:studioBack;
-    this.displayPots.visible=this.workshop.visible&&!this.exhibits.children.length&&studioBack;
-    this.galleryPots.visible=galleryBack;
+    let studioClear=studioBack,galleryClear=galleryBack;
+    for(const fixture of this.wallFixtures){
+      const gallery=fixture.getWorldPosition(new T.Vector3()).z<-3.6;
+      const box=new T.Box3().setFromObject(fixture).expandByScalar(.12);
+      const targets=[this.goalTarget,...[bounds.min.y,bounds.max.y].flatMap(y=>[bounds.min.x,bounds.max.x].map(x=>new T.Vector3(x,y,this.goalTarget.z)))];
+      const blocks=targets.some(point=>{
+        const ray=new T.Ray(this.goalPos,point.clone().sub(this.goalPos).normalize()),hit=ray.intersectBox(box,new T.Vector3());
+        return hit&&hit.distanceTo(this.goalPos)<point.distanceTo(this.goalPos);
+      });
+      fixture.visible=(gallery?galleryBack:studioBack)&&!blocks;
+      if(!fixture.visible){if(gallery)galleryClear=false;else studioClear=false;}
+    }
+    this.displayPots.visible=this.workshop.visible&&!this.exhibits.children.length&&studioClear;
+    this.exhibits.visible=this.workshop.visible&&studioClear;
+    this.galleryPots.visible=galleryClear;
     // Render the room edge to edge, but frame the artwork inside the space left
     // by real DOM controls. This also handles the portrait and comparison views.
     this.camera.setViewOffset(
@@ -686,6 +717,15 @@ export class World {
       .transformDirection(this.pottery.root.matrixWorld);
     return { uv, point: h.point, normal, facing: -normal.dot(ray.ray.direction) };
   }
+  shapeHit(x:number,y:number){
+    const direct=this.hit(x,y,false,true);if(direct||this.stage!=='body')return direct;
+    // The subtle screen-space outline and a finger should both catch the rim
+    // of the silhouette. Distant background dragging remains camera control.
+    for(const r of [3,6])for(const [dx,dy] of [[r,0],[-r,0],[0,r],[0,-r]]){
+      const hit=this.hit(x+dx,y+dy,false,true);if(hit)return hit;
+    }
+    return undefined;
+  }
   groundHit(x: number, y: number, yPlane: number) {
     const p = new T.Vector3();
     return this.pointer(x, y).ray.intersectPlane(
@@ -764,21 +804,41 @@ export class World {
     return this.terrain.coverage();
   }
   setFiringProgress(progress:number|null){
-    const wasInKiln=this.firingProgress!==null&&firingFrame(this.firingProgress).inKiln;
+    const previous=this.firingProgress===null?0:firingFrame(this.firingProgress).placement;
     this.firingProgress=progress;
-    const inKiln=progress!==null&&firingFrame(progress).inKiln;
+    const frame=firingFrame(progress??0),p=frame.placement;
     if(this.stage==='firing'){
       this.firingView.group.visible=true;
-      this.scene.environmentIntensity=inKiln?.4:.8;this.key.intensity=inKiln?1.1:2.4;
-      this.pottery.root.position.set(inKiln?0:-1.65,inKiln?.04:0,inKiln?-.2:1);
-      this.firingView.update(progress??1,this.reduced);
+      this.scene.environmentIntensity=.8-.4*frame.heat;this.key.intensity=2.4-1.3*frame.heat;
+      this.pottery.root.position.set(-1.95*(1-p),.12-.05*p+Math.sin(p*Math.PI)*.13,1.65-1.85*p+Math.sin(p*Math.PI)*.55);
+      // Anchor even older, off-origin saved shapes to the same physical support.
+      const bottom=this.pottery.body.geometry.boundingBox?.min.y??0;
+      this.pottery.root.position.y-=Math.min(0,bottom);
+      this.firingView.update(progress??0,this.reduced,progress!==null);
       if(progress!==null)this.pottery.appearance(progress);
     }
-    this.refresh(wasInKiln!==inKiln);
+    this.refresh(previous!==p||progress===null);
   }
   get kilnCutaway(){return this.firingView.cutaway;}
   toggleKiln(){this.firingView.setCutaway(!this.firingView.cutaway);this.refresh(true);}
   get assemblyHeight(){return this.digLevel+.72+this.siruHeight;}
+  async placeOnSiru(){
+    const from=this.pottery.root.position.clone(),to=new T.Vector3(0,this.assemblyHeight,0);
+    const start=performance.now(),duration=this.reduced?0:650;
+    let elapsed=0,last=start;
+    return new Promise<boolean>(resolve=>{
+      const step=(now:number)=>{
+        if(this.stage!=='assembly'){resolve(false);return;}
+        if(!this.paused&&!document.hidden)elapsed+=now-last;
+        last=now;
+        const t=duration?clamp(elapsed/duration,0,1):1,p=t*t*(3-2*t);
+        this.pottery.root.position.copy(from).lerp(to,p);
+        this.pottery.root.position.y+=Math.sin(p*Math.PI)*.16;
+        this.refresh(true);
+        if(t<1)requestAnimationFrame(step);else resolve(true);
+      };step(start);
+    });
+  }
   private animate = () => {
     this.frame = 0;
     const now = performance.now();

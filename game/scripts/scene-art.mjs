@@ -204,6 +204,8 @@ export function buildScenes(c){
   place(equipment,tools.find(t=>t[0]==='folded-cloth')[1],2.35,.025,-.30,1.2,.12);
   const kilnyard=group('Kiln working yard');
   box(kilnyard,'Recessed firing bed',3.1,.07,3.8,soil,0,-.03,-.15,.12);
+  box(kilnyard,'Pottery loading and cooling slab',1.18,.12,1.12,stone,-1.95,.06,1.65,.035);
+  box(kilnyard,'Level ceramic firing support',1.02,.07,1.05,stone,0,.035,-.2,.02);
   const logs=kiln.clone();const loose=[];logs.traverse(o=>{if(/stone/i.test(o.name))loose.push(o);});loose.forEach(o=>o.removeFromParent());logs.position.set(0,.08,-1.5);kilnyard.add(logs);
   // A purposeful fuel rack and preparation bench replace isolated loose stones.
   for(const x of [1.5,2.2])for(const z of [-1.6,-.2])box(kilnyard,'Fuel rack post',.075,.62,.075,darkWood,x,.31,z);

@@ -9,7 +9,7 @@ import {stages} from '../content/schema.mjs';
 const review=process.env.TOGI_REVIEW==='1',processes=[];
 let browser,testRoot,activePage;
 async function serve(file,env){const process=spawn(globalThis.process.execPath,[file],{env:{...globalThis.process.env,...env},windowsHide:true,stdio:['ignore','pipe','pipe']});processes.push(process);const output=await Promise.race([once(process.stdout,'data').then(([chunk])=>String(chunk)),once(process,'exit').then(()=>{throw Error('Test server exited');})]);const url=output.match(/http:\/\/127\.0\.0\.1:\d+/)?.[0];assert.ok(url);return url;}
-async function shot(page,name){if(review){await mkdir('asset/review',{recursive:true});await page.screenshot({path:`asset/review/${name}.png`});}}
+async function shot(page,name){if(review||(process.env.TOGI_FIRING_REVIEW==='1'&&name.startsWith('firing-'))){await mkdir('asset/review',{recursive:true});await page.screenshot({path:`asset/review/${name}.png`});}}
 async function layout(page,stage,width){
  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
  const problems=await page.evaluate(()=>{
@@ -87,6 +87,7 @@ try{
   await page.waitForTimeout(80);
   const progress=await page.locator('#fire-progress').getAttribute('style');
   await page.waitForTimeout(220);assert.equal(await page.locator('#fire-progress').getAttribute('style'),progress,'story dialog pauses firing');
+  assert.equal(await page.locator('[data-action="kiln-inside"]').count(),0,'automatic kiln cutaway does not show a conflicting manual view button');
   await page.locator('[data-action="close"]').click();
   if(width===1366)await shot(page,'firing-heat');
   if(width===1366){
@@ -110,6 +111,8 @@ try{
   await layout(page,'compare',width);
   if(width===1366){for(const viewport of [{width:740,height:360},{width:390,height:844},{width:320,height:568},{width:1024,height:768},{width:768,height:1024}]){await page.setViewportSize(viewport);await layout(page,'compare',viewport.width);}await page.setViewportSize({width:1366,height:768});}
   await page.locator('.story-teaser').click();assert.ok(await page.locator('.story-photo img').isVisible());
+  await page.locator('[data-action="story-next"]').click();assert.equal(await page.locator('.fact-badge').textContent(),'게임 속 상상');
+  assert.ok((await page.locator('.story-copy').textContent()).includes('3D 스캔은 아니며'),'the model is described as a photo-informed reconstruction');
   await page.locator('[data-action="story-next"]').click();assert.equal(await page.locator('.fact-badge').textContent(),'연구자의 해석');
   await page.locator('[data-action="close"]').click();await page.locator('[data-action="next"]').click();await page.waitForSelector('.photo-editor canvas');
   assert.equal(await page.locator('[data-sticker]').count(),3);await page.locator('[data-sticker="경산이"]').click();

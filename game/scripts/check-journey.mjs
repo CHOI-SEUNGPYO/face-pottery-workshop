@@ -50,10 +50,12 @@ try{
    await page.waitForSelector('#loading',{state:'detached'});await page.locator('[data-action="new"]').click();await settle(page);
    const original=await page.evaluate(()=>Array.from(window.togi.save.document.outerXYZ));
    const rotation=await page.evaluate(()=>Array.from(window.togi.world.camera.position));
+   const faceBefore=await project(page,[0,.70,.33]);
    const area=await page.locator('.work-area').boundingBox();
    const outside={x:area.x+8,y:area.y+8};
    assert.equal(await page.evaluate(p=>!!window.togi.world.hit(p.x,p.y),outside),false);
    await drag(page,outside,{x:outside.x+55,y:outside.y});
+   assert.ok((await project(page,[0,.70,.33])).x>faceBefore.x+2,'the visible front surface follows a rightward camera drag');
    assert.notDeepEqual(await page.evaluate(()=>Array.from(window.togi.world.camera.position)),rotation,'background drag orbits');
    assert.deepEqual(await page.evaluate(()=>Array.from(window.togi.save.document.outerXYZ)),original,'background drag never sculpts');
    if(viewport.width<800){
@@ -68,6 +70,18 @@ try{
    const handle=page.locator('[data-form-handle="height"]');await handle.focus();await handle.press('ArrowUp');
    assert.notDeepEqual(await page.evaluate(()=>Array.from(window.togi.save.document.outerXYZ)),original,'body handle edits');
    await page.locator('[data-action="undo"]').click();assert.deepEqual(await page.evaluate(()=>Array.from(window.togi.save.document.outerXYZ)),original);
+   const edge=await page.evaluate(()=>{
+    const w=window.togi.world,r=document.querySelector('.work-area').getBoundingClientRect();
+    const p=w.camera.position.clone().set(0,.65,0).project(w.camera),y=(1-p.y)*innerHeight/2;
+    let right=0;for(let x=r.left;x<r.right;x+=1)if(w.hit(x,y,false,true))right=x;
+    return {x:right+4,y};
+   });
+   const edgeCamera=await page.evaluate(()=>[...window.togi.world.camera.position]);
+   assert.equal(await page.evaluate(p=>!!window.togi.world.hit(p.x,p.y,false,true),edge),false,'outline grip starts just outside the clay');
+   await drag(page,edge,{x:edge.x+18,y:edge.y});
+   assert.notDeepEqual(await page.evaluate(()=>Array.from(window.togi.save.document.outerXYZ)),original,'grabbing near the visible outline reshapes the pot');
+   assert.deepEqual(await page.evaluate(()=>[...window.togi.world.camera.position]),edgeCamera,'outline grip does not accidentally orbit the room');
+   await page.locator('[data-action="undo"]').click();
    await go(page,'mouth');
    // Opening is a deliberate action, then width/height handles are directly usable.
    if(!await page.locator('[data-form-handle="mouth-width"]').count())await page.locator('[data-action="open-mouth"]').click();
@@ -122,7 +136,18 @@ try{
    await page.reload();await page.waitForSelector('#loading',{state:'detached'});await page.locator('[data-action="continue"]').click();await settle(page);
    assert.deepEqual(await siteState(page),placed,'placed assembly also resumes');
    if(process.env.TOGI_REVIEW==='1')await page.screenshot({path:`asset/review/assembly-${viewport.width}.png`});
-   await go(page,'compare');await page.locator('[data-action="next"]').click();
+   await go(page,'compare');
+   for(const which of ['own','reference']){
+    const state=await page.evaluate(()=>{const w=window.togi.world;return {own:w.pottery.root.rotation.y,reference:w.referenceArtifact.rotation.y,camera:[...w.camera.position]};});
+    const target=await project(page,[which==='own'?-.78:.9,.70,.30]);
+    assert.equal(await page.evaluate(p=>window.togi.world.artifactAt(p.x,p.y),target),which,'visible artifact is the drag target');
+    await drag(page,target,{x:target.x+55,y:target.y});
+    const after=await page.evaluate(()=>{const w=window.togi.world;return {own:w.pottery.root.rotation.y,reference:w.referenceArtifact.rotation.y,camera:[...w.camera.position]};});
+    assert.ok(after[which]>state[which]+.1,'each exhibit turns directly with the finger');
+    const other=which==='own'?'reference':'own';assert.equal(after[other],state[other],'the other exhibit stays still');
+    assert.deepEqual(after.camera,state.camera,'turning an exhibit does not orbit the room');
+   }
+   await page.locator('[data-action="next"]').click();
    for(const name of ['경산이','독이','압이'])await page.locator(`[data-sticker="${name}"]`).click();
    const bounds=await page.locator('.photo-actions').boundingBox();assert.ok(bounds.y>=0&&bounds.y+bounds.height<=viewport.height,'photo save controls fit');
    await page.locator('[data-photo="size"]').fill('330');await page.locator('[data-photo="angle"]').fill('30');
@@ -133,6 +158,10 @@ try{
    assert.deepEqual(await page.evaluate(()=>Array.from(window.togi.save.document.outerXYZ)),placed.doc,'photo editing preserves pottery');
    await page.locator('[data-action="finish-photo"]').click();
    assert.equal(await page.locator('body').getAttribute('data-stage'),'ending','photo editor leads to the completed artwork');
+   await settle(page);
+   const ownBefore=await page.evaluate(()=>window.togi.world.pottery.root.rotation.y),ownTarget=await project(page,[-.78,.7,.3]);
+   await drag(page,ownTarget,{x:ownTarget.x-45,y:ownTarget.y});
+   assert.ok(await page.evaluate(()=>window.togi.world.pottery.root.rotation.y)<ownBefore-.1,'own artwork remains rotatable on the ending screen');
    assert.deepEqual(errors,[]);
   }catch(error){await mkdir('asset/review',{recursive:true});await page.screenshot({path:`asset/review/journey-${viewport.width}-failure.png`});throw error;}
   finally{await context.close();}

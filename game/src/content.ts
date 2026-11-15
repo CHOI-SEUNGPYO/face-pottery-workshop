@@ -35,7 +35,7 @@ export const scenes: Record<
   body: {
     title: "마음 가는 대로 빚어요",
     eyebrow: "01 · 나만의 모양",
-    instruction: "잡고 옆으로 끌면 곡선이 부드럽게 달라져요.",
+    instruction: "토기 윤곽선을 잡고 좌우로 움직여 보세요.",
     character: "압이",
     speech: "통통하게, 길쭉하게!\n언제든 되돌릴 수 있으니 편하게 해 봐.",
     next: "입구 다듬기",
@@ -75,7 +75,7 @@ export const scenes: Record<
   firing: {
     title: "흙이 토기가 되는 시간",
     eyebrow: "05 · 말리고 굽기",
-    instruction: "빛과 열 속에서 토기가 완성되는 과정을 지켜봐요.",
+    instruction: "가마에 넣어 굽고, 식혀 꺼내는 과정을 안쪽까지 살펴봐요.",
     character: "경산이",
     speech: "우리가 만든 모양 그대로!\n짧은 변화의 시간을 지켜보자.",
     next: "발굴하러 가기",
@@ -105,7 +105,7 @@ export const scenes: Record<
   compare: {
     title: "닮은 곳, 다른 곳을 찾아요",
     eyebrow: "08 · 실제 유물과 비교",
-    instruction: "얼굴과 입구를 살펴보세요. 내 작품은 달라도 괜찮아요.",
+    instruction: "각 토기를 잡고 좌우로 돌려 보세요. 오른쪽은 사진을 바탕으로 만든 3D 재현이에요.",
     character: "경산이",
     speech: "실제 유물에는 세 얼굴이 있어.\n네 작품은 어떤 이야기를 들려줄까?",
     next: "사진 찍고 꾸미기",
@@ -115,7 +115,7 @@ export const scenes: Record<
   ending: {
     title: "세상에 하나뿐인 내 얼굴토기",
     eyebrow: "우리의 작은 전시회",
-    instruction: "돌려 보며 가장 마음에 드는 모습을 사진으로 남겨요.",
+    instruction: "내 토기를 잡고 돌려 가장 마음에 드는 모습을 사진으로 남겨요.",
     character: "경산이",
     speech: "너의 손끝에서 멋진 이야기가 태어났어!",
     next: "사진 찍기",

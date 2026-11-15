@@ -2,6 +2,19 @@ import assert from 'node:assert/strict';
 import {mkdir,readFile} from 'node:fs/promises';
 import {createServer} from 'vite';
 import {chromium} from 'playwright';
+import * as T from 'three';
+import {buildFaceArtifact} from './face-artifact.mjs';
+// Probe the actual geometry, not material colour: every face has open eyes,
+// nostrils and mouth. A painted black disk cannot satisfy this check.
+const model=buildFaceArtifact();model.updateMatrixWorld(true);
+for(let face=0;face<3;face++)for(const [du,y] of [[-.245,1.307],[.245,1.307],[-.087,1.198],[.087,1.198],[0,1.075]]){
+  const u=Math.PI/6+face*Math.PI*2/3+du;
+  const start=model.localToWorld(new T.Vector3(Math.sin(u)*.7,y,Math.cos(u)*.7));
+  const centre=model.localToWorld(new T.Vector3(0,y,0));
+  const hits=new T.Raycaster(start,centre.sub(start).normalize()).intersectObject(model,true);
+  assert.ok(!hits.length||hits[0].distance>.40,`face ${face+1}: opening is a real tunnel into the vessel`);
+}
+model.traverse(o=>{if(o.isMesh){o.geometry.dispose();o.material.dispose();}});
 const server=await createServer({server:{host:'127.0.0.1',port:0,strictPort:false}});
 const review=process.env.TOGI_REVIEW==='1'||process.env.TOGI_ART_REVIEW==='1';
 await server.listen();let browser;
@@ -27,7 +40,7 @@ try{
     await page.evaluate(stage=>window.togi.go(stage),stage);
     await page.waitForFunction(()=>!window.togi.world.transitioning);
     await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
-    if(review&&['body','compare','excavation'].includes(stage)){
+    if(review&&['body','compare','firing'].includes(stage)){
       await mkdir('asset/review',{recursive:true});
       await page.screenshot({path:`asset/review/art-${stage}-desktop.png`});
     }
@@ -40,22 +53,23 @@ try{
     assert.ok(stats.triangles<450000,`${stage}: mobile geometry budget: ${stats.triangles}`);
     assert.ok(stats.calls<180,`${stage}: draw call budget: ${stats.calls}`);
     console.log(stage,stats);
-    if(review&&stage==='body'){
-      await page.evaluate(()=>window.togi.world.setView('top'));
-      await page.screenshot({path:'asset/review/art-tool-materials.png'});
-      await page.evaluate(()=>window.togi.go('faces'));
-      await page.locator('.drawing-actions summary').click();
-      await page.screenshot({path:'asset/review/art-guide-menu.png'});
-      await page.evaluate(()=>window.togi.go('body'));
-    }
+    if(stage==='body')assert.equal(await page.evaluate(()=>window.togi.world.pottery.outline.visible),true,'editable body has a subtle silhouette');
     if(stage==='compare'){
-      const photo=await page.evaluate(()=>{
-        const w=window.togi.world,p=w.scene.getObjectByName('Actual artifact photograph');
-        return {url:p?.material.map.image.src,toneMapped:p?.material.toneMapped,plinths:w.art.model('gallery-fixtures').visible};
+      const artifact=await page.evaluate(()=>{
+        const w=window.togi.world,b=w.pottery.body.geometry.boundingBox.clone().makeEmpty();let vertices=0;
+        w.referenceArtifact.traverse(o=>{if(o.isMesh){o.geometry.computeBoundingBox();b.union(o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld));vertices+=o.geometry.attributes.position.count;}});
+        return {depth:b.max.z-b.min.z,bottom:b.min.y,vertices,photo:!!w.scene.getObjectByName('Actual artifact photograph'),plinths:w.art.model('gallery-fixtures').visible,outline:w.pottery.outline.visible};
       });
-      assert.ok(photo.url.endsWith('/face-museum-photo.jpg'),'comparison uses the supplied real photograph');
-      assert.equal(photo.toneMapped,false,'museum lighting must not recolour the reference photograph');
-      assert.equal(photo.plinths,true,'permanent exhibit supports are visible');
+      assert.ok(artifact.depth>.8&&artifact.vertices>10000,'reference exhibit has a curved three-dimensional body');
+      assert.ok(Math.abs(artifact.bottom)<.001,'reference vessel rests on the plinth');
+      assert.equal(artifact.photo,false,'the static photograph no longer replaces the 3D exhibit');
+      assert.equal(artifact.outline,false,'editing outline is absent in the gallery and exported photos');
+      assert.equal(artifact.plinths,true,'permanent exhibit supports are visible');
+      for(let face=0;face<3;face++){
+        await page.evaluate(angle=>{window.togi.world.referenceArtifact.rotation.y=angle;window.togi.world.refresh(true);},-face*Math.PI*2/3);
+        if(review){await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));await page.screenshot({path:`asset/review/art-reference-face-${face+1}.png`});}
+      }
+      await page.evaluate(()=>{window.togi.world.referenceArtifact.rotation.y=0;window.togi.world.refresh(true);});
     }
     if(stage==='excavation'){
       const documentBefore=await page.evaluate(()=>JSON.stringify(window.togi.save.document));
@@ -104,12 +118,37 @@ try{
       assert.ok(Math.abs(contact.table-contact.bench)<.001,'steamer rests on the conservation table');
     }
     if(stage==='firing'){
+      const motion=await page.evaluate(()=>{
+        const w=window.togi.world,samples=[];
+        for(let i=0;i<=1000;i++){w.setFiringProgress(i/1000);samples.push([...w.pottery.root.position]);}
+        return samples;
+      });
+      assert.ok(motion.every((p,i)=>!i||Math.hypot(...p.map((n,k)=>n-motion[i-1][k]))<.05),'kiln loading and unloading have no position jumps');
+      assert.ok(Math.abs(motion[0][1]-.12)<.001&&Math.abs(motion.at(-1)[1]-.12)<.001,'pot starts and finishes on the cooling slab');
+      assert.ok(Math.abs(motion[500][1]-.07)<.001,'pot rests on the kiln bed while firing');
+      if(review){await page.evaluate(()=>window.togi.world.setFiringProgress(.42));await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));await page.screenshot({path:'asset/review/art-firing-interior.png'});}
+      await page.evaluate(()=>window.togi.world.setFiringProgress(null));
       await page.evaluate(()=>window.togi.world.toggleKiln());
       assert.equal(await page.evaluate(()=>window.togi.world.firingView.group.getObjectByName('Cutaway_shell').visible),false,'kiln model opens with the cutaway control');
       await page.evaluate(()=>window.togi.world.toggleKiln());
     }
   }
   await page.evaluate(()=>window.togi.go('body'));
+  const blocked=await page.evaluate(()=>{
+    const w=window.togi.world,failures=[];
+    for(let angle=0;angle<360;angle+=15){
+      w.setView('stage');w.orbit((-14-angle)/.35,0);
+      w.scene.updateMatrixWorld(true);w.camera.updateMatrixWorld();
+      const point=w.camera.position.clone().set(0,.7,0).project(w.camera);
+      const x=(point.x+1)*innerWidth/2,y=(1-point.y)*innerHeight/2,pot=w.hit(x,y,true);
+      const meshes=[];for(const root of [w.workshop,w.displayPots])root.traverseVisible(o=>{if(o.isMesh)meshes.push(o);});
+      const obstacle=w.pointer(x,y).intersectObjects(meshes,false)[0];
+      if(!pot||(obstacle&&obstacle.distance<pot.distance-.01))failures.push({angle,obstacle:obstacle?.object.name});
+    }
+    return failures;
+  });
+  assert.deepEqual(blocked,[],'a full orbit never puts the cupboard or wall between the player and pottery');
+  await page.evaluate(()=>window.togi.world.setView('stage'));
   await page.evaluate(()=>window.togi.world.orbit(540,0));
   const behind=await page.evaluate(()=>{
     const w=window.togi.world;

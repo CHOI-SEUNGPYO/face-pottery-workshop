@@ -53,7 +53,7 @@
     {
       "id": "kiln-dressing",
       "file": "kiln-dressing-v3.glb",
-      "bytes": 590944
+      "bytes": 613716
     },
     {
       "id": "kiln-vault",
@@ -64,6 +64,11 @@
       "id": "siru",
       "file": "siru-v3.glb",
       "bytes": 84740
+    },
+    {
+      "id": "face-artifact",
+      "file": "face-artifact-v3.glb",
+      "bytes": 2025900
     }
   ],
   "exhibits": [

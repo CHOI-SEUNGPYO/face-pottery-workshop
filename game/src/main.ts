@@ -225,7 +225,7 @@ function updateUI() {
   host.dataset.tool = tool;
   world.renderer.domElement.setAttribute(
     "aria-description",
-    stage === "mouth" || stage === "faces" ? instruction : toolHelp[tool].instruction,
+    stage === "body" || stage === "mouth" || stage === "faces" || world.inGallery ? instruction : toolHelp[tool].instruction,
   );
   const header = `<header><a class="brand" href="#" data-action="home"><span class="brand-pot">${icon("mouth")}</span><span>얼굴토기<br><small>작은 흙 공방</small></span></a><nav aria-label="공통 메뉴">${
     stage !== "welcome"
@@ -260,7 +260,7 @@ function updateUI() {
   if (stage === "inspect")
     extras = actionbar('수정하기',`<div class="edit-links">${button("edit-body", "몸체 수정", "shape", "secondary")}${button("edit-mouth", "입구 수정", "mouth", "secondary")}${button("edit-faces", "얼굴 수정", "carve", "secondary")}</div>`,'edit-actions');
   if (stage === "firing")
-    extras = `<div class="firing-status"><strong id="firing-phase">${fired?"완성":fireStart?"준비":"굽기 체험"}</strong><p class="firing-note">준비 → 가열 → 냉각 → 완성 공개</p><span>${fired ? "내 토기가 완성되었어요" : fireStart ? "빛과 열이 토기를 감싸고 있어요" : "체험을 위해 짧게 보여주는 장면이에요"}</span><div class="meter"><i id="fire-progress" style="width:${fired ? 100 : 0}%"></i></div></div>`;
+    extras = `<div class="firing-status"><strong id="firing-phase">${fired?"완성":fireStart?"준비":"가마에 넣기"}</strong><p class="firing-note">넣기 → 굽기 → 식히기 → 꺼내기</p><span id="firing-action">${fired ? "받침 위의 토기가 완성됐어요. 다음은 상상 발굴 체험이에요." : fireStart ? "내 토기를 가마 안으로 옮겨요." : "아래 ‘가마에 넣고 굽기’를 누르면 안쪽을 보며 과정을 살펴볼 수 있어요."}</span><div class="meter"><i id="fire-progress" style="width:${fired ? 100 : 0}%"></i></div></div>`;
   if (stage === "excavation") {
     const progress = world.coverage();
     extras = `<div class="dig-status"><span id="dig-progress">토기 ${Math.round(progress[0] * 100)}% · 시루 ${Math.round(progress[1] * 100)}%</span>${button("assist", "함께 찾아보기", "brush", "small-button")}</div>`;
@@ -272,7 +272,7 @@ function updateUI() {
   hud.innerHTML =
     header +
     `<div class="work-area" aria-hidden="true"></div><div class="scene-info"><section class="scene-heading"><p class="eyebrow">${c.eyebrow}</p><h1>${c.title}</h1><p>${instruction}</p></section>
-    ${['body','mouth','faces','inspect','compare','ending'].includes(stage) ? '<p class="background-hint">빈 곳을 끌거나 두 손가락으로 돌려요</p>' : ''}
+    ${['body','mouth','faces','inspect','compare','ending'].includes(stage) ? `<p class="background-hint">${world.inGallery?'각 토기를 끌면 따로 돌아가요':'빈 곳을 끌거나 두 손가락으로 돌려요'}</p>` : ''}
     <div class="scene-extras">${extras}</div>
     <aside class="guide-bubble"><img class="guide-character" src="${characterImage(c.character)}" alt="${c.character}"><p>${c.speech.replaceAll("\n", "<br>")}</p></aside>
     ${["excavation", "assembly"].includes(stage) ? `<div class="context-label">${stage === "excavation" ? "상상 발굴 체험" : "함께 사용했을 가능성을 살펴보는 장면"}</div>` : ""}
@@ -283,7 +283,7 @@ function updateUI() {
     ${stage==='faces'?actionbar(drawingLabel,`<div class="tools" role="toolbar" aria-label="작업 도구">${c.tools.map((t) => `<button data-tool="${t}" class="tool ${tool === t ? "selected" : ""}" aria-pressed="${tool === t}" aria-label="${toolLabels[t]}">${icon(t)}<span>${t==='refine'?'구멍 다듬기':toolLabels[t]}</span></button>`).join("")}</div>${toolGuide(tool,carveMode)}`,'drawing-actions'):''}
     ${button("next", primaryLabel, stage === "ending" ? "photo" : "next", "primary next-button")}</footer>`;
   arrangeHUD();
-  if(stage==='firing')hud.querySelector('.firing-status')?.insertAdjacentHTML('beforeend',`<button data-action="kiln-inside" class="small-button" aria-pressed="${world.kilnCutaway}">${world.kilnCutaway?'외부로 보기':'내부 보기'}</button><small class="kiln-note">당시 가마 자료를 참고한 장면 · 내부는 설명용 단면</small>`);
+  if(stage==='firing')hud.querySelector('.firing-status')?.insertAdjacentHTML('beforeend',`${fireStart?'':`<button data-action="kiln-inside" class="small-button" aria-pressed="${world.kilnCutaway}">${world.kilnCutaway?'외부로 보기':'내부 보기'}</button>`}<small class="kiln-note">${fireStart?'가마 안쪽을 펼쳐 보여주는 장면이에요.':'당시 가마 자료를 참고한 장면 · 내부는 설명용 단면'}</small>`);
   if(stage==='excavation')hud.querySelector<HTMLButtonElement>('[data-action="next"]')!.disabled=!digComplete;
   if(stage==='assembly')hud.querySelector<HTMLButtonElement>('[data-action="next"]')!.disabled=save.assembledRevision!==save.document.revision;
   layoutUI();
@@ -346,7 +346,7 @@ function go(next: SceneId) {
   audio.firing(0);
   fireStart = 0;
   stage = next;
-  tool = next==='body'?'shape':next==='excavation'?'brush':next==='assembly'?'place':scenes[next].tools[0] ?? "rotate";
+  tool = next==='body'?'shape':next==='excavation'?'brush':next==='assembly'&&save.assembledRevision!==save.document.revision?'place':scenes[next].tools[0] ?? "rotate";
   audio.excavation = next === "excavation";
   world.setStage(next);
   digComplete=next==='excavation'&&world.coverage().length===2&&world.coverage().every(n=>n>=.7);
@@ -413,6 +413,8 @@ function startFire() {
       if(meter)meter.style.width=`${t*100}%`;
       const label=document.querySelector('#firing-phase');
       if(label)label.textContent=frame.phase;
+      const action=document.querySelector('#firing-action');
+      if(action)action.textContent=frame.description;
       document.body.dataset.firePhase=frame.phase;
       if(t>=1){fireDone();return;}
     }else audio.firing(0);
@@ -424,9 +426,16 @@ document.addEventListener('visibilitychange',()=>{
   fireLast=performance.now();
   if(document.hidden)audio.firing(0);
 });
-function place() {
+let placing=false;
+async function place() {
+  if(placing||stage!=='assembly'||save.assembledRevision===save.document.revision)return;
+  placing=true;
+  const button=hud.querySelector<HTMLButtonElement>('[data-action="place"]');
+  if(button){button.disabled=true;button.textContent='시루 위에 놓고 있어요';}
+  const completed=await world.placeOnSiru();placing=false;
+  if(!completed)return;
   save.assembledRevision = save.document.revision;
-  world.setStage("assembly");
+  tool='rotate';world.reframe();
   audio.effect("success");
   toast("함께 놓아 보았어요! 실제 사용법은 아직 연구 중이에요.");
   updateUI();
@@ -837,6 +846,7 @@ document.addEventListener("keydown", (e) => {
 interface Gesture {
   pointer: number;
   kind: ToolId;
+  artifact?:'own'|'reference';
   startX: number;
   startY: number;
   lastX: number;
@@ -908,6 +918,7 @@ function cancelGesture() {
   pendingFormValue = null;
   hud.querySelector<HTMLElement>(".form-handles .dragging")?.classList.remove("dragging");
   world?.endBrush();
+  world?.highlightPot(false);
   if (formEdit) {
     save.document = formEdit.before;
     formEdit = null;
@@ -930,7 +941,8 @@ function sample(e: PointerEvent) {
     dy = e.clientY - g.lastY;
   g.travel += Math.hypot(dx, dy);
   if (g.kind === "rotate") {
-    world.orbit(dx,dy);
+    if(g.artifact)world.rotateArtifact(g.artifact,dx,dy);
+    else world.orbit(dx,dy);
 
     g.moved = true;
   } else if (g.kind === "shape") {
@@ -1024,19 +1036,19 @@ function bindPointer() {
   let touchSoil:Uint8Array|null=null;
   const touchView=()=>{const [a,b]=[...touches.values()];return a&&b?{x:(a.x+b.x)/2,y:(a.y+b.y)/2,distance:Math.hypot(a.x-b.x,a.y-b.y)}:null;};
   const stopPointers=()=>{touches.clear();viewing=false;previousView=null;touchSoil=null;cancelGesture();};
-  canvas.addEventListener("pointerleave", () => world.hideBrush());
+  canvas.addEventListener("pointerleave", () => {world.hideBrush();if(!gesture)world.highlightPot(false);});
   canvas.addEventListener("contextmenu", (e) => e.preventDefault());
   canvas.addEventListener(
     "wheel",
     (e) => {
-      if (!loaded || world.paused || travelling || gesture || formEdit || stage === "welcome") return;
+      if (!loaded || world.paused || travelling || gesture || formEdit || placing || stage === "welcome") return;
       e.preventDefault();
       world.zoomBy(Math.exp(-clamp(e.deltaY, -100, 100) * 0.002));
     },
     { passive: false },
   );
   canvas.addEventListener("pointerdown", (e) => {
-    if(e.pointerType==='touch'&&loaded&&!world.paused&&!travelling&&stage!=='welcome'&&!formEdit){
+    if(e.pointerType==='touch'&&loaded&&!world.paused&&!travelling&&!placing&&stage!=='welcome'&&!formEdit){
       touches.set(e.pointerId,{x:e.clientX,y:e.clientY});
       canvas.setPointerCapture(e.pointerId);
       if(touches.size>=2){
@@ -1056,20 +1068,22 @@ function bindPointer() {
     if (
       !loaded ||
       dialog.open ||world.paused||travelling||
-      world.transitioning ||
+      world.transitioning ||placing||
       gesture ||
       formEdit ||
       stage === "welcome"
     )
       return;
     audio.start();
+    const artifact=e.button!==2?world.artifactAt(e.clientX,e.clientY):null;
+    if(artifact)world.selectedArtifact=artifact;
     let kind:ToolId = e.button === 2 || stage==='firing' ? "rotate" : tool;
     const
-      hit = world.hit(
+      hit = kind==='shape'?world.shapeHit(e.clientX,e.clientY):world.hit(
         e.clientX,
         e.clientY,
         ["erase", "refine", "carve", "pierce"].includes(kind),
-        kind === "shape",
+        false,
       );
     if(!hit&&['body','mouth','faces','inspect','assembly','compare','ending'].includes(stage))kind='rotate';
     if(stage==='excavation'&&!world.terrain.hit(world.pointer(e.clientX,e.clientY).ray))kind='rotate';
@@ -1079,6 +1093,7 @@ function bindPointer() {
     gesture = {
       pointer: e.pointerId,
       kind,
+      artifact:artifact??undefined,
       startX: e.clientX,
       startY: e.clientY,
       lastX: e.clientX,
@@ -1094,11 +1109,13 @@ function bindPointer() {
       units: screenUnits(),
     };
     canvas.setPointerCapture(e.pointerId);
+    if(kind==='shape')world.highlightPot(true);
     if (kind === "brush") {
       world.beginBrush();
     }
   });
   canvas.addEventListener("pointermove", (e) => {
+    if(!gesture&&['body','mouth'].includes(stage))world.highlightPot(!!world.shapeHit(e.clientX,e.clientY));
     if(touches.has(e.pointerId)){
       touches.set(e.pointerId,{x:e.clientX,y:e.clientY});
       if(viewing){
@@ -1135,6 +1152,7 @@ function bindPointer() {
     const g = gesture;
     if (!g) return;
     gesture = null;
+    world.highlightPot(false);
     if (canvas.hasPointerCapture(e.pointerId))
       canvas.releasePointerCapture(e.pointerId);
     if ((g.kind === "erase" || g.kind === "refine") && g.travel<6) {
@@ -1233,7 +1251,8 @@ function bindPointer() {
     ) {
       e.preventDefault();
       if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
-        world.orbit(e.key === "ArrowLeft" ? -24 : 24,0);
+        if(world.inGallery)world.rotateArtifact(world.selectedArtifact,e.key==='ArrowLeft'?-24:24);
+        else world.orbit(e.key === "ArrowLeft" ? -24 : 24,0);
       } else if (e.key === "ArrowUp" || e.key === "ArrowDown")
         world.tilt(e.key === "ArrowUp" ? 6 : -6);
       else world.zoomBy(e.key === "-" ? 1 / 1.1 : 1.1);

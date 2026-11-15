@@ -93,6 +93,21 @@ export class PotteryView {
   private surface={value:grainTexture as T.Texture};
   setSurface(texture:T.Texture){this.surface.value=texture;}
   root = new T.Group();
+  outline:T.Mesh;
+  private outlineMaterial=new T.ShaderMaterial({
+    side:T.BackSide,transparent:true,depthWrite:false,
+    uniforms:{viewport:{value:new T.Vector2(1,1)},width:{value:1.35},opacity:{value:.55}},
+    vertexShader:`uniform vec2 viewport;uniform float width;
+      void main(){vec4 p=projectionMatrix*modelViewMatrix*vec4(position,1.0);
+        vec3 n=normalMatrix*normal;vec2 direction=normalize(n.xy+vec2(.00001));
+        p.xy+=direction*width*2.0/viewport*p.w;gl_Position=p;}`,
+    fragmentShader:`uniform float opacity;void main(){gl_FragColor=vec4(.96,.77,.38,opacity);}`,
+  });
+  outlineSize(width:number,height:number){this.outlineMaterial.uniforms.viewport.value.set(width,height);}
+  highlight(active:boolean){
+    this.outlineMaterial.uniforms.width.value=active?2.1:1.35;
+    this.outlineMaterial.uniforms.opacity.value=active?.92:.55;
+  }
   body: T.Mesh;
   inner: T.Mesh;
   walls: T.Mesh;
@@ -139,6 +154,9 @@ export class PotteryView {
     grain(this.interior,this.surface);
     grain(this.tunnel,this.surface);
     this.body = new T.Mesh(geometry(false), this.material);
+    this.outline=new T.Mesh(this.body.geometry,this.outlineMaterial);
+    this.outline.name='Editable pottery silhouette';this.outline.visible=false;
+    this.outline.raycast=()=>{};this.root.add(this.outline);
     this.body.raycast = acceleratedRaycast;
     this.inner = new T.Mesh(geometry(true), this.interior);
     this.walls = new T.Mesh(new T.BufferGeometry(), [this.tunnel, this.plain]);
@@ -327,6 +345,7 @@ export class PotteryView {
     ])
       m.geometry.dispose();
     this.material.dispose();
+    this.outlineMaterial.dispose();
     this.interior.dispose();
     this.tunnel.dispose();
     this.plain.dispose();
