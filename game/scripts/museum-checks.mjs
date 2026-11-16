@@ -28,6 +28,9 @@ export async function checkMuseumWelcome(page,viewports=[{width:1366,height:768}
  for(const viewport of viewports){
   await page.setViewportSize(viewport);
   await imagesLoaded(page,'.welcome-copy .partner-marks img');
+  await imagesLoaded(page,'.welcome-artifact img');
+  assert.match(await page.locator('.welcome-purpose').textContent(),/얼굴모양토기.*눈과 입/s);
+  assert.deepEqual(await page.locator('.welcome-path li').allTextContents(),['몸체 빚기','얼굴 만들기','유물과 비교']);
   await review(page,`welcome-${viewport.width}`);
   await page.locator('#hud [data-action="collection"]').click();
   await imagesLoaded(page,'.album-image img');

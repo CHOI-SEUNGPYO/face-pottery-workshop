@@ -25,6 +25,10 @@ try{
   page.on('requestfailed',r=>{if(!r.failure()?.errorText.includes('ERR_ABORTED'))report.requests.push({url:r.url(),error:r.failure()});});
   const settle=()=>page.evaluate(()=>Promise.all(document.getAnimations().filter(a=>a.effect?.getTiming().iterations!==Infinity).map(a=>a.finished.catch(()=>{}))));
   await page.goto(url);await page.locator('#loading').waitFor({state:'detached'});await page.evaluate(()=>document.fonts.ready);
+  await page.locator('.welcome-artifact img').evaluate(i=>i.decode());
+  assert.match(await page.locator('.welcome-purpose').textContent(),/얼굴모양토기.*눈과 입/s);
+  assert.ok(await page.locator('.welcome-path').isVisible());
+  await page.screenshot({path:'asset/review/release-purpose-welcome.png'});
   await page.locator('[data-action="help"]').click();await page.locator('#reduce-motion').uncheck();
   await page.locator('[data-action="close"]').click();
   await page.reload();await page.locator('#loading').waitFor({state:'detached'});
@@ -75,16 +79,35 @@ try{
   const saved=await page.evaluate(()=>new Promise((resolve,reject)=>{
     const r=indexedDB.open('togi-workshop-v2',1);r.onerror=()=>reject(r.error);
     r.onsuccess=()=>{const db=r.result,t=db.transaction('state','readwrite'),store=t.objectStore('state'),q=store.get('current');let artwork;
-      q.onsuccess=()=>{const s=q.result;artwork=JSON.stringify(s.document);s.stage='compare';s.firedRevision=s.document.revision;s.assembledRevision=s.document.revision;store.put(s,'current');};
+      q.onsuccess=()=>{const s=q.result;artwork=JSON.stringify(s.document);s.stage='excavation';s.firedRevision=s.document.revision;s.assembledRevision=s.document.revision;store.put(s,'current');};
       t.oncomplete=()=>{db.close();resolve(artwork);};t.onerror=()=>reject(t.error);
     };
   }));
+  await page.reload();await page.locator('#loading').waitFor({state:'detached'});await page.locator('[data-action="continue"]').click();
+  await page.waitForFunction(()=>document.body.dataset.stage==='excavation'&&document.querySelector('#travel').hidden);await settle();
+  assert.equal(await page.locator('.story-dock').getAttribute('aria-label'),'발굴 이야기');
+  await page.locator('.story-teaser').click();
+  await page.locator('.story-photo img').evaluate(i=>i.decode());
+  assert.match(await page.locator('.story-photo img').getAttribute('src'),/sowol-pit-2019/);
+  for(const image of await page.locator('.story-inline-photo img').all()){
+    await image.scrollIntoViewIfNeeded();await page.waitForFunction(el=>el.complete&&el.naturalWidth>0,await image.elementHandle());
+  }
+  assert.match(await page.locator('.story-copy').textContent(),/발굴조사보고서/);
+  await page.locator('.story-copy').evaluate(el=>el.scrollTop=0);
+  await page.screenshot({path:'asset/review/release-excavation-story.png'});
+  await page.locator('.modal-close').click();
+  await page.evaluate(()=>new Promise((resolve,reject)=>{const r=indexedDB.open('togi-workshop-v2',1);r.onerror=()=>reject(r.error);r.onsuccess=()=>{const db=r.result,t=db.transaction('state','readwrite'),store=t.objectStore('state'),q=store.get('current');q.onsuccess=()=>{const s=q.result;s.stage='compare';store.put(s,'current');};t.oncomplete=()=>{db.close();resolve();};t.onerror=()=>reject(t.error);};}));
   await page.reload();await page.locator('#loading').waitFor({state:'detached'});await page.locator('[data-action="continue"]').click();
   await page.waitForFunction(()=>document.body.dataset.stage==='compare'&&document.querySelector('#travel').hidden);await settle();
   assert.match(await page.locator('.gallery-disclosure').textContent(),/AI가 게임 도구로 만든.*투각인면문옹형토기/s);
   await page.screenshot({path:'asset/review/release-gallery.png'});
   await page.locator('[data-action="next"]').click();await settle();
   assert.equal(await page.getAttribute('body','data-stage'),'ending');assert.equal(await page.locator('.photo-editor').count(),0);
+  await page.locator('[data-action="photo"]').click();
+  assert.match(await page.locator('.photo-editor h2').textContent(),/내 작품/);
+  assert.match(await page.locator('.photo-status').textContent(),/내 작품만/);
+  await page.screenshot({path:'asset/review/release-own-work-photo.png'});
+  await page.locator('.modal-close').click();
   await page.locator('[data-action="ending-credits"]').click();
   assert.match(await page.locator('.artifact-label').textContent(),/透刻人面文甕形土器/);
   const visit=page.locator('.museum-ending .museum-visit');

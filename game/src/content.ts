@@ -25,7 +25,7 @@ export const scenes: Record<
   welcome: {
     title: "흙에서 만나는\n나의 얼굴",
     eyebrow: "작은 손끝에서 시작되는 이야기",
-    instruction: "친구들과 함께 나만의 얼굴 토기를 만들어 보세요.",
+    instruction: "실제 유물의 세 얼굴을 살펴보고 나만의 얼굴모양토기를 만들어 보세요.",
     character: "경산이",
     speech: "우리, 어떤 얼굴을 만들어 볼까?",
     next: "만들러 가기",
@@ -33,11 +33,11 @@ export const scenes: Record<
     elevation: 15,
   },
   body: {
-    title: "마음 가는 대로 빚어요",
-    eyebrow: "01 · 나만의 모양",
+    title: "얼굴을 담을 몸체를 빚어요",
+    eyebrow: "01 · 얼굴모양토기의 몸체",
     instruction: "토기 윤곽선을 잡고 좌우로 움직여 보세요.",
     character: "압이",
-    speech: "통통하게, 길쭉하게!\n언제든 되돌릴 수 있으니 편하게 해 봐.",
+    speech: "이 몸체에 눈과 입을 만들 거야.\n모양은 네 마음대로 빚어 봐!",
     next: "입구 다듬기",
     tools: [],
     elevation: 12,
@@ -181,6 +181,7 @@ export const toolHelp: Record<
 };
 export interface StoryBlock {
   kind: "fact" | "interpretation" | "imagination";
+  heading?: string;
   text: string;
   sources?: string[];
   question?: string;

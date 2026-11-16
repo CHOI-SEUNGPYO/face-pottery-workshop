@@ -14,6 +14,7 @@ import { scenes } from "./content";
 import { surfaceFrame } from "./surface-path";
 import { FiringView, firingFrame } from './firing';
 import {museum,museumAsset} from './museum';
+import {photoScene} from './photo-scene';
 import {outdoorSite,museumRoom,setEnvironmentMaterials} from './environments';
 import {
   clamp,
@@ -126,7 +127,6 @@ export class World {
   private elevation = 15;
   private azimuth = 0;
   private zoom = 1;
-  private photoFraming = false;
   private key = new T.DirectionalLight(0xfff4e8, 3.2);
   private ambient = new T.HemisphereLight(0xfff4e4, 0x676d67, 1.25);
   private fill = new T.DirectionalLight(0xc6e1ed, 0.7);
@@ -594,20 +594,12 @@ export class World {
     this.elevation=clamp(this.elevation,digging?45:this.stage==='assembly'?22:3,digging?82:86);
     if(this.inGallery){this.azimuth=clamp(this.azimuth,-32,32);this.elevation=clamp(this.elevation,8,48);}
     if(digging)this.zoom=clamp(this.zoom,.85,1);
-    const width = this.photoFraming ? 1920 : this.host.clientWidth,
-      height = this.photoFraming ? 1080 : this.host.clientHeight;
+    const width = this.host.clientWidth, height = this.host.clientHeight;
     this.camera.aspect = width / height;
     const area = document
       .querySelector<HTMLElement>(".work-area")
       ?.getBoundingClientRect();
-    const rect = this.photoFraming
-      ? {
-          x: width * 0.06,
-          y: height * 0.08,
-          width: width * 0.88,
-          height: height * 0.84,
-        }
-      : area && area.width > 0
+    const rect = area && area.width > 0
         ? area
         : {
             x: width * 0.2,
@@ -619,11 +611,11 @@ export class World {
     // Drawing a raised rim must not reframe the pot and shift the contour
     // away from the pointer. Photos still include the complete artwork.
     const bounds = new T.Box3().setFromObject(
-      this.stage === "faces" && !this.photoFraming ? this.pottery.body : this.pottery.root,
+      this.stage === "faces" ? this.pottery.body : this.pottery.root,
     );
     // Keep the scale visible while shaping. Refitting after every edit hides
     // the player's size changes and moves the target away from their finger.
-    if (this.stage === "body" && !this.photoFraming)
+    if (this.stage === "body")
       bounds.set(
         new T.Vector3(-0.55, 0, -0.55),
         new T.Vector3(0.55, 1.55, 0.55),
@@ -689,7 +681,7 @@ export class World {
       .copy(this.goalTarget)
       .addScaledVector(
         away,
-        (distance * 1.025) / (this.photoFraming ? 1 : this.zoom),
+        (distance * 1.025) / this.zoom,
       );
     // Only the wall between the camera and the room opens. Floors and plinths remain.
     for(const wall of this.walls){
@@ -983,16 +975,18 @@ export class World {
       oldTarget = this.renderer.getRenderTarget(),
       oldSize = this.renderer.getSize(new T.Vector2()),
       ratio = this.renderer.getPixelRatio();
+    const portrait=photoScene(this.pottery.root,this.scene.environment,this.camera.position.clone().sub(this.target));
     // A direct canvas render preserves the exact on-screen tone mapping,
     // sprite colours and MSAA; rendering to an LDR target clips highlights.
     try {
       this.renderer.setPixelRatio(1);
       this.renderer.setSize(width, height, false);
       this.renderer.setRenderTarget(null);
-      this.photoFraming = true;
-      this.compose(true);
-      this.renderer.render(this.scene, this.camera);
-      return await new Promise<Blob>((resolve, reject) => {
+      this.renderer.shadowMap.needsUpdate=true;
+      this.renderer.render(portrait.scene, portrait.camera);
+      // toBlob snapshots the pixels now; restore the visible canvas before
+      // waiting for its asynchronous encoder, so portrait screens never stretch.
+      return new Promise<Blob>((resolve, reject) => {
         this.renderer.domElement.toBlob(
           (blob) =>
             blob ? resolve(blob) : reject(new Error("Photo encoding failed")),
@@ -1003,8 +997,8 @@ export class World {
       this.renderer.setRenderTarget(oldTarget);
       this.renderer.setPixelRatio(ratio);
       this.renderer.setSize(oldSize.x, oldSize.y, false);
-      this.photoFraming = false;
-      this.compose(true);
+      portrait.dispose();
+      this.renderer.shadowMap.needsUpdate=true;
       this.renderer.render(this.scene, this.camera);
     }
   }

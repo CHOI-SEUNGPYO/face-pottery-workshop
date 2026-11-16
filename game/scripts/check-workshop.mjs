@@ -102,11 +102,11 @@ async function welcomeDisclosure(page,viewport){
    const a=boxes[i],r=a.rect,s=b.rect;
    if(Math.min(r.right,s.right)-Math.max(r.left,s.left)>2&&Math.min(r.bottom,s.bottom)-Math.max(r.top,s.top)>2)errors.push(`${a.selector} overlaps ${b.selector}`);
   }
-  for(const selector of ['.ai-notice','[data-action="new"]','.welcome-foot a','.welcome-foot button']){
+  for(const selector of ['.welcome-artifact','.welcome-purpose','.welcome-path','.ai-notice','[data-action="new"]','.welcome-foot a','.welcome-foot button']){
    const el=document.querySelector(selector),r=el.getBoundingClientRect();
    if(!el.getClientRects().length||r.bottom>innerHeight+1||r.right>innerWidth+1)errors.push(`${selector} hidden or clipped`);
    const hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);
-   if(selector!=='.ai-notice'&&!el.contains(hit))errors.push(`${selector} obstructed`);
+   if(el.matches('button,a')&&!el.contains(hit))errors.push(`${selector} obstructed`);
   }
   return errors;
  });
@@ -221,6 +221,25 @@ try{
   }else await page.locator('[data-action="next"]').click();
   await page.locator('[data-action="next"]').click();await layout(page,'excavation',width);
   console.log(`PASS: ${width} firing phases and pause/resume.`);
+  assert.equal(await page.locator('.story-dock').getAttribute('aria-label'),'발굴 이야기');
+  await page.locator('.story-teaser').click();
+  assert.match(await page.locator('.story-heading').textContent(),/발굴 이야기/);
+  assert.match(await page.locator('.story-photo img').getAttribute('src'),/sowol-pit-2019/);
+  for(const text of ['목간','나뭇가지 다발','자귀','고상건물지','응급보존처리','발굴조사보고서','상상 체험'])assert.ok((await page.locator('.story-copy').textContent()).includes(text),text);
+  for(const image of await page.locator('.story-inline-photo img').all()){
+    await image.scrollIntoViewIfNeeded();
+    await page.waitForFunction(el=>el.complete&&el.naturalWidth>0,await image.elementHandle(),{timeout:15000});
+  }
+  assert.equal(await page.locator('.story-inline-photo img').count(),3);
+  assert.equal(await page.locator('.story-copy a[href*="MONO12025000009113"]').count(),1);
+  if(width===1366){
+    for(const viewport of [{width:1366,height:768},{width:390,height:696},{width:320,height:568},{width:740,height:360},{width:768,height:1024}]){
+      await page.setViewportSize(viewport);await storyLayout(page);
+      if(viewport.width===1366||viewport.width===390){await page.locator('.photo-picker button').first().click();await page.locator('.story-copy').evaluate(el=>el.scrollTop=0);await page.screenshot({path:`asset/review/excavation-story-${viewport.width}.png`});}
+    }
+    await page.setViewportSize({width:1366,height:768});
+  }
+  await page.locator('[data-action="close"]').click();
   if(width===1366){for(const viewport of [{width:740,height:360},{width:390,height:844},{width:390,height:696},{width:320,height:568},{width:1024,height:768},{width:768,height:1024}]){await page.setViewportSize(viewport);await layout(page,'excavation',viewport.width);}await page.setViewportSize({width:1366,height:768});}
   // Let the player inspect the find before explicitly leaving the trench.
   for(let i=0;i<12&&await page.locator('body').getAttribute('data-stage')==='excavation';i++){await page.locator('[data-action="assist"]').click();if(await page.locator('[data-action="next"]').isEnabled())break;}

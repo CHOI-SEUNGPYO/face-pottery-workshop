@@ -123,6 +123,7 @@ body dialog:has(.museum-album,.museum-credits,.museum-ending) .modal-close{right
 .artifact-label>small{font-size:11px;line-height:1.5;color:#796348}
 .artifact-label h3{font-size:22px;line-height:1.4;margin:6px 0 0;word-break:keep-all;overflow-wrap:anywhere}
 .artifact-label .artifact-hanja{font-size:14px;letter-spacing:.06em;margin:3px 0 12px;color:#796348}
+.story-section h3{font-size:17px;line-height:1.5;margin:10px 0 6px;word-break:keep-all}
 .artifact-label p{font-size:13px;line-height:1.8;margin:8px 0}
 .artifact-label dl{display:grid;grid-template-columns:48px 1fr;gap:9px 12px;margin:16px 0;font-size:12px;line-height:1.7}
 .artifact-label dt{font-weight:700;color:#796348}.artifact-label dd{margin:0}

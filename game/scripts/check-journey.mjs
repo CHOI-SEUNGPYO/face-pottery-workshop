@@ -217,8 +217,34 @@ try{
    assert.equal(await page.getAttribute('body','data-stage'),'ending');
    assert.equal(await page.locator('.photo-editor').count(),0,'finishing never requires a photo');
    await page.locator('[data-action="ending-credits"]').click();await checkMuseumEnding(page);
+   await page.evaluate(async()=>{
+    const {Box3}=await import('/node_modules/three/build/three.module.js');
+    const w=window.togi.world,render=w.renderer.render.bind(w.renderer);
+    window.__beforePhoto={camera:w.camera.matrixWorld.toArray(),position:w.pottery.root.position.toArray(),rotation:w.pottery.root.rotation.toArray()};
+    w.renderer.render=(scene,camera)=>{
+      if(scene!==w.scene){
+        const own=scene.getObjectByName('Player artwork'),box=new Box3().setFromObject(own);
+        const center=box.getCenter(w.camera.position.clone()).project(camera);
+        window.__capturedPhoto={name:scene.name,reference:!!scene.getObjectByName('AI example made with game tools'),center:center.toArray(),rotation:own.rotation.toArray(),vertices:Array.from(own.children.find(m=>m.geometry===w.pottery.body.geometry).geometry.attributes.position.array)};
+      }
+      return render(scene,camera);
+    };
+   });
    await page.locator('[data-action="photo"]').click();
+   await page.locator('.photo-editor canvas').waitFor();
+   await page.waitForFunction(()=>{
+    const canvas=document.querySelector('.photo-editor canvas');
+    return canvas?.getContext('2d').getImageData(960,540,1,1).data[3]===255;
+   });
+   const photo=await page.evaluate(()=>({capture:window.__capturedPhoto,before:window.__beforePhoto,after:{camera:window.togi.world.camera.matrixWorld.toArray(),position:window.togi.world.pottery.root.position.toArray(),rotation:window.togi.world.pottery.root.rotation.toArray()},vertices:Array.from(window.togi.world.pottery.body.geometry.attributes.position.array)}));
+   assert.equal(photo.capture.reference,false,'reference artwork is excluded from photography');
+   assert.equal(photo.capture.name,'Player artwork portrait');
+   assert.ok(Math.abs(photo.capture.center[0])<.01&&Math.abs(photo.capture.center[1])<.1,'own work is centered with disclosure space');
+   assert.deepEqual(photo.capture.vertices,photo.vertices,'photography preserves the actual sculpted shape');
+   assert.ok(photo.capture.rotation.slice(0,3).every((angle,i)=>Math.abs(angle-photo.before.rotation[i])<1e-10),'photography preserves the chosen face');
+   assert.deepEqual(photo.after,photo.before,'photography does not move the gallery or artwork');
    await page.evaluate(()=>document.fonts.ready);
+   if(viewport.width===390)await page.screenshot({path:'asset/review/own-work-photo-mobile.png'});
    for(const name of ['경산이','독이','압이'])await page.locator(`[data-sticker="${name}"]`).click();
    assert.match(await page.locator('.photo-editor .eyebrow').textContent(),/AI\(인공지능\) 생성·편집 콘텐츠 포함/);
    await assertPhotoDisclosure(page);
