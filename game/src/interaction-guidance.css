@@ -41,8 +41,6 @@ body #hud .tool.refine-nudge{animation:refine-beacon 1.1s ease-in-out 3}
 @media(prefers-reduced-motion:reduce){.turn-demonstration{display:none}#opening-outline[data-state="finished"]{animation:none}}
 .reduced-motion .turn-demonstration{display:none}
 .reduced-motion #opening-outline[data-state="finished"]{animation:none}
-.reference-choice{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;min-height:44px;font-size:12px;cursor:pointer}
-.reference-choice input{width:22px;height:22px;accent-color:#8e683b}
 body #hud .gallery-disclosure{font-size:11px;line-height:1.45;color:#725239;margin:8px 0 0;padding-top:7px;border-top:1px solid #cdbb9a70}
 .gallery-disclosure small{display:block;font-size:10px;margin-top:2px}
-@media(max-width:600px) and (orientation:portrait){body #hud .gallery-disclosure{font-size:10px;margin-top:5px;padding-top:4px}.gallery-disclosure small{font-size:9px;margin-top:1px}.reference-choice{justify-content:center}}
+@media(max-width:600px) and (orientation:portrait){body #hud .gallery-disclosure{font-size:10px;margin-top:5px;padding-top:4px}.gallery-disclosure small{font-size:9px;margin-top:1px}}

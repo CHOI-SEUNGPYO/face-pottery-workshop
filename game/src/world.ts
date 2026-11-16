@@ -5,7 +5,7 @@ import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import {MeshBVH,acceleratedRaycast} from 'three-mesh-bvh';
 import { asset, characterImage } from "./assets";
 import { PotteryView } from "./pottery-view";
-import {ArtAssets} from './art-assets';
+import {ArtAssets,artGroups,type ArtGroup} from './art-assets';
 import {createArtifactExample} from './artifact-example';
 import { StrokePreview } from "./stroke-preview";
 import { SoilTerrain, migrateSoilMask } from "./soil";
@@ -38,6 +38,7 @@ const stageYaw: Record<SceneId, number> = {
   compare: -12,
   ending: -16,
 };
+const artGroupFor=(stage:SceneId):ArtGroup=>['firing','excavation','assembly'].includes(stage)?'outdoor':['compare','ending'].includes(stage)?'gallery':'studio';
 
 // The furniture never animates. One mesh per material avoids submitting every
 // leaf, plank and vase separately, without changing their shapes or materials.
@@ -88,6 +89,8 @@ export class World {
   pottery = new PotteryView();
   workshop = new T.Group();
   private art = new ArtAssets();
+  private readyGroups=new Set<ArtGroup>();
+  private groupJobs=new Map<ArtGroup,Promise<void>>();
   private studioArchitecture = new T.Group();
   private galleryArchitecture = new T.Group();
   private walls:T.Object3D[]=[];
@@ -105,7 +108,6 @@ export class World {
   private museumRoom=new T.Group();
   private referenceArtifact=new T.Group();
   private gameExample:PotteryView|null=null;
-  referenceExample=true;
   selectedArtifact:'own'|'reference'='own';
   private site=new T.Group();
   private digLevel=.8;
@@ -227,93 +229,109 @@ export class World {
     this.animate();
   }
   async load() {
+    await this.prepareScene('welcome');
+    this.update();this.setStage('welcome',true);this.resize();
+  }
+  readyFor(stage:SceneId){return this.readyGroups.has(artGroupFor(stage));}
+  prepareScene(stage:SceneId):Promise<void>{
+    const group=artGroupFor(stage);
+    if(this.readyGroups.has(group))return Promise.resolve();
+    const existing=this.groupJobs.get(group);if(existing)return existing;
+    const job=this.loadGroup(group).then(()=>{this.readyGroups.add(group);}).catch(error=>{this.groupJobs.delete(group);throw error;});
+    this.groupJobs.set(group,job);return job;
+  }
+  private async loadGroup(group:ArtGroup) {
     const loader = new GLTFLoader();
-    await this.art.load(this.renderer);
-    this.pottery.setSurface(this.art.texture('grayware'));
+    const [,stand]=await Promise.all([this.art.load(this.renderer,group),group==='studio'?loader.loadAsync(asset('models/display-stand.glb')):null]);
+    if(group==='studio')this.pottery.setSurface(this.art.texture('grayware'));
     setEnvironmentMaterials(this.art.texture('earth'),this.art.texture('aged-oak'));
-    for(const [name,root] of this.art.models){
+    for(const name of artGroups[group].models){
+      // Let the loading indicator and existing stage paint between large batches.
+      await new Promise(resolve=>setTimeout(resolve,0));
+      const root=this.art.model(name);
       if(name==='studio-shell'||name==='gallery-shell')this.walls.push(...batchWithParts(root,'wall'));
       else if(name==='studio-furniture'||name==='gallery-fixtures')this.wallFixtures.push(...batchWithParts(root,'wallFixture'));
       else if(name==='courtyard')this.forestSectors.push(...batchWithParts(root,'forestSector'));
       else if(name!=='kiln-vault')batchStatic(root);
     }
-    for(const name of ['Cutaway_shell','Permanent_half']){
-      const part=this.art.model('kiln-vault').getObjectByName(name);
-      if(part)batchStatic(part);
+    if(group==='outdoor'){
+      for(const name of ['Cutaway_shell','Permanent_half']){
+        const part=this.art.model('kiln-vault').getObjectByName(name);
+        if(part)batchStatic(part);
+      }
+      const siru=this.art.model('siru'),siruBounds=new T.Box3().setFromObject(siru);
+      // The detailed siru is static. Index it once instead of testing every
+      // triangle for every brush sample, including the still-buried surface.
+      siru.traverse(o=>{if(o instanceof T.Mesh){o.geometry.boundsTree=new MeshBVH(o.geometry);o.raycast=acceleratedRaycast;}});
+      siru.position.y-=siruBounds.min.y;this.siruHeight=siruBounds.max.y-siruBounds.min.y;
+      this.siru.add(siru);
+      this.fieldProps.add(this.art.model('field-tools'));this.site.add(this.fieldProps);
+      this.courtyard.add(this.art.model('courtyard'));
+      this.assemblyBench.add(this.art.model('conservation-bench'));
+      this.firingView.applyArt(this.art.model('kiln-vault'),this.art.model('kiln-dressing'));
+      const firingGarden=this.art.model('courtyard').clone();
+      firingGarden.traverse(o=>{if(o.userData.forestSector)this.forestSectors.push(o);});
+      this.firingView.group.add(firingGarden);
+      this.terrain.setSurface(this.art.texture('earth'));
+      this.earth.material.map=this.art.texture('earth');this.earth.material.color.set(0xb7a58d);
+      const groundUV=this.earth.geometry.getAttribute('uv');for(let i=0;i<groundUV.count;i++)groundUV.setXY(i,groundUV.getX(i)*2,groundUV.getY(i)*2);
     }
-    const siru=this.art.model('siru'),siruBounds=new T.Box3().setFromObject(siru);
-    // The detailed siru is static. Index it once instead of testing every
-    // triangle for every brush sample, including the still-buried surface.
-    siru.traverse(o=>{if(o instanceof T.Mesh){o.geometry.boundsTree=new MeshBVH(o.geometry);o.raycast=acceleratedRaycast;}});
-    siru.position.y-=siruBounds.min.y;this.siruHeight=siruBounds.max.y-siruBounds.min.y;
-    this.siru.add(siru);
-    const stand=await loader.loadAsync(asset('models/display-stand.glb'));
-    batchStatic(stand.scene);this.stand.add(stand.scene);
-    this.studioArchitecture.add(this.art.model('studio-shell'));
-    this.workshop.add(this.studioArchitecture,this.art.model('studio-furniture'),this.art.model('craft-bench'),this.art.model('craft-tools'));
-    this.displayPots.clear();this.displayPots.add(this.art.model('studio-collection'));
-    this.galleryArchitecture.add(this.art.model('gallery-shell'));
-    this.galleryPots.add(this.art.model('gallery-collection'));
-    const galleryDetails=museumRoom();
-    galleryDetails.traverse(o=>{if(o.userData.wallFixture)this.wallFixtures.push(o);});
-    this.museumRoom.add(this.galleryArchitecture,this.art.model('gallery-fixtures'),this.galleryPots,galleryDetails);
-    this.fieldProps.add(this.art.model('field-tools'));this.site.add(this.fieldProps);
-    this.courtyard.add(this.art.model('courtyard'));
-    this.assemblyBench.add(this.art.model('conservation-bench'));
-    this.firingView.applyArt(this.art.model('kiln-vault'),this.art.model('kiln-dressing'));
-    const firingGarden=this.art.model('courtyard').clone();
-    firingGarden.traverse(o=>{if(o.userData.forestSector)this.forestSectors.push(o);});
-    this.firingView.group.add(firingGarden);
-    this.terrain.setSurface(this.art.texture('earth'));
-    this.earth.material.map=this.art.texture('earth');this.earth.material.color.set(0xb7a58d);
-    const groundUV=this.earth.geometry.getAttribute('uv');for(let i=0;i<groundUV.count;i++)groundUV.setXY(i,groundUV.getX(i)*2,groundUV.getY(i)*2);
-    this.referenceArtifact.name='Photo informed three face artifact';
-    this.referenceArtifact.add(this.art.model('face-artifact'));
-    this.referenceArtifact.position.set(.9,0,0);
-    for(const entry of museum.exhibits){
-      try{
-        const gltf=await loader.loadAsync(museumAsset(entry.file));
-        const box=new T.Box3().setFromObject(gltf.scene),size=box.getSize(new T.Vector3());
-        if(size.y<.001||!Number.isFinite(size.y))throw Error('Invalid exhibit bounds');
-        const holder=new T.Group();
-        gltf.scene.position.sub(new T.Vector3((box.min.x+box.max.x)/2,box.min.y,(box.min.z+box.max.z)/2));
-        holder.add(gltf.scene);holder.scale.setScalar(entry.height/size.y);
-        holder.position.set(...entry.position);holder.rotation.y=T.MathUtils.degToRad(entry.rotation);
-        holder.userData.storyStage=entry.stage;holder.name=entry.name;this.exhibits.add(holder);
-      }catch{console.warn('전시 모델을 불러오지 못했어요:',entry.name);}
+    if(group==='gallery'){
+      this.galleryArchitecture.add(this.art.model('gallery-shell'));
+      this.galleryPots.add(this.art.model('gallery-collection'));
+      const galleryDetails=museumRoom();
+      galleryDetails.traverse(o=>{if(o.userData.wallFixture)this.wallFixtures.push(o);});
+      this.museumRoom.add(this.galleryArchitecture,this.art.model('gallery-fixtures'),this.galleryPots,galleryDetails);
+      this.referenceArtifact.name='AI example made with game tools';
+      this.referenceArtifact.position.set(.9,0,0);
     }
-    this.displayPots.visible=museum.exhibits.length===0;
-    this.renderer.domElement.addEventListener('click',event=>{
-      if(this.paused||this.firingProgress!==null)return;
-      this.scene.updateMatrixWorld(true);
-      const hits=this.pointer(event.clientX,event.clientY).intersectObjects([this.pottery.body,...this.exhibits.children],true);
-      let object:T.Object3D|undefined=hits[0]?.object;
-      while(object&&object.parent!==this.exhibits)object=object.parent??undefined;
-      if(object?.userData.storyStage)this.onExhibit?.(object.userData.storyStage as SceneId);
-    });
-    await Promise.all(
-      ["압이", "독이", "경산이"].map(async (name) => {
-        const texture = await new T.TextureLoader().loadAsync(
-          characterImage(name),
-        );
-        texture.colorSpace = T.SRGBColorSpace;
-        const sprite = new T.Sprite(
-          new T.SpriteMaterial({
-            map: texture,
-            transparent: true,
-            toneMapped: false,
-            depthWrite: false,
-          }),
-        );
-        sprite.scale.set(0.43, 0.47, 1);
-        sprite.center.set(0.5, 0);
-        this.sprites.set(name, sprite);
-        this.scene.add(sprite);
-      }),
-    );
-    this.update();
-    this.setStage("welcome", true);
-    this.resize();
+    if(group==='studio'){
+      batchStatic(stand!.scene);this.stand.add(stand!.scene);
+      this.studioArchitecture.add(this.art.model('studio-shell'));
+      this.workshop.add(this.studioArchitecture,this.art.model('studio-furniture'),this.art.model('craft-bench'),this.art.model('craft-tools'));
+      this.displayPots.clear();this.displayPots.add(this.art.model('studio-collection'));
+      for(const entry of museum.exhibits){
+        try{
+          const gltf=await loader.loadAsync(museumAsset(entry.file));
+          const box=new T.Box3().setFromObject(gltf.scene),size=box.getSize(new T.Vector3());
+          if(size.y<.001||!Number.isFinite(size.y))throw Error('Invalid exhibit bounds');
+          const holder=new T.Group();
+          gltf.scene.position.sub(new T.Vector3((box.min.x+box.max.x)/2,box.min.y,(box.min.z+box.max.z)/2));
+          holder.add(gltf.scene);holder.scale.setScalar(entry.height/size.y);
+          holder.position.set(...entry.position);holder.rotation.y=T.MathUtils.degToRad(entry.rotation);
+          holder.userData.storyStage=entry.stage;holder.name=entry.name;this.exhibits.add(holder);
+        }catch{console.warn('전시 모델을 불러오지 못했어요:',entry.name);}
+      }
+      this.displayPots.visible=museum.exhibits.length===0;
+      this.renderer.domElement.addEventListener('click',event=>{
+        if(this.paused||this.firingProgress!==null)return;
+        this.scene.updateMatrixWorld(true);
+        const hits=this.pointer(event.clientX,event.clientY).intersectObjects([this.pottery.body,...this.exhibits.children],true);
+        let object:T.Object3D|undefined=hits[0]?.object;
+        while(object&&object.parent!==this.exhibits)object=object.parent??undefined;
+        if(object?.userData.storyStage)this.onExhibit?.(object.userData.storyStage as SceneId);
+      });
+      await Promise.all(
+        ["압이", "독이", "경산이"].map(async (name) => {
+          const texture = await new T.TextureLoader().loadAsync(
+            characterImage(name),
+          );
+          texture.colorSpace = T.SRGBColorSpace;
+          const sprite = new T.Sprite(
+            new T.SpriteMaterial({
+              map: texture,
+              transparent: true,
+              toneMapped: false,
+              depthWrite: false,
+            }),
+          );
+          sprite.scale.set(0.43, 0.47, 1);
+          sprite.center.set(0.5, 0);
+          this.sprites.set(name, sprite);
+          this.scene.add(sprite);
+        }),
+      );
+    }
   }
   refresh(shadows = false) {
     this.dirty = true;
@@ -366,7 +384,7 @@ export class World {
     this.terrain.cursor.visible = false;
     const s = this.getSave();
     const outdoors=stage==='excavation'||stage==='assembly',museumStage=stage==='compare'||stage==='ending';
-    if(museumStage)this.showReferenceExample(this.referenceExample);
+    if(museumStage)this.showReferenceExample();
     this.workshop.visible = !outdoors&&!museumStage&&stage!=='firing';
     this.exhibits.visible=this.workshop.visible;
     this.displayPots.visible=this.workshop.visible&&this.exhibits.children.length===0;
@@ -517,21 +535,18 @@ export class World {
     this.tilt(dy*.3);
   }
   get inGallery(){return this.stage==='compare'||this.stage==='ending';}
-  showReferenceExample(enabled:boolean){
-    this.referenceExample=enabled;
-    if(enabled&&!this.gameExample){
+  private showReferenceExample(){
+    if(!this.gameExample){
       this.gameExample=new PotteryView();this.gameExample.update(createArtifactExample());
       this.gameExample.appearance(1);this.gameExample.root.name='AI example made with game tools';
       this.referenceArtifact.add(this.gameExample.root);
     }
-    for(const child of this.referenceArtifact.children)child.visible=enabled?child===this.gameExample?.root:child!==this.gameExample?.root;
     this.refresh(true);
   }
   artifactAt(x:number,y:number):'own'|'reference'|null{
     if(!this.inGallery)return null;
     this.scene.updateMatrixWorld(true);
-    // Raycaster also visits invisible objects. Only the exhibit currently on
-    // display can capture a drag when swapping between the two examples.
+    // Raycaster also visits invisible objects; only displayed exhibits respond.
     const visibleExhibits=this.referenceArtifact.children.filter(o=>o.visible);
     const hits=this.pointer(x,y).intersectObjects([this.pottery.body,...visibleExhibits],true);
     let object=hits[0]?.object;

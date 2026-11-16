@@ -81,9 +81,7 @@ try{
     console.log(stage,stats);
     if(stage==='body')assert.equal(await page.evaluate(()=>window.togi.world.pottery.outline.visible),true,'editable body has a subtle silhouette');
     if(stage==='compare'){
-      // Keep validating the original photo-informed asset as well as the
-      // default editable-game example covered by the render budget above.
-      await page.evaluate(()=>window.togi.world.showReferenceExample(false));
+      assert.equal(await page.evaluate(()=>window.togi.world.referenceArtifact.children.length),1,'only the game-authored example is displayed');
       const artifact=await page.evaluate(()=>{
         const w=window.togi.world,b=w.pottery.body.geometry.boundingBox.clone().makeEmpty();let vertices=0;
         w.referenceArtifact.traverseVisible(o=>{if(o.isMesh){o.geometry.computeBoundingBox();b.union(o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld));vertices+=o.geometry.attributes.position.count;}});
@@ -94,19 +92,15 @@ try{
       assert.equal(artifact.photo,false,'the static photograph no longer replaces the 3D exhibit');
       assert.equal(artifact.outline,false,'editing outline is absent in the gallery and exported photos');
       assert.equal(artifact.plinths,true,'permanent exhibit supports are visible');
-      assert.equal(await page.evaluate(()=>{
-        const materials=new Set();window.togi.world.referenceArtifact.traverseVisible(o=>{if(o.isMesh)for(const m of Array.isArray(o.material)?o.material:[o.material])if(m.userData.artifactSurface==='exterior')materials.add(m);});
-        return materials.size>0&&[...materials].every(m=>m.map&&m.normalMap&&!m.bumpMap&&m.map.image.width===1024);
-      }),true,'reference exhibit preserves its embedded colour and relief maps');
+      assert.ok((await page.locator('.gallery-disclosure').textContent()).includes('AI가 게임 도구로 만든'),'the example is visibly labelled as AI-authored');
       for(let face=0;face<3;face++){
         await page.evaluate(angle=>{window.togi.world.referenceArtifact.rotation.y=angle;window.togi.world.refresh(true);},-face*Math.PI*2/3);
         if(review){await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));await page.screenshot({path:`asset/review/art-reference-face-${face+1}.png`});}
       }
       await page.evaluate(()=>{window.togi.world.referenceArtifact.rotation.y=0;window.togi.world.refresh(true);});
       if(artifactReview){
-        await page.screenshot({path:'asset/review/artifact-v4-gallery.png'});
-        // Render the loaded game asset with neutral lighting at matching angles.
-        // This also checks that the GLB is self-contained outside the game room.
+        await page.screenshot({path:'asset/review/ai-game-example-gallery.png'});
+        // Render the same game-authored example at each of its three faces.
         const plates=await page.evaluate(()=>{
           const w=window.togi.world,scene=new w.scene.constructor(),artifact=w.referenceArtifact.clone(true);
           artifact.position.set(0,0,0);scene.add(artifact);
@@ -122,7 +116,7 @@ try{
           }
           artifact.rotation.y=0;camera.position.set(1.4,-3.5,.8);camera.lookAt(0,.75,0);camera.updateMatrixWorld();renderer.render(scene,camera);out.push(renderer.domElement.toDataURL('image/png'));renderer.dispose();return out;
         });
-        for(let i=0;i<plates.length;i++)await writeFile(`asset/review/artifact-v4-${i===3?'underside':`face-${i+1}`}.png`,Buffer.from(plates[i].split(',')[1],'base64'));
+        for(let i=0;i<plates.length;i++)await writeFile(`asset/review/ai-game-example-${i===3?'underside':`face-${i+1}`}.png`,Buffer.from(plates[i].split(',')[1],'base64'));
       }
     }
     if(stage==='excavation'){

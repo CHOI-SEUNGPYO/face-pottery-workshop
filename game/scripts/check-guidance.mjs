@@ -81,20 +81,10 @@ try{
   assert.ok(await page.locator('.gallery-disclosure').textContent().then(t=>t.includes('AI가 게임 도구로 만든')));
   const own=await page.evaluate(()=>JSON.stringify(window.togi.save.document));assert.equal(own,artwork);
   await page.screenshot({path:'asset/review/ai-game-example-mobile.png'});
-  await page.locator('#reference-example').uncheck();await settle();
-  assert.equal(await page.evaluate(()=>window.togi.world.referenceExample),false);
-  await page.locator('#reference-example').check();await settle();
-  assert.equal(await page.evaluate(()=>JSON.stringify(window.togi.save.document)),artwork,'reference switching never changes the player artwork');
-  const hiddenHits=await page.evaluate(()=>{
-    const w=window.togi.world,restore=[];let calls=0;
-    for(const child of w.referenceArtifact.children.filter(c=>!c.visible))child.traverse(o=>{
-      if(o.isMesh){const old=o.raycast;restore.push(()=>o.raycast=old);o.raycast=()=>calls++;}
-    });
-    const p=w.camera.position.clone().set(.9,.9,0).project(w.camera);
-    w.artifactAt((p.x+1)*innerWidth/2,(1-p.y)*innerHeight/2);
-    restore.forEach(f=>f());return calls;
-  });
-  assert.equal(hiddenHits,0,'hidden reference model cannot capture a drag');
+  assert.equal(await page.locator('#reference-example').count(),0,'gallery offers only the game-authored example');
+  assert.equal(await page.evaluate(()=>window.togi.world.referenceArtifact.children.length),1);
+  await page.evaluate(()=>window.togi.world.rotateArtifact('reference',100));await settle();
+  assert.equal(await page.evaluate(()=>JSON.stringify(window.togi.save.document)),artwork,'turning the AI example never changes the player artwork');
   await page.setViewportSize({width:1366,height:768});await settle();
   await page.screenshot({path:'asset/review/ai-game-example-desktop.png'});
   await page.evaluate(()=>{window.togi.world.reduced=true;window.togi.world.startFaceTour();});

@@ -246,7 +246,7 @@ function updateUI() {
     fired = save.firedRevision === save.document.revision;
   const drawingLabel=tool==='carve'?(carveMode!=='line'?'눈·입 · 구멍':'눈·입 · 선'):toolLabels[tool];
   const drawingInstruction=carveMode==='round'?'끌어서 눈·입 크기를 정하고, 다듬기로 마무리해요.':carveMode==='opening'?'모양을 그려 닫고, 다듬기로 테두리를 정리해요.':'선을 그어 눈썹이나 입을 새겨요.';
-  const instruction=stage==='faces'?(tool==='carve'?drawingInstruction:tool==='refine'?'구멍 안쪽이나 테두리를 문질러 매끈하게 다듬어요.':toolHelp[tool].instruction):stage==='compare'?`내 토기와 ${world.referenceExample?'AI 재현 예시':'참고 모형'}를 각각 잡고 돌려 보세요.`:c.instruction;
+  const instruction=stage==='faces'?(tool==='carve'?drawingInstruction:tool==='refine'?'구멍 안쪽이나 테두리를 문질러 매끈하게 다듬어요.':toolHelp[tool].instruction):stage==='compare'?'내 토기와 AI 재현 예시를 각각 잡고 돌려 보세요.':c.instruction;
   const briefInstruction=stage==='faces'?instruction:stage==='firing'?'흙을 굽는 가마 안에서 변화를 살펴봐요.':stage==='ending'?'각 토기를 돌려 보고 사진으로 남겨요.':instruction;
   document.body.dataset.stage = stage;
   host.dataset.tool = tool;
@@ -296,7 +296,6 @@ function updateUI() {
     extras = `<div class="find-event"><strong>${save.assembledRevision===save.document.revision?'함께 놓았어요!':'흙 속에서 만난 두 유물'}</strong><p>토기를 끌거나 아래 버튼을 눌러 시루 위에 얹어 보세요.</p>${button("place", "시루에 얹기", "place", "secondary",save.assembledRevision===save.document.revision)}</div>`;
   if (stage === "ending")
     extras = `<div class="ending-links">${button("ending-credits", "유물 사진·마무리", "story", "secondary")}${button("new", "새 작품 만들기", "plus", "secondary")}</div>`;
-  if(stage==='compare')extras=`<label class="reference-choice">오른쪽 전시<input type="checkbox" id="reference-example" ${world.referenceExample?'checked':''}><span>게임 도구 재현 예시</span></label>`;
   hud.innerHTML =
     header +
     `<div class="work-area" aria-hidden="true"></div><div class="scene-info"><section class="scene-heading"><p class="eyebrow">${c.eyebrow}</p><h1>${c.title}</h1><p class="scene-instruction"><span class="instruction-full">${instruction}</span><span class="instruction-brief">${briefInstruction}</span></p></section>
@@ -311,7 +310,7 @@ function updateUI() {
     ${stage==='faces'?actionbar(drawingLabel,`<div class="tools" role="toolbar" aria-label="작업 도구">${c.tools.map((t) => `<button data-tool="${t}" class="tool ${tool === t ? "selected" : ""}" aria-pressed="${tool === t}" aria-label="${toolLabels[t]}">${icon(t)}<span>${t==='refine'?'구멍 다듬기':toolLabels[t]}</span></button>`).join("")}</div>${toolGuide(tool,carveMode)}`,'drawing-actions'):''}
     ${button("next", primaryLabel, stage === "ending" ? "photo" : "next", "primary next-button")}</footer>`;
   arrangeHUD();
-  if(world.inGallery)hud.querySelector('.scene-heading')?.insertAdjacentHTML('beforeend',`<p class="gallery-disclosure">오른쪽 · ${world.referenceExample?EXAMPLE_LABEL:'AI가 사진을 참고해 만든 3D 모형'}<small>실제 유물의 형태·색과 다를 수 있어요.</small></p>`);
+  if(world.inGallery)hud.querySelector('.scene-heading')?.insertAdjacentHTML('beforeend',`<p class="gallery-disclosure">오른쪽 · ${EXAMPLE_LABEL}<small>실제 유물의 형태·색과 다를 수 있어요.</small></p>`);
   if(stage==='faces'){
     hud.querySelector('.scene-heading')?.insertAdjacentHTML('afterbegin',`<div class="face-aspects" role="img" aria-label="세 면에 얼굴을 만들 수 있어요">${[1,2,3].map(n=>`<span data-face="${n}"><svg viewBox="0 0 24 24"><path d="M6 5 Q12 1 18 5 L20 19 Q12 23 4 19 Z M8 10h1 M15 10h1 M9 16q3 2 6 0"/></svg><small>${n}</small></span>`).join('')}</div>`);
     hud.querySelector('[data-tool="refine"]')?.classList.toggle('refine-nudge',refineNudge);
@@ -388,7 +387,7 @@ function showStory(page=0,photoId=photoFor(stage).id,target:SceneId=stage) {
   const related=museum.photos.filter(p=>p.id===photo.id||(p.category??'other')===(photo.category??'other'));
   modal(`<div class="story-layout"><div class="story-photo"><img src="${museumAsset(photo.file)}" alt="${e(photo.alt)}"><p>${e(photo.caption)}</p><p>${e(photo.credit)}</p><div class="photo-picker">${related.map((p,i)=>`<button data-action="story-photo-${museum.photos.indexOf(p)}" aria-pressed="${photo.id===p.id}">사진 ${i+1}</button>`).join('')}</div></div><div class="story-copy"><p class="eyebrow">실제 유물에서 찾아보기</p><h2>${e(entry.title)}</h2><section><span class="fact-badge ${block.kind}">${factLabels[block.kind]}</span><p>${e(block.text)}</p></section><nav class="story-pages"><button data-action="story-previous" ${storyPage===0?'disabled':''}>이전 이야기</button><span>${storyPage+1} / ${pages.length}</span><button data-action="story-next" ${storyPage===pages.length-1?'disabled':''}>다음 이야기</button></nav><div class="credits-actions"><button data-action="collection" class="secondary">유물 사진첩 전체 보기</button>${photo.source?`<a href="${e(photo.source)}" target="_blank" rel="noopener noreferrer">자료 출처 보기 ↗</a>`:''}${museumHomeLink()}</div></div></div>`);
 }
-function go(next: SceneId) {
+async function go(next: SceneId) {
   cancelGesture();
   clearTimeout(toastTimer);
   toastElement.classList.remove('visible');
@@ -396,6 +395,14 @@ function go(next: SceneId) {
   fireTimer=0;
   audio.firing(0);
   fireStart = 0;
+  if(!world.readyFor(next)){
+    const wasTravelling=travelling,overlay=document.querySelector<HTMLElement>('#travel')!;
+    travelling=true;closeActions();overlay.hidden=false;
+    overlay.querySelector('h2')!.textContent=['compare','ending'].includes(next)?'전시실을 준비하고 있어요':'다음 장면을 준비하고 있어요';
+    try{await world.prepareScene(next);}
+    catch{toast('장면을 불러오지 못했어요. 연결을 확인하고 다시 눌러 주세요.');return;}
+    finally{if(!wasTravelling)overlay.hidden=true;travelling=wasTravelling;}
+  }
   stage = next;
   tool = next==='body'?'shape':next==='excavation'?'brush':next==='assembly'&&save.assembledRevision!==save.document.revision?'place':scenes[next].tools[0] ?? "rotate";
   audio.excavation = next === "excavation";
@@ -407,6 +414,10 @@ function go(next: SceneId) {
       el.animate([{opacity:0,transform:'translateY(7px)'},{opacity:1,transform:'translateY(0)'}],{duration:260,delay:i*25,easing:'ease-out'});
   }
   if(next==='faces'&&!faceTourShown){faceTourShown=true;world.startFaceTour();syncFaceGuidance();}
+  // Prepare the next environment while the player reviews or places their pot.
+  // Failed preloads are retried with visible feedback when entering that scene.
+  if(next==='inspect')void world.prepareScene('firing').catch(()=>{});
+  if(next==='assembly')void world.prepareScene('compare').catch(()=>{});
   if (next !== "welcome") void persist();
 }
 async function travelTo(next:SceneId,label:string){
@@ -414,7 +425,7 @@ async function travelTo(next:SceneId,label:string){
   const overlay=document.querySelector<HTMLElement>('#travel')!;
   overlay.querySelector('h2')!.textContent=label;overlay.hidden=false;
   await new Promise<void>(resolve=>{let elapsed=0,last=performance.now();const tick=(now:number)=>{if(!document.hidden)elapsed+=now-last;last=now;if(elapsed>=(world.reduced?450:1600))resolve();else requestAnimationFrame(tick);};requestAnimationFrame(tick);});
-  go(next);overlay.hidden=true;travelling=false;
+  await go(next);overlay.hidden=true;travelling=false;
 }
 function checkDiscovery(){
   if(stage!=='excavation'||digComplete||world.coverage().some(n=>n<.7))return;
@@ -703,9 +714,6 @@ document.addEventListener("click", async (e) => {
   }
 });
 document.addEventListener("change", (e) => {
-  if((e.target as HTMLElement).id==='reference-example'){
-    world.showReferenceExample((e.target as HTMLInputElement).checked);updateUI();return;
-  }
   if ((e.target as HTMLElement).id === "reduce-motion") {
     world.reduced = (e.target as HTMLInputElement).checked;
     world.stopFaceTour();
@@ -1414,7 +1422,7 @@ async function boot() {
     await new Promise(resolve=>setTimeout(resolve,Math.max(0,(world.reduced?250:900)-(performance.now()-loadingStarted))));
     loader.querySelector('p')!.textContent='작업실이 준비됐어요';
     await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
-    if(!world.reduced)await loader.animate([{opacity:1},{opacity:0}],{duration:280,delay:120,easing:'ease-out',fill:'forwards'}).finished;
+    if(!world.reduced)await loader.animate([{opacity:1},{opacity:0}],{duration:160,easing:'ease-out',fill:'forwards'}).finished;
     loader.remove();
     host.addEventListener("render-lost", () =>
       toast("화면을 다시 연결하고 있어요. 마지막 작업은 보관되어 있어요."),

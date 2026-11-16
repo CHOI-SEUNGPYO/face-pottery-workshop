@@ -13,7 +13,7 @@ assert.ok(viewports.length,'TOGI_JOURNEY_WIDTH must be all, 1366, 740 or 390');
 const server=await createServer({server:{host:'127.0.0.1',port:0,strictPort:false}});
 await server.listen();
 let browser;
-const settle=page=>page.waitForFunction(()=>!window.togi.world.transitioning);
+const settle=page=>page.waitForFunction(()=>!window.togi.world.transitioning&&document.querySelector('#travel')?.hidden);
 const go=async(page,stage)=>{console.log(`Journey ${page.viewportSize().width}: ${stage}`);await page.evaluate(s=>window.togi.go(s),stage);await settle(page);};
 async function drag(page,a,b){
  if(page.viewportSize().width>800){await page.mouse.move(a.x,a.y);await page.mouse.down();await page.mouse.move(b.x,b.y,{steps:20});await page.mouse.up();return;}
