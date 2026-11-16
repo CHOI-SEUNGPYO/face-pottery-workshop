@@ -6,6 +6,7 @@ import {MeshBVH,acceleratedRaycast} from 'three-mesh-bvh';
 import { asset, characterImage } from "./assets";
 import { PotteryView } from "./pottery-view";
 import {ArtAssets} from './art-assets';
+import {createArtifactExample} from './artifact-example';
 import { StrokePreview } from "./stroke-preview";
 import { SoilTerrain, migrateSoilMask } from "./soil";
 import { scenes } from "./content";
@@ -103,6 +104,8 @@ export class World {
   private exhibits=new T.Group();
   private museumRoom=new T.Group();
   private referenceArtifact=new T.Group();
+  private gameExample:PotteryView|null=null;
+  referenceExample=true;
   selectedArtifact:'own'|'reference'='own';
   private site=new T.Group();
   private digLevel=.8;
@@ -126,6 +129,7 @@ export class World {
   private goalPos = new T.Vector3();
   private goalTarget = new T.Vector3();
   private transition = 0;
+  private faceTour: {start:number;azimuth:number}|null=null;
   private observer: ResizeObserver;
   private frame = 0;
   private sprites = new Map<string, T.Sprite>();
@@ -326,9 +330,17 @@ export class World {
     this.refresh(true);
   }
   get transitioning() {
-    return this.transition > performance.now();
+    return this.transition > performance.now() || !!this.faceTour;
   }
+  get demonstratingFaces(){return !!this.faceTour;}
+  get faceAspect(){return ((Math.round((this.getSave().rotation*180/Math.PI-this.azimuth)/120)%3)+3)%3+1;}
+  startFaceTour(){
+    if(this.reduced||this.stage!=='faces')return;
+    this.faceTour={start:performance.now()+480,azimuth:this.azimuth};this.refresh();
+  }
+  stopFaceTour(){if(this.faceTour){this.faceTour=null;this.compose(true);this.refresh();}}
   resize() {
+    this.stopFaceTour();
     const w = this.host.clientWidth,
       h = this.host.clientHeight;
     // Cap fill rate on high-DPI displays; the exported photo keeps full resolution.
@@ -343,6 +355,7 @@ export class World {
     this.refresh();
   }
   setStage(stage: SceneId, instant = false) {
+    this.stopFaceTour();
     this.setFiringProgress(null);
     this.stage = stage;
     this.viewPreset = "stage";
@@ -352,6 +365,7 @@ export class World {
     this.terrain.cursor.visible = false;
     const s = this.getSave();
     const outdoors=stage==='excavation'||stage==='assembly',museumStage=stage==='compare'||stage==='ending';
+    if(museumStage)this.showReferenceExample(this.referenceExample);
     this.workshop.visible = !outdoors&&!museumStage&&stage!=='firing';
     this.exhibits.visible=this.workshop.visible;
     this.displayPots.visible=this.workshop.visible&&this.exhibits.children.length===0;
@@ -502,10 +516,23 @@ export class World {
     this.tilt(dy*.3);
   }
   get inGallery(){return this.stage==='compare'||this.stage==='ending';}
+  showReferenceExample(enabled:boolean){
+    this.referenceExample=enabled;
+    if(enabled&&!this.gameExample){
+      this.gameExample=new PotteryView();this.gameExample.update(createArtifactExample());
+      this.gameExample.appearance(1);this.gameExample.root.name='AI example made with game tools';
+      this.referenceArtifact.add(this.gameExample.root);
+    }
+    for(const child of this.referenceArtifact.children)child.visible=enabled?child===this.gameExample?.root:child!==this.gameExample?.root;
+    this.refresh(true);
+  }
   artifactAt(x:number,y:number):'own'|'reference'|null{
     if(!this.inGallery)return null;
     this.scene.updateMatrixWorld(true);
-    const hits=this.pointer(x,y).intersectObjects([this.pottery.body,this.referenceArtifact],true);
+    // Raycaster also visits invisible objects. Only the exhibit currently on
+    // display can capture a drag when swapping between the two examples.
+    const visibleExhibits=this.referenceArtifact.children.filter(o=>o.visible);
+    const hits=this.pointer(x,y).intersectObjects([this.pottery.body,...visibleExhibits],true);
     let object=hits[0]?.object;
     if(object===this.pottery.body)return 'own';
     while(object){if(object===this.referenceArtifact)return 'reference';object=object.parent!;}
@@ -581,7 +608,7 @@ export class World {
     // Once found, frame the two artifacts rather than the full excavation pit.
     if (this.stage === "excavation") bounds.expandByObject(this.soil);
     if(this.stage==='compare'||this.stage==='ending'){
-      bounds.expandByObject(this.referenceArtifact);
+      for(const exhibit of this.referenceArtifact.children)if(exhibit.visible)bounds.expandByObject(exhibit);
       bounds.expandByPoint(new T.Vector3(-1.46,-.50,-.65));
       bounds.expandByPoint(new T.Vector3(1.58,1.88,.65));
     }
@@ -865,6 +892,13 @@ export class World {
     this.frame = 0;
     const now = performance.now();
     if (this.paused || document.hidden) return;
+    if(this.faceTour&&now>=this.faceTour.start){
+      const t=Math.min(3,(now-this.faceTour.start)/1150),step=Math.floor(t),fraction=Math.min(1,(t-step)/.72);
+      const eased=fraction*fraction*(3-2*fraction);
+      this.azimuth=this.faceTour.azimuth-(step+eased)*120;
+      if(t===3){this.azimuth=this.faceTour.azimuth;this.faceTour=null;}
+      this.compose(true);this.dirty=true;
+    }
     if (this.transition > now) {
       this.camera.position.lerp(this.goalPos, 0.18);
       this.target.lerp(this.goalTarget, 0.18);
@@ -889,7 +923,7 @@ export class World {
           : 0;
     }
     const animated =
-      this.transition > now ||
+      !!this.faceTour || this.transition > now ||
       (!this.reduced &&
         this.reactionUntil > now &&
         ["welcome", "ending"].includes(this.stage));
@@ -937,6 +971,7 @@ export class World {
     cancelAnimationFrame(this.frame);
     this.observer.disconnect();
     this.pottery.dispose();
+    this.gameExample?.dispose();
     this.firingView.dispose();
     this.terrain.cursor.geometry.dispose();
     this.terrain.cursor.material.dispose();

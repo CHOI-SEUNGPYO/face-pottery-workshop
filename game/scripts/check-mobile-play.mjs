@@ -59,7 +59,7 @@ try{
     for(const point of points.slice(1))await touch.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{...point,id:1}]});
     await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
   };
-  const drag=(a,b,steps=24)=>path(Array.from({length:steps+1},(_,i)=>({x:a.x+(b.x-a.x)*i/steps,y:a.y+(b.y-a.y)*i/steps})));
+  const drag=(a,b,steps=12)=>path(Array.from({length:steps+1},(_,i)=>({x:a.x+(b.x-a.x)*i/steps,y:a.y+(b.y-a.y)*i/steps})));
   // Edge's CDP bridge swallows the first synthetic tap after a touch drag,
   // including on a plain button-only reproduction. Use normal button clicks;
   // shaping, drawing, brushing, placement and rotation remain native touch.
@@ -79,11 +79,12 @@ try{
   assert.notDeepEqual(await page.evaluate(()=>Array.from(window.togi.save.document.outerXYZ)),initial,'touch shaping changes the pot');
   await resize({width:320,height:568},'body');await resize(portrait,'body');
   await activate('[data-action="next"]');await audit('mouth');
-  const m=await page.locator('[data-form-handle="mouth-width"]').boundingBox();
-  await drag({x:m.x+m.width/2,y:m.y+m.height/2},{x:m.x+m.width/2+14,y:m.y+m.height/2});
+  const m=await page.locator('[data-form-range="mouth-width"]').boundingBox();
+  await drag({x:m.x+14,y:m.y+m.height/2},{x:m.x+36,y:m.y+m.height/2});
   await activate('[data-action="next"]');const pot=await audit('faces');
   const centre=(pot.left+pot.right)/2,eyeY=pot.top+(pot.bottom-pot.top)*.40;
   await page.touchscreen.tap(centre-30,eyeY);await page.touchscreen.tap(centre+30,eyeY);
+  await activate('[data-action="draw-opening"]');
   const mouthY=pot.top+(pot.bottom-pot.top)*.65;
   await path(Array.from({length:49},(_,i)=>({x:centre+24*Math.cos(i*Math.PI/24),y:mouthY+12*Math.sin(i*Math.PI/24)})));
   assert.equal(await page.evaluate(()=>window.togi.save.document.features.length),3,'touch taps and a closed contour create a face');
@@ -96,7 +97,9 @@ try{
   await page.waitForFunction(()=>document.querySelector('#firing-phase')?.textContent==='완성',null,{timeout:90000});
   await audit('firing');await activate('[data-action="next"]');await audit('excavation');
   for(let pass=0;pass<6&&await page.locator('[data-action="next"]').isDisabled();pass++)
-    for(const y of [280,310,340,370,400,430])await drag({x:92,y},{x:300,y},32);
+    // Soil fills the path between touch samples; dense synthetic moves just
+    // stall CI's software renderer without exercising another behavior.
+    for(const y of [280,310,340,370,400,430])await drag({x:92,y},{x:300,y},16);
   assert.ok(await page.locator('[data-action="next"]').isEnabled(),'finger brushing alone discovers both artifacts');
   await activate('[data-action="next"]');await audit('assembly');
   const poses=await page.evaluate(()=>{const w=window.togi.world,p=w.pottery.root.position;return{from:[p.x,p.y+.48,p.z],to:[0,w.assemblyHeight,0]};});

@@ -12,7 +12,8 @@ import { applyForm, createSoftDocument, forms, adjustMouth } from "./src/form.ts
 import { surfaceFrame, sampleSurfacePath } from "./src/surface-path.ts";
 import { openingGeometry } from "./src/openings.ts";
 import { placeOpening } from "./src/opening-placement.ts";
-import { finishStroke, strokeIntent } from "./src/stroke.ts";
+import { finishStroke, strokeIntent, roundOpening, closeFingerLoop } from "./src/stroke.ts";
+import { createArtifactExample } from "./src/artifact-example.ts";
 import { Vector3, Ray } from "three";
 import { SoilTerrain } from "./src/soil.ts";
 
@@ -48,8 +49,25 @@ for (const soft of [false, true]) {
       assert.deepEqual(d.outerXYZ.slice(0, 50 * COLS * 3), source.outerXYZ.slice(0, 50 * COLS * 3));
     }
   }
+  const widthOnly=cloneDoc(source);
+  (soft?adjustMouth:setMouth)(widthOnly,.13,source.mouth.neckHeight);
+  assert.equal(widthOnly.mouth.center[1],source.mouth.center[1],"opening width never lowers the top");
 }
 const edge = (x, y) => x <= 11 ? plane(x, y) : null;
+const fingerLoop=circle(0,28).slice(0,-2);
+assert.equal(strokeIntent(fingerLoop,true).closed,true,'finger loop accepts a small closing gap');
+assert.equal(strokeIntent(fingerLoop).closed,false,'mouse contours retain precise closure');
+assert.equal(strokeIntent(circle(0,28).slice(0,26),true).closed,false,'unfinished C is never filled');
+assert.equal(strokeIntent([{x:20,y:20},{x:23,y:22},{x:22,y:21}],true).tap,true,'finger tap tolerates jitter');
+const ellipse=roundOpening({x:40,y:30},{x:100,y:50},true);
+assert.equal(strokeIntent(ellipse,true).closed,true);
+assert.ok(ellipse.every(p=>p.x>=40&&p.x<=100&&p.y>=30&&p.y<=50),'drag size remains under user control');
+const withTail=[...circle(0,28),{x:29,y:2},{x:31,y:5}];
+assert.ok(closeFingerLoop(withTail).length<withTail.length,'lift-off tail is trimmed');
+const example=createArtifactExample();
+assert.ok(validateSave({...freshSave(),document:example}),'AI game example uses a normal editable document');
+assert.equal(example.features.length,18,'three complete faces plus three side openings');
+for(let side=0;side<3;side++)assert.equal(example.features.filter(f=>f.id.startsWith('example-'+side+'-')).length,6);
 const input = circle(2), original = structuredClone(input);
 const placed = placeOpening(input, edge, 0.001);
 assert.ok(placed.samples && placed.shifted, "slight overlap is translated");

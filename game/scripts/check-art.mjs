@@ -81,9 +81,12 @@ try{
     console.log(stage,stats);
     if(stage==='body')assert.equal(await page.evaluate(()=>window.togi.world.pottery.outline.visible),true,'editable body has a subtle silhouette');
     if(stage==='compare'){
+      // Keep validating the original photo-informed asset as well as the
+      // default editable-game example covered by the render budget above.
+      await page.evaluate(()=>window.togi.world.showReferenceExample(false));
       const artifact=await page.evaluate(()=>{
         const w=window.togi.world,b=w.pottery.body.geometry.boundingBox.clone().makeEmpty();let vertices=0;
-        w.referenceArtifact.traverse(o=>{if(o.isMesh){o.geometry.computeBoundingBox();b.union(o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld));vertices+=o.geometry.attributes.position.count;}});
+        w.referenceArtifact.traverseVisible(o=>{if(o.isMesh){o.geometry.computeBoundingBox();b.union(o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld));vertices+=o.geometry.attributes.position.count;}});
         return {depth:b.max.z-b.min.z,bottom:b.min.y,vertices,photo:!!w.scene.getObjectByName('Actual artifact photograph'),plinths:w.art.model('gallery-fixtures').visible,outline:w.pottery.outline.visible};
       });
       assert.ok(artifact.depth>.8&&artifact.vertices>10000,'reference exhibit has a curved three-dimensional body');
@@ -92,7 +95,7 @@ try{
       assert.equal(artifact.outline,false,'editing outline is absent in the gallery and exported photos');
       assert.equal(artifact.plinths,true,'permanent exhibit supports are visible');
       assert.equal(await page.evaluate(()=>{
-        const materials=new Set();window.togi.world.referenceArtifact.traverse(o=>{if(o.isMesh&&o.material.userData.artifactSurface==='exterior')materials.add(o.material);});
+        const materials=new Set();window.togi.world.referenceArtifact.traverseVisible(o=>{if(o.isMesh)for(const m of Array.isArray(o.material)?o.material:[o.material])if(m.userData.artifactSurface==='exterior')materials.add(m);});
         return materials.size>0&&[...materials].every(m=>m.map&&m.normalMap&&!m.bumpMap&&m.map.image.width===1024);
       }),true,'reference exhibit preserves its embedded colour and relief maps');
       for(let face=0;face<3;face++){

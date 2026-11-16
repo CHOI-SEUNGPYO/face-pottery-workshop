@@ -7,6 +7,7 @@ export interface StrokePoint {
 }
 export function strokeIntent(
   points: Pick<StrokePoint, "x" | "y">[],
+  touch = false,
 ) {
   const first = points[0],
     last = points.at(-1)!;
@@ -28,18 +29,39 @@ export function strokeIntent(
   const shortSide = Math.min(maxX - minX, maxY - minY);
   const gap = Math.hypot(last.x - first.x, last.y - first.y);
   return {
-    tap: distance < 2.5 && length < 6,
+    tap: distance < (touch ? 8 : 2.5) && length < (touch ? 24 : 6),
     closed:
       points.length >= 6 &&
       shortSide >= 3 &&
       length >= 10 &&
       // Close a small lift-off gap, not an unfinished arc or mouth.
-      gap <= Math.max(2.5, Math.min(5, shortSide * 0.12)),
+      gap <= (touch ? Math.max(7, Math.min(14, shortSide * 0.24)) : Math.max(2.5, Math.min(5, shortSide * 0.12))),
   };
 }
 
+/** A drag defines a closed ellipse; no precise return to the first pixel is needed. */
+export function roundOpening(a: {x:number;y:number}, b: {x:number;y:number}, touch=false) {
+  const tap=Math.hypot(b.x-a.x,b.y-a.y)<(touch?8:3);
+  const cx=tap?a.x:(a.x+b.x)/2,cy=tap?a.y:(a.y+b.y)/2;
+  const rx=tap?(touch?18:14):Math.max(6,Math.abs(b.x-a.x)/2);
+  const ry=tap?(touch?18:14):Math.max(6,Math.abs(b.y-a.y)/2);
+  return Array.from({length:49},(_,i)=>({x:cx+rx*Math.cos(i*Math.PI/24),y:cy+ry*Math.sin(i*Math.PI/24)}));
+}
+
+/** Trim a short finger lift-off tail after a nearly completed loop. */
+export function closeFingerLoop<T extends {x:number;y:number}>(points:T[]):T[]{
+  if(points.length<10)return points;
+  let nearest=points.length-1,distance=Infinity;
+  for(let i=Math.floor(points.length*.8);i<points.length;i++){
+    const d=Math.hypot(points[i].x-points[0].x,points[i].y-points[0].y);
+    if(d<distance){distance=d;nearest=i;}
+  }
+  let tail=0;for(let i=nearest+1;i<points.length;i++)tail+=Math.hypot(points[i].x-points[i-1].x,points[i].y-points[i-1].y);
+  return distance<=7&&tail<=16?points.slice(0,nearest+1):points;
+}
+
 /** Screen-space tolerance keeps tiny artwork precise at any zoom level. */
-export function finishStroke(points: StrokePoint[], closed = false): UV[] {
+export function finishStroke(points: StrokePoint[], closed = false, touch = false): UV[] {
   if (points.length < 2) return points.map((p) => [...p.uv]);
   // Lift-off often retraces the first few pixels of a loop. Trim that little
   // tail before closing, instead of rejecting the entire eye as self-crossing.
@@ -76,7 +98,7 @@ export function finishStroke(points: StrokePoint[], closed = false): UV[] {
     if (la > 3 || lb > 3) return p;
     // New holes get only subpixel cleanup. Stronger fairing is an explicit
     // refine-tool action, never part of drawing or committing a hole.
-    const blend = closed ? 0.08 : straight < 0.7 ? 0.2 : 0.1;
+    const blend = closed ? (touch ? 0.16 : 0.08) : straight < 0.7 ? 0.2 : 0.1;
     return {
       x: p.x * (1 - blend * 2) + (a.x + b.x) * blend,
       y: p.y * (1 - blend * 2) + (a.y + b.y) * blend,
@@ -117,7 +139,7 @@ export function finishStroke(points: StrokePoint[], closed = false): UV[] {
     }
     return [...keep].sort((a, b) => a - b).map((i) => smooth[i].uv);
   };
-  let tolerance = 0.22,
+  let tolerance = touch ? 0.55 : 0.22,
     result = simplify(tolerance);
   while (result.length > 512) {
     tolerance *= 1.5;

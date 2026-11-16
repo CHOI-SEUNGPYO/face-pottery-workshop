@@ -1,5 +1,5 @@
 import type { SceneId } from "./model";
-export type CarveMode = "opening" | "line";
+export type CarveMode = "round" | "opening" | "line";
 export type ToolId =
   | "shape"
   | "rotate"
@@ -45,7 +45,7 @@ export const scenes: Record<
   mouth: {
     title: "입구도 나답게",
     eyebrow: "02 · 입구 다듬기",
-    instruction: "입구 옆 손잡이를 끌어 넓이와 높이를 조절해요.",
+    instruction: "아래 조절 막대로 입구 넓이와 테두리 높이를 바꿔요.",
     character: "경산이",
     speech: "입구의 둥근 테두리를 살펴봐!\n크기도 조금씩 바꿔 볼까?",
     next: "얼굴 만들기",
@@ -159,9 +159,9 @@ export const toolHelp: Record<
     result: "구멍 둘레에 도톰한 테두리가 솟아나요.",
   },
   refine: {
-    short: "원할 때만 더 둥글게",
-    instruction: "모양을 더 둥글게 바꾸고 싶을 때만 눌러 보세요.",
-    result: "반드시 할 필요는 없어요. 지금 모습 그대로 완성해도 좋아요.",
+    short: "테두리까지 마무리",
+    instruction: "구멍 안쪽이나 테두리를 문질러 매끈하게 다듬어요.",
+    result: "한 번 문지를 때마다 조금씩 부드러워져요. 되돌리기로 비교할 수 있어요.",
   },
   erase: {
     short: "표현을 톡",

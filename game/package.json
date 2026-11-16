@@ -11,7 +11,7 @@
     "edit-story": "node scripts/museum-editor.mjs",
     "typecheck": "tsc --noEmit",
     "check:openings": "node scripts/check-openings.mjs",
-    "check:ui": "node scripts/check-interactions.mjs",
+    "check:ui": "node scripts/check-interactions.mjs && node scripts/check-guidance.mjs",
     "check:workshop": "node scripts/check-workshop.mjs",
     "check:journey": "node scripts/check-journey.mjs",
     "check:mobile": "node scripts/check-mobile-play.mjs",

@@ -112,10 +112,10 @@ try{
    assert.deepEqual(await page.evaluate(()=>[...window.togi.world.camera.position]),edgeCamera,'outline grip does not accidentally orbit the room');
    await page.locator('[data-action="undo"]').click();
    await go(page,'mouth');
-   // Opening is a deliberate action, then width/height handles are directly usable.
-   if(!await page.locator('[data-form-handle="mouth-width"]').count())await page.locator('[data-action="open-mouth"]').click();
+   // Opening is a deliberate action, then the fixed sliders are directly usable.
+   if(!await page.locator('[data-form-range="mouth-width"]').count())await page.locator('[data-action="open-mouth"]').click();
    const beforeMouth=await page.evaluate(()=>window.togi.save.document.mouth.innerRadius);
-   const mouth=page.locator('[data-form-handle="mouth-width"]'),r=await mouth.boundingBox();
+   const mouth=page.locator('[data-form-range="mouth-width"]'),r=await mouth.boundingBox();
    assert.ok(r&&r.y>=0&&r.y+r.height<=viewport.height);
    await drag(page,{x:r.x+r.width/2,y:r.y+r.height/2},{x:r.x+r.width/2+28,y:r.y+r.height/2});
    assert.notEqual(await page.evaluate(()=>window.togi.save.document.mouth.innerRadius),beforeMouth,'mouth drag edits width');

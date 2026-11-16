@@ -20,7 +20,7 @@ export function drawPhotoDisclosure(context: CanvasRenderingContext2D) {
   context.font = '600 24px Pretendard, sans-serif';
   context.fillText(AI_CONTENT_LABEL, 28, 1039);
   context.font = '18px Pretendard, sans-serif';
-  context.fillText('내 토기는 사용자가 직접 빚었어요. 배경과 캐릭터 등에는 AI 제작 요소가 포함되어 있어요.', 28, 1066);
+  context.fillText('내 토기는 사용자가 빚었어요. 오른쪽 전시와 배경·캐릭터는 AI 제작 요소를 포함하며 실제 유물과 다를 수 있어요.', 28, 1066);
   context.textAlign = 'right';
   context.font = '20px Pretendard, sans-serif';
   context.fillText('경산시립박물관  www.gbgs.go.kr/museum', 1892, 1044);
