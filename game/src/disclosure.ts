@@ -5,6 +5,10 @@ export function museumHomeLink() {
   return `<a class="museum-home-link" href="${MUSEUM_HOME}" target="_blank" rel="noopener noreferrer" aria-label="경산시립박물관 공식 홈페이지 (새 탭)">경산시립박물관 ↗</a>`;
 }
 
+export function museumVisitMarkup() {
+  return `<aside class="museum-visit" aria-label="박물관 방문 안내"><strong>다음 만남은 경산시립박물관에서</strong><p>게임에서 만난 얼굴모양토기는 경산시립박물관 특별전에서 소개된 유물이에요.</p><small>실물을 보고 싶다면 방문 전 공식 홈페이지에서 현재 전시 여부와 관람 안내를 확인해 주세요.</small>${museumHomeLink()}</aside>`;
+}
+
 // Draw after every sticker and selection overlay so the disclosure remains
 // visible in the preview and in the exported pixels. It is not a sticker.
 export function drawPhotoDisclosure(context: CanvasRenderingContext2D) {

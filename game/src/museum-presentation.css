@@ -65,6 +65,13 @@ body dialog:has(.museum-album,.museum-credits,.museum-ending) .modal-close{right
 .ending-disclosure{font-size:11px;line-height:1.7;text-align:center;color:#74664f;margin:14px 0}
 .ending-actions{display:flex;justify-content:center;flex-wrap:wrap;gap:8px}.ending-actions button{min-height:44px;font-size:13px;padding:12px 18px}
 
+.museum-visit{margin:18px 0;padding:16px 18px;border-left:3px solid #7d9690;background:#edf1ec;border-radius:0 10px 10px 0;text-align:left;word-break:keep-all;overflow-wrap:break-word}
+.museum-visit>strong{display:block;font-size:15px;line-height:1.5;color:#304f4c}
+.museum-visit>p{font-size:13px;line-height:1.8;margin:7px 0;color:#493f31}
+.museum-visit>small{display:block;font-size:11px;line-height:1.7;color:#665d4d}
+.museum-visit>a{display:inline-flex;align-items:center;min-height:44px;font-size:12px;margin-top:4px;color:#316c70;text-underline-offset:4px}
+.museum-ending>.museum-visit{max-width:640px;margin:0 auto 22px}
+
 @media(max-width:1099px),(max-height:599px){
  .partner-marks.compact{margin-bottom:10px;gap:12px}.partner-marks.compact .huss-mark{width:45px;height:32px}.partner-marks.compact .museum-mark{width:65px;height:42px}.partner-marks.compact>span{height:26px}
  body[data-stage="welcome"] #hud .welcome-copy{top:17%;padding:20px}

@@ -59,8 +59,18 @@ try{
   assert.equal(await page.getAttribute('body','data-stage'),'ending');assert.equal(await page.locator('.photo-editor').count(),0);
   await page.locator('[data-action="ending-credits"]').click();
   assert.match(await page.locator('.artifact-label').textContent(),/透刻人面文甕形土器/);
+  const visit=page.locator('.museum-ending .museum-visit');
+  assert.match(await visit.textContent(),/얼굴모양토기는 경산시립박물관 특별전에서 소개된 유물/);
+  for(const viewport of [{width:320,height:568},{width:768,height:1024},report.viewport]){
+    await page.setViewportSize(viewport);await visit.scrollIntoViewIfNeeded();
+    const box=await visit.boundingBox();assert.ok(box.x>=0&&box.x+box.width<=viewport.width,'museum visit invitation fits the screen');
+    assert.equal(await visit.locator('a').getAttribute('href'),'https://www.gbgs.go.kr/museum/main.do');
+    assert.equal(await visit.evaluate(el=>el.scrollWidth<=el.clientWidth),true);
+  }
+  await page.screenshot({path:'asset/review/release-museum-visit.png'});
   await page.locator('[data-action="collection-face"]').click();
   await page.locator('.album-image img').evaluate(i=>i.decode());
+  assert.ok(await page.locator('.album-info .museum-visit').count());
   await page.locator('.artifact-label').scrollIntoViewIfNeeded();
   await page.screenshot({path:'asset/review/release-academic-label.png'});
   await page.locator('[data-action="album-back"]').click();await page.locator('.ending-actions [data-action="close"]').click();
@@ -86,6 +96,7 @@ try{
   assert.equal(await page.locator('[data-action="story-next"]').count(),0);assert.ok(await page.locator('.story-section').count()>1);
   const albumButton=page.locator('.story-controls [data-action="collection"]'),position=await albumButton.boundingBox();
   await page.locator('.photo-picker button').last().click();assert.deepEqual(await albumButton.boundingBox(),position);
+  await page.locator('.story-copy .museum-visit').scrollIntoViewIfNeeded();assert.deepEqual(await albumButton.boundingBox(),position);
   await page.screenshot({path:'asset/review/release-full-story.png'});assert.deepEqual(report.errors,[]);
   report.status='pass';report.checkedAt=new Date().toISOString();
 }catch(error){report.status='failed';report.failure=String(error);await page?.screenshot({path:'asset/review/release-failure.png'});throw error;}
