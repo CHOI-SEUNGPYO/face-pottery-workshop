@@ -16,6 +16,14 @@
 
 방문 안내 추가 후 다시 빌드하고 `check-release.mjs http://127.0.0.1:4174/`를 통과했다(2026-11-16 14:21 KST). 320·390·768 폭에서 방문 안내와 홈페이지 링크가 잘리지 않고, PC 유물 이야기에서도 사진첩 버튼 위치를 유지하는지 확인했다. 로컬 실행본의 JS·CSS·카탈로그 바이트 일치, 터치 구멍·다듬기 안내, 넓이→높이 조절, 마무리에서 사진첩 왕복 후 작품 보존, 페이지 오류·요청 실패 0건을 확인했다.
 
+### 공개 반영 완료 · 2026-11-16 14:42 KST
+
+- 실행 코드 커밋 `078f4438437822ff0ab38a3d6596a7a3e015b898`을 `main`과 `codex/immersive-workshop`에 저장했다. 방문 안내는 사용자가 확정한 **경산시립박물관에서 만나 보세요**다.
+- [GitHub Actions 43810021008](https://github.com/CHOI-SEUNGPYO/face-pottery-workshop/actions/runs/43810021008)에서 빌드, 8개 브라우저 검사, Pages 배포가 모두 통과했다. 실행 차수별 파일명과 업로드 확인 단계도 정상 동작했다.
+- [공개 게임](https://choi-seungpyo.github.io/face-pottery-workshop/)에서 `check-release.mjs`를 통과했다. 2026-11-16 14:42:38 KST에 JS `index-DIBsYliQ.js`, CSS `index-c_txEcr2.css`, 유물 카탈로그가 로컬 최종 실행본과 바이트까지 같음을 확인했다.
+- 공개 사이트에서 터치 구멍·다듬기·세 면 안내, PC 넓이→높이 조절, 오른쪽 도구, 전체 이야기와 고정 사진첩 버튼, 방문 안내의 320·390·768 폭 배치와 공식 링크를 확인했다. 사진첩 왕복 후 작품 보존, 페이지 오류·요청 실패 0건이다. 실제 휴대기기 검증이 아닌 브라우저의 화면 크기·터치 검사다.
+- 최종 결과와 화면은 `asset/review/release-check.json`, `release-public-final.log`, `release-museum-visit.png`, `release-full-story.png`에 보관하며 실행본·Git에서 제외한다.
+
 ---
 
 ## 2026-11-16 · AI 제작 표시와 박물관 공식 링크
