@@ -73,12 +73,23 @@ try{
   await page.evaluate(()=>{
     const outline=document.querySelector('#opening-outline');
     window.__feedbackCleared=new Promise((resolve,reject)=>{
-      let started;
-      const timeout=setTimeout(()=>{observer.disconnect();reject(new Error('Refinement outline did not clear'));},10000);
+      let started,deadlineTimer,timing,finalOpacity;
+      const timeout=setTimeout(()=>{observer.disconnect();clearTimeout(deadlineTimer);reject(new Error('Refinement outline did not clear'));},10000);
       const observer=new MutationObserver(()=>{
-        if(outline.dataset.state==='finished'&&started===undefined)started=performance.now();
+        if(outline.dataset.state==='finished'&&started===undefined){
+          started=performance.now();
+          const effect=outline.getAnimations()[0]?.effect;
+          timing=effect?.getTiming();finalOpacity=effect?.getKeyframes().at(-1)?.opacity;
+          // Timers may both wait behind a software-GPU frame; the application's
+          // earlier 260ms cleanup must still run before this 650ms deadline.
+          deadlineTimer=setTimeout(()=>{
+            observer.disconnect();clearTimeout(timeout);
+            reject(new Error('Refinement outline survives the cleanup deadline'));
+          },650);
+        }
         if(started!==undefined&&outline.style.display==='none'){
-          clearTimeout(timeout);observer.disconnect();resolve({duration:performance.now()-started,path:outline.querySelector('path').getAttribute('d')});
+          clearTimeout(timeout);clearTimeout(deadlineTimer);observer.disconnect();
+          resolve({duration:performance.now()-started,timing,finalOpacity,path:outline.querySelector('path').getAttribute('d')});
         }
       });observer.observe(outline,{attributes:true,childList:true,subtree:true});
     });
@@ -87,7 +98,9 @@ try{
   assert.notEqual(await page.evaluate(()=>JSON.stringify(window.togi.save.document.features)),rough,'rubbing the opening refines it');
   assert.equal(await page.locator('.refine-nudge').count(),0,'successful refinement clears the reminder');
   const feedback=await page.evaluate(()=>window.__feedbackCleared);
-  assert.ok(feedback.duration<650,`refinement glow clears promptly (${feedback.duration}ms)`);
+  assert.ok(feedback.timing?.duration<=300,'refinement fade lasts at most 300ms');
+  assert.equal(feedback.timing.fill,'forwards','completed animation keeps the outline invisible until cleanup');
+  assert.equal(Number(feedback.finalOpacity),0);
   assert.equal(feedback.path,null,'completed refinement leaves no screen-space outline');
   await page.locator('[data-action="undo"]').click();assert.equal(await page.evaluate(()=>JSON.stringify(window.togi.save.document.features)),rough,'one rub is one undo');
   await page.locator('[data-action="undo"]').click();

@@ -94,7 +94,7 @@ const history = new History(),
   repository = new SaveRepository(),
   audio = new AudioController();
 let world: World;
-let faceTourShown=false, rotationHint=true, refineNudge=false, outlineTimer=0;
+let faceTourShown=false, rotationHint=true, refineNudge=false, outlineTimer=0, outlineDeadline=0;
 let outlineAnimation:Animation|undefined;
 const loadingStarted=performance.now();
 let photoEditor:PhotoEditor|null=null,returnToInspect=false,travelling=false,digComplete=false;
@@ -994,6 +994,7 @@ let gesture: Gesture | null = null,
   raf = 0;
 function clearOpening() {
   clearTimeout(outlineTimer);
+  outlineDeadline=0;
   outlineAnimation?.cancel();
   outlineAnimation=undefined;
   openingOutline.style.display = "none";
@@ -1019,6 +1020,7 @@ function openingFeedback(points:UV[],refined=false){
   clearOpening();
   drawOutline(projectOutline(points),'finished',true);
   const duration=world.reduced?150:refined?260:450;
+  outlineDeadline=performance.now()+duration;
   if(!world.reduced){
     outlineAnimation=openingOutline.animate([{opacity:.8},{opacity:0}],{duration,easing:'ease-out',fill:'forwards'});
     outlineAnimation.onfinish=clearOpening;
@@ -1441,7 +1443,11 @@ async function boot() {
     // Let the first loader reach the screen before synchronous WebGL setup.
     await new Promise<void>(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve())));
     world = new World(host, () => save);
-    world.onRender = ()=>{positionFormHandles();syncFaceGuidance();};
+    world.onRender = ()=>{
+      // A slow 3D frame can postpone timers. Clear expired feedback before paint.
+      if(outlineDeadline&&performance.now()>=outlineDeadline)clearOpening();
+      positionFormHandles();syncFaceGuidance();
+    };
     world.onExhibit=target=>showStory(photoFor(target).id,target);
     world.reduced=syncReducedMotion();
     try {
