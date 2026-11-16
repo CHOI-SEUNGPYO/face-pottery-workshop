@@ -100,6 +100,18 @@ try{
   await page.locator('.artifact-label').scrollIntoViewIfNeeded();
   await page.screenshot({path:'asset/review/release-academic-label.png'});
   await page.locator('[data-action="album-back"]').click();await page.locator('.ending-actions [data-action="close"]').click();
+  await page.screenshot({path:'asset/review/release-ending-complete.png'});
+  await page.locator('footer [data-action="finish-home"]').click();
+  await page.waitForFunction(()=>document.body.dataset.stage==='welcome');await settle();
+  assert.equal(await page.getAttribute('body','data-stage'),'welcome');
+  await page.reload();await page.locator('#loading').waitFor({state:'detached'});
+  await page.locator('[data-action="continue"]').click();await settle();
+  await page.waitForFunction(()=>document.body.dataset.stage==='ending'&&document.querySelector('#travel').hidden);
+  await page.locator('[data-action="ending-credits"]').click();
+  await page.locator('.ending-actions [data-action="finish-home"]').click();
+  await page.waitForFunction(()=>document.body.dataset.stage==='welcome');await settle();
+  assert.equal(await page.getAttribute('body','data-stage'),'welcome');
+  assert.equal(await page.locator('dialog').evaluate(el=>el.open),false);
   const after=await page.evaluate(()=>new Promise(resolve=>{const r=indexedDB.open('togi-workshop-v2',1);r.onsuccess=()=>{const db=r.result,q=db.transaction('state').objectStore('state').get('current');q.onsuccess=()=>{db.close();resolve(JSON.stringify(q.result.document));};};}));
   assert.equal(after,saved);assert.deepEqual(report.errors,[]);assert.deepEqual(report.requests,[]);
   const desktop=await browser.newContext({viewport:{width:1366,height:768},reducedMotion:'reduce'});

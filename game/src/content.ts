@@ -115,7 +115,7 @@ export const scenes: Record<
   ending: {
     title: "세상에 하나뿐인 내 얼굴모양토기",
     eyebrow: "우리의 작은 전시회",
-    instruction: "유물 사진을 보거나 새 작품을 만들어요. 사진은 선택이에요.",
+    instruction: "작품을 완성했어요. 유물 사진을 살펴보고, 완료하면 처음 화면으로 돌아가요.",
     character: "경산이",
     speech: "너의 손끝에서 멋진 이야기가 태어났어!",
     next: "유물 사진·마무리",
