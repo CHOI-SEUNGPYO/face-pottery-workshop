@@ -65,7 +65,7 @@ import {EXAMPLE_LABEL} from './artifact-example';
 
 const app = document.querySelector<HTMLDivElement>("#app")!;
 app.innerHTML =
-  '<div id="world"></div><div class="vignette"></div><svg id="opening-outline" aria-hidden="true"><path class="outline-halo"/><path class="outline-line"/></svg><main id="hud"></main><div id="toast" role="status" aria-live="polite"></div><dialog id="dialog"></dialog><div id="travel" hidden aria-live="polite"><div class="travel-party" role="img" aria-label="세 친구가 옆으로 눕힌 큰 얼굴토기를 함께 들고 달려요"><img class="travel-vessel" alt=""></div><h2></h2><p>경산이 · 독이 · 압이와 함께</p></div>';
+  '<div id="world"></div><div class="vignette"></div><svg id="opening-outline" aria-hidden="true"><path class="outline-halo"/><path class="outline-line"/></svg><main id="hud"></main><div id="toast" role="status" aria-live="polite"></div><dialog id="dialog"></dialog><div id="travel" hidden aria-live="polite"><div class="travel-party" role="img" aria-label="세 친구가 옆으로 눕힌 큰 얼굴모양토기를 함께 들고 달려요"><img class="travel-vessel" alt=""></div><h2></h2><p>경산이 · 독이 · 압이와 함께</p></div>';
 const host = document.querySelector<HTMLDivElement>("#world")!,
   hud = document.querySelector<HTMLDivElement>("#hud")!,
   dialog = document.querySelector<HTMLDialogElement>("#dialog")!,
@@ -98,9 +98,12 @@ const loadingStarted=performance.now();
 let photoEditor:PhotoEditor|null=null,returnToInspect=false,travelling=false,digComplete=false;
 function syncPause(){if(!world)return;world.paused=dialog.open;fireLast=performance.now();if(!world.paused)world.refresh();}
 const portraitPhone=()=>matchMedia('(max-width:600px) and (orientation:portrait)').matches;
-function closeActions(){hud.querySelectorAll<HTMLDetailsElement>('details[open]').forEach(d=>{if(!portraitPhone()||!d.matches('.drawing-actions,.edit-actions'))d.open=false;});}
+const desktopTools=matchMedia('(min-width:1100px) and (min-height:600px) and (hover:hover) and (pointer:fine)');
+const pinnedActions=(el:Element)=>(portraitPhone()||desktopTools.matches)&&el.matches('.drawing-actions,.edit-actions');
+desktopTools.addEventListener('change',()=>layoutUI());
+function closeActions(){hud.querySelectorAll<HTMLDetailsElement>('details[open]').forEach(d=>{if(!pinnedActions(d))d.open=false;});}
 document.addEventListener('pointerdown',event=>{if(!(event.target as HTMLElement).closest('details.actionbar'))closeActions();});
-document.addEventListener('toggle',event=>{const el=event.target;if(el instanceof HTMLDetailsElement&&el.open&&el.classList.contains('actionbar'))hud.querySelectorAll<HTMLDetailsElement>('details[open]').forEach(d=>{if(d!==el)d.open=false;});},true);
+document.addEventListener('toggle',event=>{const el=event.target;if(el instanceof HTMLDetailsElement&&el.open&&el.classList.contains('actionbar'))hud.querySelectorAll<HTMLDetailsElement>('details[open]').forEach(d=>{if(d!==el&&!pinnedActions(d))d.open=false;});},true);
 document.addEventListener('keydown',event=>{if(event.key==='Escape')closeActions();});
 function actionbar(label:string,content:string,classes:string){return `<details class="actionbar ${classes}"><summary>${icon(classes==='edit-actions'?'shape':'carve')}<span>${label}</span><span class="action-chevron">＋</span></summary><div class="action-panel">${content}</div></details>`;}
 const button = (
@@ -136,10 +139,10 @@ function layoutUI() {
     h = innerHeight,
     compact = w < 1100 || h < 600;
   for(const actions of hud.querySelectorAll<HTMLDetailsElement>('.drawing-actions,.edit-actions')){
-    const phone=portraitPhone();
-    if(phone)actions.open=true;
-    else if(actions.dataset.phone==='true')actions.open=false;
-    actions.dataset.phone=String(phone);
+    const pinned=pinnedActions(actions);
+    if(pinned)actions.open=true;
+    else if(actions.dataset.pinned==='true')actions.open=false;
+    actions.dataset.pinned=String(pinned);
   }
   let left = 28,
     top = 140,
@@ -254,7 +257,7 @@ function updateUI() {
     "aria-description",
     stage === "body" || stage === "mouth" || stage === "faces" || world.inGallery ? instruction : toolHelp[tool].instruction,
   );
-  const header = `<header><a class="brand" href="#" data-action="home" aria-label="얼굴토기 작은 흙 공방 · ${AI_CONTENT_LABEL} · 처음 화면"><span class="brand-pot">${icon("mouth")}</span><span>얼굴토기<br><small class="ai-mark" title="${AI_CONTENT_LABEL}">AI 생성물 포함</small></span></a><nav aria-label="공통 메뉴">${
+  const header = `<header><a class="brand" href="#" data-action="home" aria-label="얼굴모양토기 작은 흙 공방 · ${AI_CONTENT_LABEL} · 처음 화면"><span class="brand-pot">${icon("mouth")}</span><span>얼굴모양토기<br><small class="ai-mark" title="${AI_CONTENT_LABEL}">AI 생성물 포함</small></span></a><nav aria-label="공통 메뉴">${
     stage !== "welcome"
       ? `<div class="journey" aria-label="${n} / 9 단계">${order
           .slice(1)
@@ -287,7 +290,7 @@ function updateUI() {
   if (stage === "inspect")
     extras = actionbar('수정하기',`<div class="edit-links">${button("edit-body", "몸체 수정", "shape", "secondary")}${button("edit-mouth", "입구 수정", "mouth", "secondary")}${button("edit-faces", "얼굴 수정", "carve", "secondary")}</div>`,'edit-actions');
   if (stage === "firing")
-    extras = `<div class="firing-status"><strong id="firing-phase">${fired?"완성":fireStart?"준비":"가마에 넣기"}</strong><p class="firing-note">넣기 → 굽기 → 식히기 → 꺼내기</p><span id="firing-action">${fired ? "받침 위의 토기가 완성됐어요. 다음은 상상 발굴 체험이에요." : fireStart ? "내 토기를 가마 안으로 옮겨요." : "아래 ‘가마에 넣고 굽기’를 누르면 안쪽을 보며 과정을 살펴볼 수 있어요."}</span><div class="meter"><i id="fire-progress" style="width:${fired ? 100 : 0}%"></i></div></div>`;
+    extras = `<div class="firing-status"><strong id="firing-phase">${fired?"완성":fireStart?"준비":"가마에 넣기"}</strong><p class="firing-note" aria-label="넣기, 굽기, 식히기, 꺼내기">${['넣기','굽기','식히기','꺼내기'].map(label=>`<span>${label}</span>`).join('')}</p><span id="firing-action">${fired ? "받침 위의 토기가 완성됐어요. 다음은 상상 발굴 체험이에요." : fireStart ? "내 토기를 가마 안으로 옮겨요." : "아래 ‘가마에 넣고 굽기’를 누르면 안쪽을 보며 과정을 살펴볼 수 있어요."}</span><div class="meter"><i id="fire-progress" style="width:${fired ? 100 : 0}%"></i></div></div>`;
   if (stage === "excavation") {
     const progress = world.coverage();
     extras = `<div class="dig-status"><span id="dig-progress">토기 ${Math.round(progress[0] * 100)}% · 시루 ${Math.round(progress[1] * 100)}%</span>${button("assist", "함께 찾아보기", "brush", "small-button")}</div>`;
@@ -363,7 +366,7 @@ dialog.addEventListener("cancel", (e) => {
   e.preventDefault();
   closeModal();
 });
-let storyPage=0,storyPhoto='',storyScene:SceneId='welcome';
+let storyPhoto='',storyScene:SceneId='welcome';
 let albumCategory:PhotoCategory='face',albumIndex=0,albumReturn='close';
 function showCollection(category=albumCategory,index=0){
   albumCategory=availableGroups().includes(category)?category:availableGroups()[0];
@@ -376,17 +379,24 @@ dialog.addEventListener('keydown',event=>{
   if(!dialog.querySelector('.museum-album')||!['ArrowLeft','ArrowRight'].includes(event.key))return;
   event.preventDefault();showCollection(albumCategory,albumIndex+(event.key==='ArrowRight'?1:-1));
 });
-function showStory(page=0,photoId=photoFor(stage).id,target:SceneId=stage) {
+function showStory(photoId?:string,target:SceneId=stage) {
+  const previousArticle=dialog.querySelector<HTMLElement>('.story-copy');
+  const scrollTop=storyScene===target?previousArticle?.scrollTop??0:0;
+  const photoScroll=storyScene===target?dialog.querySelector('.photo-picker')?.scrollLeft??0:0;
+  const focusAction=previousArticle?(document.activeElement as HTMLElement)?.dataset.action:undefined;
   storyScene=target;
   const entry=museum.stages[target],photo=museum.photos.find(p=>p.id===photoId)??photoFor(target);
-  const pages=entry.blocks.flatMap(block=>{
-    const chunks=block.text.match(/[\s\S]{1,360}/g)??[''];
-    return chunks.map(text=>({...block,text}));
-  });
-  storyPage=clamp(page,0,pages.length-1);storyPhoto=photo.id;
-  const block=pages[storyPage];
-  const related=museum.photos.filter(p=>p.id===photo.id||(p.category??'other')===(photo.category??'other'));
-  modal(`<div class="story-layout"><div class="story-photo"><img src="${museumAsset(photo.file)}" alt="${e(photo.alt)}"><p>${e(photo.caption)}</p><p>${e(photo.credit)}</p><div class="photo-picker">${related.map((p,i)=>`<button data-action="story-photo-${museum.photos.indexOf(p)}" aria-pressed="${photo.id===p.id}">사진 ${i+1}</button>`).join('')}</div></div><div class="story-copy"><p class="eyebrow">실제 유물에서 찾아보기</p><h2>${e(entry.title)}</h2><section><span class="fact-badge ${block.kind}">${factLabels[block.kind]}</span><p>${e(block.text)}</p>${block.question?`<p class="observation-question"><strong>직접 살펴봐요</strong>${e(block.question)}</p>`:""}${sourceLinks(block.sources)}</section><nav class="story-pages"><button data-action="story-previous" ${storyPage===0?'disabled':''}>이전 이야기</button><span>${storyPage+1} / ${pages.length}</span><button data-action="story-next" ${storyPage===pages.length-1?'disabled':''}>다음 이야기</button></nav><div class="credits-actions"><button data-action="collection" class="secondary">유물 사진첩 전체 보기</button>${photo.source?`<a href="${e(photo.source)}" target="_blank" rel="noopener noreferrer">사진 출처 보기 ↗</a>`:''}${museumHomeLink()}</div></div></div>`);
+  storyPhoto=photo.id;
+  const category=photoFor(target).category??'other';
+  const related=museum.photos.filter(p=>p.id===entry.photo||entry.blocks.some(block=>block.photo===p.id)||(category!=='other'&&p.category===category));
+  const blocks=entry.blocks.map(block=>{
+    const illustration=block.photo&&block.photo!==entry.photo?museum.photos.find(p=>p.id===block.photo):undefined;
+    return `<section class="story-section"><span class="fact-badge ${block.kind}">${factLabels[block.kind]}</span><p>${e(block.text)}</p>${illustration?`<figure class="story-inline-photo"><img src="${museumAsset(illustration.file)}" alt="${e(illustration.alt)}" loading="lazy"><figcaption>${e(illustration.caption)}<small>${e(illustration.credit)}</small>${illustration.source?`<a href="${e(illustration.source)}" target="_blank" rel="noopener noreferrer">사진 출처 보기 ↗</a>`:''}</figcaption></figure>`:''}${block.question?`<p class="observation-question"><strong>직접 살펴봐요</strong>${e(block.question)}</p>`:''}${sourceLinks(block.sources)}</section>`;
+  }).join('');
+  modal(`<div class="story-layout museum-story"><header class="story-heading"><p class="eyebrow">실제 유물에서 찾아보기</p><h2 id="story-title">${e(entry.title)}</h2></header><div class="story-body"><div class="story-photo"><div class="story-image"><img src="${museumAsset(photo.file)}" alt="${e(photo.alt)}"></div><div class="story-photo-caption" tabindex="0" aria-label="사진 설명"><p>${e(photo.caption)}</p><p class="story-photo-credit">${e(photo.credit)}</p></div><nav class="photo-picker" aria-label="참고 사진 선택">${related.map((p,i)=>`<button data-action="story-photo-${museum.photos.indexOf(p)}" aria-pressed="${photo.id===p.id}">사진 ${i+1}</button>`).join('')}</nav></div><article class="story-copy" tabindex="0" aria-labelledby="story-title">${blocks}</article></div><footer class="story-controls"><button data-action="collection" class="secondary">유물 사진첩 전체 보기</button><div class="story-footer-links">${photo.source?`<a href="${e(photo.source)}" target="_blank" rel="noopener noreferrer">사진 출처 보기 ↗</a>`:''}${museumHomeLink()}</div></footer></div>`);
+  dialog.querySelector<HTMLElement>('.story-copy')!.scrollTop=scrollTop;
+  dialog.querySelector<HTMLElement>('.photo-picker')!.scrollLeft=photoScroll;
+  if(focusAction)Array.from(dialog.querySelectorAll<HTMLButtonElement>('button')).find(b=>b.dataset.action===focusAction)?.focus({preventScroll:true});
 }
 async function go(next: SceneId) {
   cancelGesture();
@@ -411,7 +421,7 @@ async function go(next: SceneId) {
   digComplete=next==='excavation'&&world.coverage().length===2&&world.coverage().every(n=>n>=.7);
   updateUI();
   if(!world.reduced){
-    for(const [i,el] of [...hud.querySelectorAll<HTMLElement>('.scene-info,.guide-stack,.settings-dock,footer')].entries())
+    for(const [i,el] of [...hud.querySelectorAll<HTMLElement>('.scene-info,.guide-stack>.character-dock,.drawing-actions,.settings-dock,footer')].entries())
       el.animate([{opacity:0,transform:'translateY(7px)'},{opacity:1,transform:'translateY(0)'}],{duration:260,delay:i*25,easing:'ease-out'});
   }
   if(next==='faces'&&!faceTourShown){faceTourShown=true;rotationHint=true;world.startFaceTour();syncFaceGuidance();}
@@ -433,12 +443,12 @@ function checkDiscovery(){
   digComplete=true;audio.effect('success');toast('찾았어요! 같은 현장에서 시루 위에 함께 놓아 볼까요?');
   updateUI();
 }
-function record(before: ReturnType<typeof cloneDoc>) {
+function record(before: ReturnType<typeof cloneDoc>, refreshUI = true) {
   history.push(before, stage);
   changed(save);
   world.update();
   world.react();
-  updateUI();
+  if (refreshUI) updateUI();
   void persist();
 }
 function openMouth() {
@@ -582,7 +592,7 @@ document.addEventListener("click", async (e) => {
   if(a==='album-back'){
     if(albumReturn==='ending-credits')modal(endingMarkup());
     else if(albumReturn==='credits')modal(creditsMarkup());
-    else if(albumReturn==='story')showStory(storyPage,storyPhoto,storyScene);
+    else if(albumReturn==='story')showStory(storyPhoto,storyScene);
     else closeModal();
     return;
   }
@@ -590,8 +600,7 @@ document.addEventListener("click", async (e) => {
   if(a==='settings'){
     const opened=hud.classList.toggle('settings-open');el.setAttribute('aria-expanded',String(opened));return;
   }
-  if(a==='story-next'||a==='story-previous'){showStory(storyPage+(a==='story-next'?1:-1),storyPhoto,storyScene);return;}
-  if(a.startsWith('story-photo-')){showStory(storyPage,museum.photos[Number(a.slice(12))]?.id,storyScene);return;}
+  if(a.startsWith('story-photo-')){showStory(museum.photos[Number(a.slice(12))]?.id,storyScene);return;}
   if (a === "draw-opening" || a === "draw-line" || a === "draw-round") {
     cancelGesture();
     carveMode = a === "draw-line" ? "line" : a === "draw-round" ? "round" : "opening";
@@ -775,6 +784,7 @@ let formEdit: {
   units: number;
   value: number;
   pointer?: number;
+  range?: HTMLInputElement;
   moved: boolean;
 } | null = null;
 let formFrame = 0, pendingFormValue: number | null = null;
@@ -825,17 +835,19 @@ function syncFormValues() {
     const input = hud.querySelector<HTMLInputElement>(
       `[data-form-range="${key}"]`,
     );
-    if (input) input.value = String(body ? Math.round(value * 100) : value);
+    // Leave the native thumb alone during its gesture; rewriting value can
+    // disturb the browser's input/change bookkeeping (especially on touch).
+    if (input && input !== formEdit?.range) input.value = String(body ? Math.round(value * 100) : value);
     const output = hud.querySelector(`#${key}-value`);
     if (output) output.textContent = `${Math.round(value * 100)}%`;
   }
 }
-function finishFormEdit() {
+function finishFormEdit(refreshUI = true) {
   flushFormValue();
   const edit = formEdit;
   formEdit = null;
   if (edit?.moved) {
-    record(edit.before);
+    record(edit.before, refreshUI);
     audio.effect("clay");
   } else if (edit) {
     save.document = edit.before;
@@ -848,16 +860,30 @@ document.addEventListener("input", (e) => {
   const el = e.target as HTMLInputElement,
     key = el.dataset.formRange as FormKey | undefined;
   if (!key || !canEditForm(key)) return;
-  if (!formEdit) beginFormEdit(key);
-  previewFormValue(Number(el.value) / (key.startsWith("mouth-") ? 1 : 100));
+  const value = Number(el.value) / (key.startsWith("mouth-") ? 1 : 100);
+  // Commit a missed release before changing controls, without replacing the
+  // new input element in the middle of its native drag.
+  if (formEdit && (formEdit.key !== key || formEdit.range !== el)) finishFormEdit(false);
+  if (!formEdit) { beginFormEdit(key); formEdit!.range = el; }
+  previewFormValue(value);
 });
 document.addEventListener("change", (e) => {
-  const key = (e.target as HTMLElement).dataset.formRange;
-  if (!key) return;
+  const el = e.target as HTMLInputElement, key = el.dataset.formRange;
+  if (!key || formEdit?.range !== el || formEdit.pointer !== undefined) return;
   finishFormEdit();
   hud
     .querySelector<HTMLElement>(`[data-form-range="${key}"]`)
     ?.focus({ preventScroll: true });
+});
+document.addEventListener("focusout", (e) => {
+  if (formEdit?.range === e.target) finishFormEdit(false);
+});
+document.addEventListener("pointerdown", (e) => {
+  const el = e.target as HTMLInputElement, key = el.dataset.formRange as FormKey | undefined;
+  if (!key || !canEditForm(key) || !loaded || dialog.open || travelling || e.button !== 0) return;
+  if (formEdit) finishFormEdit(false);
+  beginFormEdit(key, e.clientX, e.clientY, e.pointerId);
+  formEdit!.range = el;
 });
 document.addEventListener("pointerdown", (e) => {
   const el = (e.target as HTMLElement).closest<HTMLElement>(
@@ -878,7 +904,7 @@ document.addEventListener("pointerdown", (e) => {
 });
 document.addEventListener("pointermove", (e) => {
   const edit = formEdit;
-  if (!edit || edit.pointer !== e.pointerId) return;
+  if (!edit || edit.range || edit.pointer !== e.pointerId) return;
   const delta =
     edit.key === "height"
       ? (edit.y - e.clientY) * edit.units
@@ -892,9 +918,9 @@ document.addEventListener("pointermove", (e) => {
 });
 document.addEventListener("pointerup", (e) => {
   if (formEdit?.pointer === e.pointerId) {
-    const key = formEdit.key;
+    const key = formEdit.key, control = formEdit.range ? 'range' : 'handle';
     finishFormEdit();
-    hud.querySelector<HTMLElement>(`[data-form-handle="${key}"]`)?.focus({ preventScroll: true });
+    hud.querySelector<HTMLElement>(`[data-form-${control}="${key}"]`)?.focus({ preventScroll: true });
   }
 });
 document.addEventListener("lostpointercapture", (e) => {
@@ -1399,7 +1425,7 @@ async function boot() {
   try {
     world = new World(host, () => save);
     world.onRender = ()=>{positionFormHandles();syncFaceGuidance();};
-    world.onExhibit=target=>showStory(0,photoFor(target).id,target);
+    world.onExhibit=target=>showStory(photoFor(target).id,target);
     world.reduced =
       localStorage.getItem("togi-reduced") === "true" || world.reduced;
     document.body.classList.toggle("reduced-motion", world.reduced);

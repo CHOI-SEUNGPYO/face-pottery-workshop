@@ -64,7 +64,7 @@ export class PhotoEditor {
   }
   private async download(){
     const status=this.root.querySelector<HTMLElement>('.photo-status')!;
-    try{await document.fonts.ready;await Promise.all([this.base,...this.stickers.map(s=>this.images.get(s.name)!)].map(im=>im.decode()));this.draw(false);const blob=await new Promise<Blob>((resolve,reject)=>this.canvas.toBlob(b=>b?resolve(b):reject(Error('encode')),'image/png'));const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`내-얼굴토기-${new Date().toISOString().slice(0,10)}.png`;a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);status.textContent='꾸민 사진을 저장했어요.';}
+    try{await document.fonts.ready;await Promise.all([this.base,...this.stickers.map(s=>this.images.get(s.name)!)].map(im=>im.decode()));this.draw(false);const blob=await new Promise<Blob>((resolve,reject)=>this.canvas.toBlob(b=>b?resolve(b):reject(Error('encode')),'image/png'));const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`내-얼굴모양토기-${new Date().toISOString().slice(0,10)}.png`;a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);status.textContent='꾸민 사진을 저장했어요.';}
     catch{status.textContent='사진을 저장하지 못했어요. 다시 눌러 주세요.';}finally{this.draw();}
   }
   dispose(){this.events.abort();this.base.onload=null;for(const im of this.images.values())im.onload=null;}

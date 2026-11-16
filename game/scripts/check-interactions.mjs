@@ -29,7 +29,8 @@ try {
       await page.locator('[data-action="next"]').click();
       await page.locator('[data-action="next"]').click();
       assert.equal(await page.locator('.view-controls').count(),0,'views use direct gestures');
-      const choose=async tool=>{await page.locator('.drawing-actions summary').click();await page.locator(`button[data-tool="${tool}"]`).click();};
+      const openTools=async()=>{if(await page.locator('.drawing-actions summary').isVisible())await page.locator('.drawing-actions summary').click();};
+      const choose=async tool=>{await openTools();await page.locator(`button[data-tool="${tool}"]`).click();};
       assert.equal(await page.locator('[data-action="coach-demo"], [data-action="demo"], .tool-example').count(), 0);
       await page.locator('[data-action="help"]').click();
       assert.equal(await page.locator('[data-action="demo"]').count(), 0, "help has no demonstration entry");
@@ -57,7 +58,7 @@ try {
       for (const tool of ["carve", "pierce"]) {
         await choose(tool);
         if(tool==='carve'){
-          await page.locator('.drawing-actions summary').click();
+          await openTools();
           await page.locator('[data-action="draw-opening"]').click();
         }
         const kind = tool === "carve" ? "hole" : "raised-hole";

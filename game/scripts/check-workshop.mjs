@@ -49,6 +49,12 @@ async function layout(page,stage,width){
      if(Math.min(r.right,s.right)-Math.max(r.left,s.left)>2&&Math.min(r.bottom,s.bottom)-Math.max(r.top,s.top)>2)errors.push({toolOverlap:[a.name,b.name]});
    }
    if(innerWidth<=600&&innerHeight>innerWidth){
+     const entry=document.querySelector('.story-teaser'),brand=document.querySelector('.brand');
+     if(entry&&brand){
+       const r=entry.getBoundingClientRect(),b=brand.getBoundingClientRect();
+       if(b.right>r.left-2)errors.push({storyOverlapsBrand:true});
+       if(!document.querySelector('.story-mobile-label').checkVisibility())errors.push({storyEntryUnlabelled:true});
+     }
      const area=document.querySelector('.work-area').getBoundingClientRect();
      if(area.height<innerHeight*.40)errors.push({workingSpace:area.height,screen:innerHeight});
      for(const box of boxes){
@@ -65,6 +71,23 @@ async function layout(page,stage,width){
  if(problems.length){await mkdir('asset/review',{recursive:true});await page.screenshot({path:`asset/review/layout-${width}-${stage}-failure.png`});}
  assert.deepEqual(problems,[],`${width} ${stage} layout`);
  assert.ok(await page.locator('.ai-mark').isVisible(),`${stage} keeps the AI notice visible`);
+}
+async function storyLayout(page){
+ const footer=page.locator('.story-controls'),album=page.locator('.story-controls [data-action="collection"]');
+ const initial=await album.boundingBox();
+ assert.ok(initial&&initial.y>=0&&initial.y+initial.height<=page.viewportSize().height,'photo album remains on screen');
+ const box=await footer.boundingBox();
+ assert.ok(box.x>=0&&box.x+box.width<=page.viewportSize().width,'story footer fits the screen');
+ const photos=page.locator('.photo-picker button');
+ if(await photos.count()>1){
+  await photos.last().click();await page.locator('.story-photo img').evaluate(img=>img.decode());
+  assert.deepEqual(await album.boundingBox(),initial,'changing photos does not move the album button');
+ }
+ await page.locator('.story-copy').evaluate(el=>el.scrollTop=el.scrollHeight);
+ assert.deepEqual(await album.boundingBox(),initial,'reading the complete story does not move its footer');
+ const r=await album.boundingBox();
+ assert.ok(await album.evaluate((el,r)=>el.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)),r),'album button remains clickable');
+ assert.equal(await page.locator('[data-action="story-next"],[data-action="story-previous"]').count(),0);
 }
 async function welcomeDisclosure(page,viewport){
  await page.setViewportSize(viewport);
@@ -121,7 +144,7 @@ try{
   for(const stage of ['body','mouth','faces','inspect','firing']){
    await page.waitForFunction(s=>document.body.dataset.stage===s,stage);
    await layout(page,stage,width);
-   if(stage==='faces'){
+   if(stage==='faces'&&await page.locator('.drawing-actions summary').isVisible()){
      await page.locator('.drawing-actions summary').click();await layout(page,'faces-open',width);
      await page.locator('.drawing-actions summary').click();
    }
@@ -131,6 +154,19 @@ try{
      assert.ok(await page.locator('.kiln-flow').isVisible());
      if(process.env.TOGI_MUSEUM_REVIEW==='1'&&width===1366)await page.screenshot({path:'asset/review/museum-kiln-guide.png'});
      await page.locator('.modal-close').click();
+     await page.locator('.story-teaser').click();
+     assert.deepEqual(await page.locator('.story-copy .fact-badge').allTextContents(),['확인된 내용','확인된 내용','게임 속 상상','연구자의 해석']);
+     assert.match(await page.locator('.story-photo img').getAttribute('src'),/haman-ugeori-kiln\.jpg/,'kiln story uses the official kiln photo');
+     assert.match(await page.locator('.story-copy').textContent(),/함안 우거리.*다른 지역/s);
+     await storyLayout(page);
+     if(width===1366){
+       for(const viewport of [{width:390,height:696},{width:320,height:568},{width:740,height:360},{width:768,height:1024}]){
+         await page.setViewportSize(viewport);await storyLayout(page);
+       }
+       await page.setViewportSize({width:1366,height:768});
+       await page.screenshot({path:'asset/review/story-full-kiln-desktop.png'});
+     }
+     await page.locator('[data-action="close"]').click();
    }
    if(width===1366){
      for(const viewport of [{width:1920,height:1080},{width:844,height:390},{width:390,height:844},{width:390,height:696},{width:320,height:568},{width:740,height:360},{width:1024,height:768},{width:768,height:1024},{width:1180,height:820}]){
@@ -197,9 +233,9 @@ try{
   await layout(page,'compare',width);
   if(width===1366){for(const viewport of [{width:740,height:360},{width:390,height:844},{width:390,height:696},{width:320,height:568},{width:1024,height:768},{width:768,height:1024}]){await page.setViewportSize(viewport);await layout(page,'compare',viewport.width);}await page.setViewportSize({width:1366,height:768});}
   await page.locator('.story-teaser').click();assert.ok(await page.locator('.story-photo img').isVisible());
-  await page.locator('[data-action="story-next"]').click();assert.equal(await page.locator('.fact-badge').textContent(),'게임 속 상상');
+  assert.equal(await page.locator('[data-action="story-next"],[data-action="story-previous"]').count(),0,'the complete story is available without page turns');
+  assert.deepEqual(await page.locator('.story-copy .fact-badge').allTextContents(),['확인된 내용','게임 속 상상','연구자의 해석']);
   assert.ok((await page.locator('.story-copy').textContent()).includes('3D 스캔은 아니며'),'the model is described as a photo-informed reconstruction');
-  await page.locator('[data-action="story-next"]').click();assert.equal(await page.locator('.fact-badge').textContent(),'연구자의 해석');
   await page.locator('[data-action="close"]').click();await page.locator('[data-action="next"]').click();await page.waitForFunction(()=>document.body.dataset.stage==='ending');
   assert.equal(await page.locator('.photo-editor').count(),0,'photography is optional');
   await page.locator('[data-action="photo"]').click();await page.waitForSelector('.photo-editor canvas');

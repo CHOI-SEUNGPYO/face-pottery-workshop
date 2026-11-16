@@ -17,7 +17,7 @@ export function creditsMarkup(){
 
 export const photoGroups:Record<PhotoCategory,{label:string;title:string;description:string}>= {
   face:{label:'얼굴모양토기',title:'하나의 토기에 담긴 세 얼굴',description:'눈·코·입을 뚫어 표현한 얼굴이 서로 달라요. 내 작품과 실제 유물의 표정, 몸체와 입구를 나란히 떠올려 보세요.'},
-  siru:{label:'함께 나온 시루',title:'얼굴토기와 함께 발견된 시루',description:'바닥을 없애고 몸통 중간에 소뿔 모양 손잡이 두 개를 붙인 시루예요. 얼굴토기와 결합해 썼을 가능성이 있지만, 정확한 사용법은 밝혀지지 않았어요.'},
+  siru:{label:'함께 나온 시루',title:'얼굴모양토기와 함께 발견된 시루',description:'바닥을 없애고 몸통 중간에 소뿔 모양 손잡이 두 개를 붙인 시루예요. 얼굴모양토기와 결합해 썼을 가능성이 있지만, 정확한 사용법은 밝혀지지 않았어요.'},
   background:{label:'배경 토기',title:'공방과 전시실을 채운 토기들',description:'게임의 선반과 전시 공간을 만들 때 참고한 실제 전시 사진이에요. 목과 몸체, 받침의 모양을 살펴보세요. 게임의 배치는 창작이며 실물을 그대로 복제한 것은 아니에요.'},
   other:{label:'더 많은 자료',title:'사진으로 만나는 유물 이야기',description:'함께 살펴볼 수 있도록 모은 사진 자료예요. 사진별 설명과 제공자를 확인해 주세요.'},
 };
@@ -31,5 +31,5 @@ export function collectionMarkup(category:PhotoCategory,index:number,backLabel:s
 
 export function endingMarkup(){
   const groups=availableGroups().slice(0,3);
-  return `<article class="museum-ending" aria-labelledby="ending-credits-heading"><div class="ending-intro"><p class="eyebrow">나의 토기에서, 박물관으로</p><h2 id="ending-credits-heading">서로 다른 얼굴,<br>함께 남긴 이야기</h2><p>당신의 손끝에서 새로운 얼굴토기가 태어났어요.<br>이야기의 시작이 된 실제 유물도 만나 보세요.</p></div><div class="ending-photos">${groups.map(c=>{const p=photosIn(c).find(p=>p.id==='face-three-sides')??photosIn(c)[0];return `<button data-action="collection-${c}"><img src="${museumAsset(p.file)}" alt="${e(p.alt)}"><span>${photoGroups[c].label}<b aria-hidden="true">↗</b></span></button>`;}).join('')}</div>${artifactLabel()}<div class="ending-partners">${partnerMarks()}<p>${institution} 참여학과 학생들 · 경산시립박물관 소장 유물 활용</p><p class="support-credit">${support}</p></div><p class="ending-disclosure">${AI_CONTENT_LABEL} · 게임 속 장면과 3D 재현은 실제 유물과 다를 수 있어요.</p><nav class="ending-actions"><button data-action="close" class="primary">내 작품으로 돌아가기</button><button data-action="credits" class="secondary">제작·출처 자세히</button>${museumHomeLink()}</nav></article>`;
+  return `<article class="museum-ending" aria-labelledby="ending-credits-heading"><div class="ending-intro"><p class="eyebrow">나의 토기에서, 박물관으로</p><h2 id="ending-credits-heading">서로 다른 얼굴,<br>함께 남긴 이야기</h2><p>당신의 손끝에서 새로운 얼굴모양토기가 태어났어요.<br>이야기의 시작이 된 실제 유물도 만나 보세요.</p></div><div class="ending-photos">${groups.map(c=>{const p=photosIn(c).find(p=>p.id==='face-three-sides')??photosIn(c)[0];return `<button data-action="collection-${c}"><img src="${museumAsset(p.file)}" alt="${e(p.alt)}"><span>${photoGroups[c].label}<b aria-hidden="true">↗</b></span></button>`;}).join('')}</div>${artifactLabel()}<div class="ending-partners">${partnerMarks()}<p>${institution} 참여학과 학생들 · 경산시립박물관 소장 유물 활용</p><p class="support-credit">${support}</p></div><p class="ending-disclosure">${AI_CONTENT_LABEL} · 게임 속 장면과 3D 재현은 실제 유물과 다를 수 있어요.</p><nav class="ending-actions"><button data-action="close" class="primary">내 작품으로 돌아가기</button><button data-action="credits" class="secondary">제작·출처 자세히</button>${museumHomeLink()}</nav></article>`;
 }

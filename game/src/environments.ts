@@ -80,7 +80,7 @@ export function museumRoom(){
   const g=new T.Group();
   const glass=new T.MeshStandardMaterial({color:0xd8f2ed,transparent:true,opacity:.035,roughness:.12,metalness:0,side:T.DoubleSide,depthWrite:false});
   const edge=new T.MeshStandardMaterial({color:0xa7beb8,roughness:.3,transparent:true,opacity:.42});
-  for(const [x,label] of [[-.78,'내가 만든 얼굴토기'],[.9,'AI 제작 · 유물 재현 예시']] as const){
+  for(const [x,label] of [[-.78,'내가 만든 얼굴모양토기'],[.9,'AI 제작 · 유물 재현 예시']] as const){
     {
       const displayCase=new T.Group();displayCase.name=x<0?'own-exhibit-glass':'reference-exhibit-glass';g.add(displayCase);
       const width=x<0?1.24:1.40,depth=x<0?1.20:1.40;

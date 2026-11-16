@@ -3,8 +3,18 @@
   "title": "경산 소월리 얼굴모양토기",
   "photos": [
     {
+      "id": "haman-ugeori-kiln",
+      "title": "함안 우거리 토기가마터 발굴현장",
+      "category": "other",
+      "file": "haman-ugeori-kiln.jpg",
+      "alt": "함안 우거리 발굴현장을 위에서 촬영한 사진. 길쭉한 토기가마터와 주변 폐기장의 조사 구역이 보인다.",
+      "caption": "함안 우거리의 아라가야 토기가마터와 폐기장 · 가마의 실제 흔적을 살펴보는 비교 자료예요. 소월리 유물의 제작 가마 사진은 아니에요.",
+      "credit": "국립가야문화재연구소, 2018-12-13 보도자료 「아라가야 수공업의 거점, 함안 우거리 토기가마터 발굴 성과 공개」 · 현재 국립가야문화유산연구소 제공 · 공공누리 제1유형(출처표시)",
+      "source": "https://www.nrich.go.kr/gaya/boardView.do?bbs_idx=41063&bbscd=33&menuIdx=707"
+    },
+    {
       "id": "artifact",
-      "title": "발견 당시의 얼굴토기와 시루",
+      "title": "발견 당시의 얼굴모양토기와 시루",
       "category": "face",
       "file": "artifact.png",
       "alt": "소월리 얼굴 장식 토기와 시루",
@@ -14,17 +24,17 @@
     },
     {
       "id": "user-face-reference",
-      "title": "전시장에서 본 얼굴토기",
+      "title": "전시장에서 본 얼굴모양토기",
       "category": "face",
       "file": "face-reference.jpg",
-      "alt": "사용자가 제공한 소월리 얼굴토기 전시 참고 사진",
+      "alt": "사용자가 제공한 소월리 얼굴모양토기 전시 참고 사진",
       "caption": "제공받은 전시 사진 · 사진 속 전시물의 모습",
       "credit": "사용자 제공 사진",
       "source": ""
     },
     {
       "id": "museum-face-photo",
-      "title": "얼굴토기와 시루를 함께 놓은 모습",
+      "title": "얼굴모양토기와 시루를 함께 놓은 모습",
       "category": "face",
       "file": "face-museum-photo.jpg",
       "alt": "경산시 제공 얼굴모양토기와 시루의 실물 사진",
@@ -237,7 +247,7 @@
     },
     "firing": {
       "title": "가마는 토기를 굽는 시설이에요",
-      "photo": "artifact",
+      "photo": "haman-ugeori-kiln",
       "summary": "흙으로 만든 그릇을 불과 열로 구워요. 옆면이 열리는 것은 안쪽을 보여주기 위한 설명용 연출이에요.",
       "blocks": [
         {
@@ -245,6 +255,13 @@
           "text": "가마는 그릇을 구워 완성하는 시설이에요. 벽과 천장을 갖춘 가마에는 불을 피우는 곳, 토기를 놓는 굽는 공간, 열과 연기가 빠져나가는 통로가 있어요. 국립문화유산연구원 한국고고학 전문사전의 ‘토기 가마의 구조’를 참고했어요.",
           "sources": [
             "kiln-dictionary"
+          ]
+        },
+        {
+          "kind": "fact",
+          "text": "사진은 함안 우거리에서 조사한 아라가야 토기가마터예요. 국립가야문화재연구소의 2018년 발표에 따르면 경사면에 터널처럼 만든 등요이며, 토기를 놓던 곳과 연기가 빠지는 곳 사이에 낮은 계단이 있었어요. 길쭉하게 남은 가마의 바닥과 주변 조사 구역을 찾아보세요. 이 사진은 다른 지역의 가마를 살피는 비교 자료예요.",
+          "sources": [
+            "haman-kiln-2018"
           ]
         },
         {
@@ -264,11 +281,11 @@
     "excavation": {
       "title": "유물은 어디에서 함께 나왔을까요?",
       "photo": "artifact",
-      "summary": "얼굴토기·시루·목간을 함께 살피면, 소월리 마을의 생활과 의례를 생각해 볼 수 있어요.",
+      "summary": "얼굴모양토기·시루·목간을 함께 살피면, 소월리 마을의 생활과 의례를 생각해 볼 수 있어요.",
       "blocks": [
         {
           "kind": "fact",
-          "text": "소월리의 구덩이에서는 얼굴토기와 시루, 글을 적은 나무인 목간 등이 함께 나왔어요. 2021년 논문의 107호 수혈은 2025년 연구에서 76호(옛 107호)로 표기돼요.",
+          "text": "소월리의 구덩이에서는 얼굴모양토기와 시루, 글을 적은 나무인 목간 등이 함께 나왔어요. 2021년 논문의 107호 수혈은 2025년 연구에서 76호(옛 107호)로 표기돼요.",
           "sources": [
             "kim-2021",
             "lee-2025"
@@ -392,6 +409,11 @@
       "id": "kiln-dictionary",
       "title": "국립문화유산연구원 · 토기 가마의 구조",
       "url": "https://portal.nrich.go.kr/kor/archeologyUsrView.do?idx=23429&menuIdx=1074"
+    },
+    {
+      "id": "haman-kiln-2018",
+      "title": "국립가야문화재연구소, 2018 · 함안 우거리 토기가마터 발굴 성과",
+      "url": "https://www.nrich.go.kr/gaya/boardView.do?bbs_idx=41063&bbscd=33&menuIdx=707"
     },
     {
       "id": "museum-exhibition",

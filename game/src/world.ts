@@ -167,7 +167,7 @@ export class World {
     this.renderer.toneMappingExposure = 0.95;
     this.renderer.domElement.setAttribute(
       "aria-label",
-      "손으로 만드는 3차원 얼굴토기",
+      "손으로 만드는 3차원 얼굴모양토기",
     );
     this.renderer.domElement.tabIndex = 0;
     host.append(this.renderer.domElement);

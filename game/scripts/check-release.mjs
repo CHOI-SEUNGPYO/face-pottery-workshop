@@ -66,6 +66,27 @@ try{
   await page.locator('[data-action="album-back"]').click();await page.locator('.ending-actions [data-action="close"]').click();
   const after=await page.evaluate(()=>new Promise(resolve=>{const r=indexedDB.open('togi-workshop-v2',1);r.onsuccess=()=>{const db=r.result,q=db.transaction('state').objectStore('state').get('current');q.onsuccess=()=>{db.close();resolve(JSON.stringify(q.result.document));};};}));
   assert.equal(after,saved);assert.deepEqual(report.errors,[]);assert.deepEqual(report.requests,[]);
+  const desktop=await browser.newContext({viewport:{width:1366,height:768},reducedMotion:'reduce'});
+  page=await desktop.newPage();page.on('pageerror',e=>report.errors.push(e.message));
+  await page.goto(url);await page.locator('#loading').waitFor({state:'detached'});await page.locator('[data-action="new"]').click();await settle();
+  const readDoc=()=>page.evaluate(()=>new Promise((resolve,reject)=>{const r=indexedDB.open('togi-workshop-v2',1);r.onerror=()=>reject(r.error);r.onsuccess=()=>{const db=r.result,q=db.transaction('state').objectStore('state').get('current');q.onsuccess=()=>{db.close();resolve(q.result.document);};};}));
+  for(const [key,fraction] of [['width',.8],['height',.85]]){
+    const range=page.locator(`[data-form-range="${key}"]`),rect=await range.boundingBox();
+    const current=await range.evaluate(el=>(Number(el.value)-Number(el.min))/(Number(el.max)-Number(el.min)));
+    await page.mouse.move(rect.x+8+(rect.width-16)*current,rect.y+rect.height/2);await page.mouse.down();
+    await page.mouse.move(rect.x+8+(rect.width-16)*fraction,rect.y+rect.height/2,{steps:12});await page.mouse.up();
+    await page.waitForFunction(()=>!document.querySelector('[data-action="undo"]').disabled);
+    const doc=await readDoc();
+    if(key==='width')report.sliderWidth=doc.form.width;
+    else{assert.equal(doc.form.width,report.sliderWidth,'published height slider preserves width');assert.ok(doc.form.height>1.3);}
+  }
+  await page.locator('[data-action="next"]').click();await settle();await page.locator('[data-action="next"]').click();await settle();
+  assert.equal(await page.locator('.drawing-actions>summary').isVisible(),false);assert.ok(await page.locator('[data-tool="refine"]').isVisible());
+  await page.locator('.story-teaser').click();
+  assert.equal(await page.locator('[data-action="story-next"]').count(),0);assert.ok(await page.locator('.story-section').count()>1);
+  const albumButton=page.locator('.story-controls [data-action="collection"]'),position=await albumButton.boundingBox();
+  await page.locator('.photo-picker button').last().click();assert.deepEqual(await albumButton.boundingBox(),position);
+  await page.screenshot({path:'asset/review/release-full-story.png'});assert.deepEqual(report.errors,[]);
   report.status='pass';report.checkedAt=new Date().toISOString();
 }catch(error){report.status='failed';report.failure=String(error);await page?.screenshot({path:'asset/review/release-failure.png'});throw error;}
 finally{await writeFile('asset/review/release-check.json',JSON.stringify(report,null,2));await browser.close();}

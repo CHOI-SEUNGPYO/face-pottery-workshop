@@ -95,6 +95,11 @@ try{
   await activate('[data-action="edit-faces"]');await settled('faces');await activate('[data-action="next"]');await settled('inspect');
   await activate('[data-action="next"]');await audit('firing');await activate('[data-action="next"]');
   await page.waitForFunction(()=>document.querySelector('#firing-phase')?.textContent==='완성',null,{timeout:90000});
+  assert.ok(await page.locator('.story-mobile-label').isVisible(),'phone explicitly labels the story entry');
+  await activate('.story-teaser');await page.locator('.story-photo img').evaluate(img=>img.decode());
+  assert.equal(await page.locator('.story-section').count(),4,'all kiln explanations are present in the mobile reader');
+  await mkdir('asset/review',{recursive:true});await page.screenshot({path:'asset/review/story-phone-reader.png'});
+  await activate('.modal-close');
   await audit('firing');await activate('[data-action="next"]');await audit('excavation');
   for(let pass=0;pass<6&&await page.locator('[data-action="next"]').isDisabled();pass++)
     // Soil fills the path between touch samples; dense synthetic moves just

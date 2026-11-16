@@ -1,4 +1,5 @@
 import {asset} from './assets';
+import './loading-motion.css';
 
 // The first loader is in index.html so its characters download before the game.
 // Reuse the same fallback for all screen sizes and slow scene transfers.

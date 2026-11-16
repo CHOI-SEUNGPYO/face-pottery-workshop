@@ -1,6 +1,6 @@
 /* Mobile controls share two rails; the artwork owns the space between them. */
 body #hud .scene-instruction{display:block;font-size:13px;line-height:1.65;margin:0;color:#725239}
-body #hud .story-compact-icon,.kiln-help-brief{display:none}
+body #hud .story-compact-icon,body #hud .story-mobile-label,.kiln-help-brief{display:none}
 .sticker-controls[hidden]{display:none!important}
 .photo-editor .photo-icon{flex:none;width:44px;min-width:44px;height:44px;padding:10px}
 .photo-icon svg{width:20px;height:20px}
@@ -13,18 +13,19 @@ body #hud .story-compact-icon,.kiln-help-brief{display:none}
 @media(max-width:600px) and (orientation:portrait){
  body{--mobile-bottom:max(8px,env(safe-area-inset-bottom));--mobile-top:max(8px,env(safe-area-inset-top))}
  body #hud header{top:var(--mobile-top);left:12px;right:12px;gap:6px;height:44px}
- body #hud .brand{font-size:16px;gap:5px;padding:3px 7px 3px 0;border-radius:10px}
- body #hud .brand-pot{width:30px;height:34px;border-radius:8px}
+ body #hud .brand{font-size:15px;gap:0;padding:4px 7px;border-radius:10px}
+ body #hud .brand-pot{display:none}
  body #hud .brand-pot svg{width:22px;height:22px}
  body #hud .brand small.ai-mark{font-size:10px;line-height:1.5}
  body #hud header nav{gap:4px}
  body #hud header .round{height:44px;width:44px;min-width:44px;padding:11px;border-radius:14px;box-shadow:0 2px 0 #a7854c66}
  body #hud header .round svg{width:21px;height:21px}
- body #hud .story-dock{top:var(--mobile-top);right:108px;left:auto;bottom:auto;width:44px;height:44px;z-index:3}
- body #hud .story-teaser{width:44px;height:44px;min-height:44px;padding:11px;border-radius:14px;justify-content:center;box-shadow:0 2px 0 #a7854c66}
+ body #hud .story-dock{top:var(--mobile-top);right:108px;left:auto;bottom:auto;width:82px;height:44px;z-index:3}
+ body #hud .story-teaser{width:82px;height:44px;min-height:44px;padding:5px 7px;border-radius:12px;gap:6px;justify-content:center;box-shadow:0 2px 0 #a7854c66}
+ body #hud .story-mobile-label{display:block;font-size:11px;line-height:1.3;text-align:left;white-space:nowrap;color:#624525}
  body #hud .story-teaser>img,body #hud .story-teaser-copy{display:none}
  body #hud .story-compact-icon{display:flex;align-items:center;justify-content:center}
- body #hud .story-compact-icon svg{width:21px;height:21px}
+ body #hud .story-compact-icon svg{width:19px;height:21px}
  body:not([data-stage="welcome"]) #hud .scene-info{left:12px;right:12px;top:calc(var(--mobile-top) + 52px);width:auto}
  body #hud .scene-heading{position:relative;padding:8px 12px;border-radius:12px;box-shadow:0 2px 10px #3529170c}
  body #hud .scene-heading .eyebrow{font-size:10px;line-height:1.3;letter-spacing:0;margin:0 0 4px}

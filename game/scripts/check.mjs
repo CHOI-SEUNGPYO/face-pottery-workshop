@@ -14,6 +14,8 @@ test('museum research links resolve and older editable catalogues remain usable'
  }
  const broken=structuredClone(catalog);broken.stages.faces.blocks[0].sources=['missing'];
  assert.equal(validCatalog(broken),false,'unknown citations cannot silently enter the published catalogue');
+ const missingPhoto=structuredClone(catalog);missingPhoto.stages.firing.blocks[0].photo='missing';
+ assert.equal(validCatalog(missingPhoto),false,'story illustrations must reference an available photo');
  delete catalog.artifact;delete catalog.sources;
  for(const stage of Object.values(catalog.stages))for(const block of stage.blocks){delete block.sources;delete block.question;}
  assert.ok(validCatalog(catalog),'existing editor data without new metadata remains valid');

@@ -113,7 +113,7 @@ export const scenes: Record<
     elevation: 15,
   },
   ending: {
-    title: "세상에 하나뿐인 내 얼굴토기",
+    title: "세상에 하나뿐인 내 얼굴모양토기",
     eyebrow: "우리의 작은 전시회",
     instruction: "유물 사진을 보거나 새 작품을 만들어요. 사진은 선택이에요.",
     character: "경산이",
@@ -184,4 +184,5 @@ export interface StoryBlock {
   text: string;
   sources?: string[];
   question?: string;
+  photo?: string;
 }
