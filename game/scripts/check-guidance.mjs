@@ -27,15 +27,29 @@ try{
   assert.ok(expanded.radius>initial.radius*2);assert.equal(expanded.height,initial.height);
   assert.deepEqual(await range.boundingBox(),rect,'mouth controls do not fall down when widened');
   await page.screenshot({path:'asset/review/mouth-fixed-controls.png'});
-  await page.locator('[data-action="undo"]').click();await page.locator('[data-action="next"]').click();
-  const tour=await page.evaluate(async()=>{
+  await page.locator('[data-action="undo"]').click();
+  // Subscribe before entering: a slow click acknowledgement can arrive after
+  // an early face has already been rendered on a software-GPU runner.
+  await page.evaluate(()=>{
     const w=window.togi.world,doc=window.togi.save.document,revision=doc.revision,xyz=Array.from(doc.outerXYZ),rotation=window.togi.save.rotation;
-    const aspects=new Set(),start=w.faceAspect;
-    await new Promise(resolve=>{const tick=()=>{aspects.add(w.faceAspect);if(w.demonstratingFaces)requestAnimationFrame(tick);else resolve();};tick();});
-    return {aspects:[...aspects].sort(),start,end:w.faceAspect,unchanged:revision===doc.revision&&xyz.every((n,i)=>n===doc.outerXYZ[i])&&rotation===window.togi.save.rotation};
+    const aspects=new Set();let started=false,start;
+    window.__tourResult=new Promise(resolve=>{const tick=()=>{
+      if(w.demonstratingFaces){if(!started){started=true;start=w.faceAspect;}aspects.add(w.faceAspect);}
+      if(started&&!w.demonstratingFaces)resolve({aspects:[...aspects].sort(),start,end:w.faceAspect,unchanged:revision===doc.revision&&xyz.every((n,i)=>n===doc.outerXYZ[i])&&rotation===window.togi.save.rotation});
+      else requestAnimationFrame(tick);
+    };requestAnimationFrame(tick);});
   });
+  await page.locator('[data-action="next"]').click();
+  const tour=await page.evaluate(()=>window.__tourResult);
   assert.deepEqual(tour.aspects,[1,2,3]);assert.equal(tour.end,tour.start);assert.ok(tour.unchanged);
   assert.equal(await page.locator('.turn-demonstration').isVisible(),false);
+  const delayed=await page.evaluate(async()=>{
+    const w=window.togi.world;w.startFaceTour();
+    w.faceTour.start=performance.now()-5000;w.faceTour.last=w.faceTour.start;
+    await new Promise(resolve=>requestAnimationFrame(resolve));
+    const elapsed=w.faceTour?.elapsed;w.stopFaceTour();return elapsed;
+  });
+  assert.ok(delayed>0&&delayed<=230,'a five-second delayed frame cannot skip a face');
   const touch=await context.newCDPSession(page);
   const draw=async points=>{
     await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{...points[0],id:1}]});

@@ -129,7 +129,7 @@ export class World {
   private goalPos = new T.Vector3();
   private goalTarget = new T.Vector3();
   private transition = 0;
-  private faceTour: {start:number;azimuth:number}|null=null;
+  private faceTour: {start:number;last:number;elapsed:number;azimuth:number}|null=null;
   private observer: ResizeObserver;
   private frame = 0;
   private sprites = new Map<string, T.Sprite>();
@@ -336,7 +336,8 @@ export class World {
   get faceAspect(){return ((Math.round((this.getSave().rotation*180/Math.PI-this.azimuth)/120)%3)+3)%3+1;}
   startFaceTour(){
     if(this.reduced||this.stage!=='faces')return;
-    this.faceTour={start:performance.now()+480,azimuth:this.azimuth};this.refresh();
+    const start=performance.now()+480;
+    this.faceTour={start,last:start,elapsed:0,azimuth:this.azimuth};this.refresh();
   }
   stopFaceTour(){if(this.faceTour){this.faceTour=null;this.compose(true);this.refresh();}}
   resize() {
@@ -893,7 +894,10 @@ export class World {
     const now = performance.now();
     if (this.paused || document.hidden) return;
     if(this.faceTour&&now>=this.faceTour.start){
-      const t=Math.min(3,(now-this.faceTour.start)/1150),step=Math.floor(t),fraction=Math.min(1,(t-step)/.72);
+      // A slow frame must not skip a whole face in this teaching gesture.
+      this.faceTour.elapsed+=Math.min(230,Math.max(0,now-this.faceTour.last));
+      this.faceTour.last=now;
+      const t=Math.min(3,this.faceTour.elapsed/1150),step=Math.floor(t),fraction=Math.min(1,(t-step)/.72);
       const eased=fraction*fraction*(3-2*fraction);
       this.azimuth=this.faceTour.azimuth-(step+eased)*120;
       if(t===3){this.azimuth=this.faceTour.azimuth;this.faceTour=null;}
