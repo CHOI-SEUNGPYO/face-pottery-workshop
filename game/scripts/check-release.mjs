@@ -39,12 +39,15 @@ try{
   await page.locator('[data-action="next"]').click();
   await page.waitForFunction(()=>window.__faces.size===3&&document.querySelector('[data-face].active')?.dataset.face==='1');
   assert.ok(await page.locator('.turn-demonstration').isVisible(),'gesture hint outlasts the automatic tour');
-  assert.equal(await page.locator('[data-action="draw-round"]').getAttribute('aria-pressed'),'true');
+  assert.equal(await page.locator('[data-action="draw-opening"]').getAttribute('aria-pressed'),'true','published build defaults to free drawing');
+  assert.equal(await page.locator('[data-action="draw-round"]').count(),0,'published build has no drag-to-pierce mode');
   const area=await page.locator('.work-area').boundingBox(),cx=area.x+area.width/2,cy=area.y+area.height*.42;
   const touch=await context.newCDPSession(page);
-  await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:cx-28,y:cy-15,id:1}]});
-  for(const t of [.25,.5,.75,1])await touch.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:cx-28+56*t,y:cy-15+30*t,id:1}]});
+  const ellipse=Array.from({length:33},(_,i)=>{const a=i/32*Math.PI*2;return{x:cx+28*Math.cos(a),y:cy+15*Math.sin(a),id:1};});
+  await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[ellipse[0]]});
+  for(const point of ellipse.slice(1))await touch.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[point]});
   await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+  assert.equal(await page.evaluate(()=>window.togi.save.document.features.length),1,'published free drawing creates an opening from a closed contour');
   await page.locator('.refine-nudge').waitFor();await page.locator('[data-tool="refine"]').click();await settle();
   assert.ok(await page.locator('.refine-nudge').isVisible());
   await page.screenshot({path:'asset/review/release-touch-guidance.png'});

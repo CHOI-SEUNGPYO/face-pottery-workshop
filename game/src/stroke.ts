@@ -39,13 +39,10 @@ export function strokeIntent(
   };
 }
 
-/** A drag defines a closed ellipse; no precise return to the first pixel is needed. */
-export function roundOpening(a: {x:number;y:number}, b: {x:number;y:number}, touch=false) {
-  const tap=Math.hypot(b.x-a.x,b.y-a.y)<(touch?8:3);
-  const cx=tap?a.x:(a.x+b.x)/2,cy=tap?a.y:(a.y+b.y)/2;
-  const rx=tap?(touch?18:14):Math.max(6,Math.abs(b.x-a.x)/2);
-  const ry=tap?(touch?18:14):Math.max(6,Math.abs(b.y-a.y)/2);
-  return Array.from({length:49},(_,i)=>({x:cx+rx*Math.cos(i*Math.PI/24),y:cy+ry*Math.sin(i*Math.PI/24)}));
+/** A tap stamps a small circular opening centered on the contact point. */
+export function tapOpening(point: {x:number;y:number}, touch=false) {
+  const radius=touch?18:14;
+  return Array.from({length:49},(_,i)=>({x:point.x+radius*Math.cos(i*Math.PI/24),y:point.y+radius*Math.sin(i*Math.PI/24)}));
 }
 
 /** Trim a short finger lift-off tail after a nearly completed loop. */

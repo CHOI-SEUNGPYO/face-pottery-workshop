@@ -1,5 +1,5 @@
 import type { SceneId } from "./model";
-export type CarveMode = "round" | "opening" | "line";
+export type CarveMode = "opening" | "line";
 export type ToolId =
   | "shape"
   | "rotate"

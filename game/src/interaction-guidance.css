@@ -19,6 +19,8 @@ body #hud .scene-heading:has(.face-aspects) .eyebrow{padding-right:76px}
 body #hud .tool.refine-nudge{position:relative;background:#ffe5a2;border-color:#a77525;box-shadow:inset 0 0 0 1px #a77525;animation:refine-beacon 1.3s ease-in-out 3}
 body #hud .tool.refine-nudge::after{content:'';position:absolute;right:5px;top:5px;width:6px;height:6px;background:#9c5b12;border-radius:50%}
 @keyframes refine-beacon{50%{background:#ffebb8;box-shadow:inset 0 0 0 2px #b38332;transform:translateY(-2px)}}
+body #hud .refine-tip{position:fixed;z-index:9;width:168px;box-sizing:border-box;padding:8px 11px;border:1px solid #d8bd82;border-radius:13px;background:#fff6da;color:#76562e;font:11px/1.5 Pretendard,sans-serif;word-break:keep-all;box-shadow:0 3px 10px #63421b16;pointer-events:none}
+body #hud .refine-tip::after{content:'';position:absolute;left:var(--tip-arrow,140px);bottom:-5px;width:8px;height:8px;background:#fff6da;border-right:1px solid #d8bd82;border-bottom:1px solid #d8bd82;transform:translateX(-50%) rotate(45deg)}
 #opening-outline .loop-target{fill:#fff9e52b;stroke:#fff9e5;stroke-width:2;stroke-dasharray:3 3}
 #opening-outline[data-state="finished"] .outline-line{stroke:#e5bd66;stroke-width:2}
 #loading p{font-size:14px;letter-spacing:.01em}

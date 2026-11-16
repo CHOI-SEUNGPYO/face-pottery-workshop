@@ -12,7 +12,7 @@ import { applyForm, createSoftDocument, forms, adjustMouth } from "./src/form.ts
 import { surfaceFrame, sampleSurfacePath } from "./src/surface-path.ts";
 import { openingGeometry } from "./src/openings.ts";
 import { placeOpening } from "./src/opening-placement.ts";
-import { finishStroke, strokeIntent, roundOpening, closeFingerLoop } from "./src/stroke.ts";
+import { finishStroke, strokeIntent, tapOpening, closeFingerLoop } from "./src/stroke.ts";
 import { createArtifactExample } from "./src/artifact-example.ts";
 import { Vector3, Ray } from "three";
 import { SoilTerrain } from "./src/soil.ts";
@@ -59,9 +59,10 @@ assert.equal(strokeIntent(fingerLoop,true).closed,true,'finger loop accepts a sm
 assert.equal(strokeIntent(fingerLoop).closed,false,'mouse contours retain precise closure');
 assert.equal(strokeIntent(circle(0,28).slice(0,26),true).closed,false,'unfinished C is never filled');
 assert.equal(strokeIntent([{x:20,y:20},{x:23,y:22},{x:22,y:21}],true).tap,true,'finger tap tolerates jitter');
-const ellipse=roundOpening({x:40,y:30},{x:100,y:50},true);
-assert.equal(strokeIntent(ellipse,true).closed,true);
-assert.ok(ellipse.every(p=>p.x>=40&&p.x<=100&&p.y>=30&&p.y<=50),'drag size remains under user control');
+for(const [opening,radius] of [[tapOpening({x:40,y:30}),14],[tapOpening({x:40,y:30},true),18]]){
+  assert.equal(strokeIntent(opening).closed,true,'tap creates a closed contour');
+  assert.ok(opening.every(p=>Math.abs(Math.hypot(p.x-40,p.y-30)-radius)<1e-9),'PC and touch taps keep their small circular sizes around the contact point');
+}
 const withTail=[...circle(0,28),{x:29,y:2},{x:31,y:5}];
 assert.ok(closeFingerLoop(withTail).length<withTail.length,'lift-off tail is trimmed');
 const example=createArtifactExample();

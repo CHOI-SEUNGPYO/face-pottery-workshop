@@ -62,10 +62,32 @@ try{
     await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
   };
   const area=await page.locator('.work-area').boundingBox(),cx=area.x+area.width/2,cy=area.y+area.height*.42;
-  assert.equal(await page.locator('[data-action="draw-round"]').getAttribute('aria-pressed'),'true');
-  await draw([{x:cx-32,y:cy-17},{x:cx-12,y:cy-9},{x:cx+12,y:cy+6},{x:cx+32,y:cy+17}]);
-  assert.equal(await page.evaluate(()=>window.togi.save.document.features.length),1,'finger drag makes an ellipse');
+  assert.equal(await page.locator('[data-action="draw-opening"]').getAttribute('aria-pressed'),'true','free drawing is the default');
+  assert.equal(await page.locator('[data-action="draw-round"]').count(),0,'drag-to-pierce mode is absent');
+  await page.evaluate(()=>{
+    window.__refineTipShown=new Promise((resolve,reject)=>{
+      const observer=new MutationObserver(()=>{
+        const tip=document.querySelector('.refine-tip');if(!tip)return;
+        clearTimeout(timeout);observer.disconnect();
+        const box=tip.getBoundingClientRect();
+        const overlap=el=>{const r=el.getBoundingClientRect();return Math.min(r.right,box.right)>Math.max(r.left,box.left)&&Math.min(r.bottom,box.bottom)>Math.max(r.top,box.top);};
+        resolve({text:tip.textContent,onScreen:box.left>=0&&box.top>=0&&box.right<=innerWidth&&box.bottom<=innerHeight,
+          coversButton:[...document.querySelectorAll('#hud button')].filter(el=>el.checkVisibility()).some(overlap),pointerEvents:getComputedStyle(tip).pointerEvents,
+          rotationHintHidden:document.querySelector('.turn-demonstration').hidden});
+      });
+      const timeout=setTimeout(()=>{observer.disconnect();reject(new Error('Missing refinement speech bubble'));},10000);
+      observer.observe(document.querySelector('#hud'),{childList:true,subtree:true});
+    });
+  });
+  const ellipse=Array.from({length:33},(_,i)=>{const a=i/32*Math.PI*2;return{x:cx+32*Math.cos(a),y:cy+17*Math.sin(a)};});
+  await draw(ellipse);
+  assert.equal(await page.evaluate(()=>window.togi.save.document.features.length),1,'a closed finger contour makes an opening');
   assert.equal(await page.locator('.refine-nudge').count(),1);
+  const tip=await page.evaluate(()=>window.__refineTipShown);
+  assert.match(tip.text,/오돌토돌한 테두리를 다듬어 봐요/);
+  assert.ok(tip.onScreen);assert.equal(tip.coversButton,false);assert.equal(tip.pointerEvents,'none');
+  assert.ok(tip.rotationHintHidden,'the speech bubble and rotation cue do not compete');
+  await page.waitForFunction(()=>{const el=document.querySelector('.refine-tip');return !el||Number(getComputedStyle(el).opacity)>=.95;});
   await page.screenshot({path:'asset/review/touch-hole-tools.png'});
   const rough=await page.evaluate(()=>JSON.stringify(window.togi.save.document.features));
   await page.locator('[data-tool="refine"]').click();await settle();
@@ -98,6 +120,7 @@ try{
   assert.notEqual(await page.evaluate(()=>JSON.stringify(window.togi.save.document.features)),rough,'rubbing the opening refines it');
   assert.equal(await page.locator('.refine-nudge').count(),0,'successful refinement clears the reminder');
   const feedback=await page.evaluate(()=>window.__feedbackCleared);
+  assert.equal(await page.locator('.refine-tip').count(),0,'refinement dismisses the speech bubble');
   assert.ok(feedback.timing?.duration<=300,'refinement fade lasts at most 300ms');
   assert.equal(feedback.timing.fill,'forwards','completed animation keeps the outline invisible until cleanup');
   assert.equal(Number(feedback.finalOpacity),0);
@@ -134,7 +157,7 @@ try{
   assert.equal(await page.locator('.turn-demonstration i').first().evaluate(el=>getComputedStyle(el).animationName),'none');
   assert.equal(await page.evaluate(()=>window.togi.world.demonstratingFaces),false);
   assert.deepEqual(errors,[]);
-  await writeFile('asset/review/guidance-check.json',JSON.stringify({tour,initial,expanded,feedback,status:'pass'},null,2));
-  console.log('PASS: stable mouth controls, three-face tour, touch ellipse/closure/refinement, AI example and saved-art isolation.');
+  await writeFile('asset/review/guidance-check.json',JSON.stringify({tour,initial,expanded,tip,feedback,status:'pass'},null,2));
+  console.log('PASS: stable mouth controls, three-face tour, freehand holes, refinement speech bubble, AI example and saved-art isolation.');
 }catch(error){await page?.screenshot({path:'asset/review/guidance-failure.png'});throw error;}
 finally{await browser?.close();await server.close();}
