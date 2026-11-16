@@ -22,7 +22,8 @@ export class AudioController {
   }
   start() {
     if (!this.ctx) {
-      this.ctx = new AudioContext();
+      if(!globalThis.AudioContext)return;
+      try{this.ctx = new AudioContext();}catch{return;}
       this.master = this.ctx.createGain();
       this.master.gain.value = this.muted ? 0 : 0.55;
       this.master.connect(this.ctx.destination);

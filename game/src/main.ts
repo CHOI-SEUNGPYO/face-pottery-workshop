@@ -55,6 +55,7 @@ import { AudioController } from "./audio";
 import { icon } from "./icons";
 import { characterImage } from "./assets";
 import {initTravel,prepareTravelArt,playTravel} from './loading';
+import {systemMotion,setReducedMotion,syncReducedMotion} from './motion';
 import {PhotoEditor} from './photo-editor';
 import {AI_CONTENT_LABEL,museumHomeLink,museumVisitMarkup} from './disclosure';
 import { museum, loadMuseum, museumAsset, photoFor, storyCard, sourceLinks, escapeHTML as e, factLabels } from './museum';
@@ -94,6 +95,7 @@ const history = new History(),
   audio = new AudioController();
 let world: World;
 let faceTourShown=false, rotationHint=true, refineNudge=false, outlineTimer=0;
+let outlineAnimation:Animation|undefined;
 const loadingStarted=performance.now();
 let photoEditor:PhotoEditor|null=null,returnToInspect=false,travelling=false,digComplete=false;
 function syncPause(){if(!world)return;world.paused=dialog.open;fireLast=performance.now();if(!world.paused)world.refresh();}
@@ -320,7 +322,7 @@ function updateUI() {
     syncFaceGuidance();
   }
   if(stage==='firing')hud.querySelector('.scene-heading')?.insertAdjacentHTML('beforeend','<button data-action="kiln-guide" class="kiln-help" aria-label="가마와 이 장면 알아보기"><span class="kiln-help-full">가마와 이 장면 알아보기 ↗</span><span class="kiln-help-brief">가마란?</span></button>');
-  if(stage==='firing')hud.querySelector('.firing-status')?.insertAdjacentHTML('beforeend',`${fireStart?'':`<button data-action="kiln-inside" class="small-button" aria-pressed="${world.kilnCutaway}">${world.kilnCutaway?'외부로 보기':'내부 보기'}</button>`}<small class="kiln-note">${fireStart?'가마 안쪽을 펼쳐 보여주는 장면이에요.':'당시 가마 자료를 참고한 장면 · 내부는 설명용 단면'}</small>`);
+  if(stage==='firing')hud.querySelector('.firing-status')?.insertAdjacentHTML('beforeend',`<small class="kiln-note">${fireStart?'가마 안쪽을 펼쳐 보여주는 장면이에요.':'당시 가마 자료를 참고한 장면 · 내부는 설명용 단면'}</small>`);
   if(stage==='excavation')hud.querySelector<HTMLButtonElement>('[data-action="next"]')!.disabled=!digComplete;
   if(stage==='assembly')hud.querySelector<HTMLButtonElement>('[data-action="next"]')!.disabled=save.assembledRevision!==save.document.revision;
   layoutUI();
@@ -596,7 +598,6 @@ document.addEventListener("click", async (e) => {
     else closeModal();
     return;
   }
-  if(a==='kiln-inside'){world.toggleKiln();el.setAttribute('aria-pressed',String(world.kilnCutaway));el.textContent=world.kilnCutaway?'외부로 보기':'내부 보기';return;}
   if(a==='settings'){
     const opened=hud.classList.toggle('settings-open');el.setAttribute('aria-expanded',String(opened));return;
   }
@@ -728,12 +729,16 @@ document.addEventListener("click", async (e) => {
 });
 document.addEventListener("change", (e) => {
   if ((e.target as HTMLElement).id === "reduce-motion") {
-    world.reduced = (e.target as HTMLInputElement).checked;
+    world.reduced = setReducedMotion((e.target as HTMLInputElement).checked);
     world.stopFaceTour();
-    localStorage.setItem("togi-reduced", String(world.reduced));
-    document.body.classList.toggle("reduced-motion", world.reduced);
     world.refresh();
   }
+});
+systemMotion.addEventListener('change',()=>{
+  const reduced=syncReducedMotion();
+  if(world){world.reduced=reduced;world.stopFaceTour();world.refresh();}
+  const input=document.querySelector<HTMLInputElement>('#reduce-motion');
+  if(input)input.checked=reduced;
 });
 function aNew() {
   faceTourShown=false;rotationHint=true;refineNudge=false;carveMode='round';
@@ -989,7 +994,10 @@ let gesture: Gesture | null = null,
   raf = 0;
 function clearOpening() {
   clearTimeout(outlineTimer);
+  outlineAnimation?.cancel();
+  outlineAnimation=undefined;
   openingOutline.style.display = "none";
+  delete openingOutline.dataset.state;
   for (const p of openingOutline.querySelectorAll("path")) p.removeAttribute("d");
   openingOutline.querySelector('circle')?.remove();
 }
@@ -1007,9 +1015,16 @@ function drawOutline(points: ScreenPoint[], state: "drawing" | "ready" | "outsid
     c.classList.add('loop-target');openingOutline.append(c);
   }
 }
-function openingFeedback(points:UV[]){
+function openingFeedback(points:UV[],refined=false){
+  clearOpening();
   drawOutline(projectOutline(points),'finished',true);
-  outlineTimer=window.setTimeout(clearOpening,world.reduced?800:1200);
+  const duration=world.reduced?150:refined?260:450;
+  if(!world.reduced){
+    outlineAnimation=openingOutline.animate([{opacity:.8},{opacity:0}],{duration,easing:'ease-out',fill:'forwards'});
+    outlineAnimation.onfinish=clearOpening;
+  }
+  // Also remove the path when animations are disabled or a frame is delayed.
+  outlineTimer=window.setTimeout(clearOpening,duration);
 }
 function syncFaceGuidance(){
   if(!['body','mouth','faces'].includes(stage))return;
@@ -1189,7 +1204,7 @@ function bindPointer() {
     (e) => {
       if (!loaded || world.paused || travelling || gesture || formEdit || placing || stage === "welcome") return;
       e.preventDefault();
-      world.stopFaceTour();
+      world.stopFaceTour();clearOpening();
       world.zoomBy(Math.exp(-clamp(e.deltaY, -100, 100) * 0.002));
     },
     { passive: false },
@@ -1311,7 +1326,7 @@ function bindPointer() {
     if(g.kind==='refine'){
       let refined:UV[]|undefined;
       for(const id of g.refineIds){const f=save.document.features.find(f=>f.id===id);if(f&&!refineFeature(save.document,f))refined=save.document.features.find(f=>f.id===id)?.points;}
-      if(refined){refineNudge=false;record(g.before);openingFeedback(refined);audio.effect('clay');toast('테두리를 부드럽게 다듬었어요. 더 문지르거나 되돌릴 수 있어요.');}
+      if(refined){refineNudge=false;record(g.before);openingFeedback(refined,true);audio.effect('clay');toast('테두리를 부드럽게 다듬었어요. 더 문지르거나 되돌릴 수 있어요.');}
       else toast('다듬고 싶은 구멍의 안쪽이나 테두리를 문질러 보세요.');
       return;
     }
@@ -1423,12 +1438,12 @@ document.addEventListener("keydown", (e) => {
 });
 async function boot() {
   try {
+    // Let the first loader reach the screen before synchronous WebGL setup.
+    await new Promise<void>(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve())));
     world = new World(host, () => save);
     world.onRender = ()=>{positionFormHandles();syncFaceGuidance();};
     world.onExhibit=target=>showStory(photoFor(target).id,target);
-    world.reduced =
-      localStorage.getItem("togi-reduced") === "true" || world.reduced;
-    document.body.classList.toggle("reduced-motion", world.reduced);
+    world.reduced=syncReducedMotion();
     try {
       saved = await repository.load();
     } catch {

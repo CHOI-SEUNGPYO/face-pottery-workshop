@@ -12,7 +12,6 @@ export function firingFrame(progress:number){
 export class FiringView {
   group=new T.Group();
   light=new T.PointLight(0xff7028,0,5,2);
-  cutaway=false;
   private shell:T.Object3D=new T.Group();
   private shellMaterials:T.Material[]=[];
   private coal=new T.MeshStandardMaterial({color:0x4e2315,emissive:0xff4808,emissiveIntensity:0,roughness:1});
@@ -29,7 +28,6 @@ export class FiringView {
     this.smoke=new T.Points(smokeGeometry,new T.PointsMaterial({color:0xc6c0b0,size:.16,transparent:true,opacity:0,depthWrite:false}));
     this.group.add(this.sparks,this.smoke);this.group.visible=false;
   }
-  setCutaway(value:boolean){this.cutaway=value;this.reveal(value?1:0);}
   private reveal(amount:number){
     this.shell.visible=amount<.995;
     for(const material of this.shellMaterials){
@@ -41,7 +39,7 @@ export class FiringView {
   applyArt(vault:T.Group,dressing:T.Group){
     const shell=vault.getObjectByName('Cutaway_shell');
     if(!shell)throw new Error('Kiln cutaway shell is missing');
-    this.shell=shell;this.shell.visible=!this.cutaway;
+    this.shell=shell;this.shell.visible=true;
     this.shellMaterials=[];
     this.shell.traverse(o=>{if(o instanceof T.Mesh){
       const materials=(Array.isArray(o.material)?o.material:[o.material]).map(m=>m.clone());
@@ -51,7 +49,7 @@ export class FiringView {
   }
   update(progress:number,reduced:boolean,animating=false){
     const {heat}=firingFrame(progress);this.group.visible=true;
-    this.reveal(this.cutaway?1:animating?ease(progress/.10)*(1-ease((progress-.91)/.09)):0);
+    this.reveal(animating?ease(progress/.10)*(1-ease((progress-.91)/.09)):0);
     const flicker=reduced?1:1+Math.sin(progress*310)*.045;
     this.light.intensity=heat*15*flicker;this.coal.emissiveIntensity=heat*3;
     this.sparks.material.opacity=reduced?0:heat*.65;

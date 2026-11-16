@@ -19,12 +19,16 @@ for(const path of [...localHTML.match(/\.\/assets\/index-[^"']+\.(?:js|css)/g),'
 }
 const browser=await chromium.launch({channel:'msedge',headless:true});let page;
 try{
-  const context=await browser.newContext({viewport:report.viewport,deviceScaleFactor:2,hasTouch:true,isMobile:true,reducedMotion:'no-preference'});
+  const context=await browser.newContext({viewport:report.viewport,deviceScaleFactor:2,hasTouch:true,isMobile:true,reducedMotion:'reduce'});
   page=await context.newPage();page.setDefaultTimeout(60000);
   page.on('pageerror',e=>report.errors.push(e.message));
   page.on('requestfailed',r=>{if(!r.failure()?.errorText.includes('ERR_ABORTED'))report.requests.push({url:r.url(),error:r.failure()});});
   const settle=()=>page.evaluate(()=>Promise.all(document.getAnimations().filter(a=>a.effect?.getTiming().iterations!==Infinity).map(a=>a.finished.catch(()=>{}))));
   await page.goto(url);await page.locator('#loading').waitFor({state:'detached'});await page.evaluate(()=>document.fonts.ready);
+  await page.locator('[data-action="help"]').click();await page.locator('#reduce-motion').uncheck();
+  await page.locator('[data-action="close"]').click();
+  await page.reload();await page.locator('#loading').waitFor({state:'detached'});
+  assert.equal(await page.locator('html').getAttribute('data-motion'),'full','published build retains the game motion choice over the OS setting');
   await page.locator('[data-action="new"]').click();await settle();
   assert.ok(await page.locator('.turn-demonstration').isVisible());
   await page.locator('[data-action="next"]').click();await settle();
@@ -44,6 +48,24 @@ try{
   await page.locator('.refine-nudge').waitFor();await page.locator('[data-tool="refine"]').click();await settle();
   assert.ok(await page.locator('.refine-nudge').isVisible());
   await page.screenshot({path:'asset/review/release-touch-guidance.png'});
+  await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:cx,y:cy,id:1}]});
+  await touch.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:cx+8,y:cy+4,id:1}]});
+  await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+  await page.waitForFunction(()=>!document.querySelector('.refine-nudge'));
+  await page.locator('#opening-outline').waitFor({state:'hidden',timeout:1500});
+  assert.equal(await page.locator('#opening-outline path').first().getAttribute('d'),null,'published refinement clears its outline');
+  await page.locator('[data-action="next"]').click();await settle();
+  await page.locator('[data-action="next"]').click();
+  await page.locator('#travel.art-ready').waitFor({state:'visible'});
+  const travelFrames=await page.locator('.travel-sprite-sheet').evaluate(async el=>{
+    const frames=new Set(),end=performance.now()+400;
+    do{frames.add(getComputedStyle(el).transform);await new Promise(requestAnimationFrame);}while(performance.now()<end);
+    return frames.size;
+  });
+  assert.ok(travelFrames>1,'published carrier frames advance after reduced motion is switched off');
+  await page.waitForFunction(()=>document.body.dataset.stage==='firing'&&document.querySelector('#travel').hidden);await settle();
+  assert.equal(await page.locator('[data-action="kiln-inside"]').count(),0,'published kiln has no manual inside-view button');
+  await page.screenshot({path:'asset/review/release-firing-no-manual-view.png'});
   const saved=await page.evaluate(()=>new Promise((resolve,reject)=>{
     const r=indexedDB.open('togi-workshop-v2',1);r.onerror=()=>reject(r.error);
     r.onsuccess=()=>{const db=r.result,t=db.transaction('state','readwrite'),store=t.objectStore('state'),q=store.get('current');let artwork;

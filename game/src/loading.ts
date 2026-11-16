@@ -14,7 +14,12 @@ export function prepareTravelArt(){
     party.src=asset('animations/party-travel.png');
     vessel.src=asset('animations/face-pot.png');
     await Promise.all([party.decode(),vessel.decode()]);
-    travel.querySelector<HTMLElement>('.travel-party')!.style.backgroundImage=`url("${party.src}")`;
+    // Move a decoded image layer instead of repainting background-position.
+    // Only the three front-facing frames belong to this carrying sequence.
+    const frame=document.createElement('div');frame.className='travel-sprite';
+    party.className='travel-sprite-sheet';party.alt='';
+    frame.append(party);
+    travel.querySelector('.travel-party')!.prepend(frame);
     travel.classList.add('art-ready');
     return true;
   })().catch(()=>{ready=undefined;return false;});

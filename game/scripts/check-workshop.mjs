@@ -149,6 +149,8 @@ try{
      await page.locator('.drawing-actions summary').click();
    }
    if(stage==='firing'){
+     assert.equal(await page.locator('[data-action="kiln-inside"]').count(),0,'loading the kiln has no interior-view button');
+     if(width===1366)await page.screenshot({path:'asset/review/firing-no-manual-view.png'});
      await page.locator('[data-action="kiln-guide"]').click();
      assert.match(await page.locator('.kiln-guide').textContent(),/실제로 가마 벽을 열어 둔 채 굽는다는 뜻은 아니에요/);
      assert.ok(await page.locator('.kiln-flow').isVisible());

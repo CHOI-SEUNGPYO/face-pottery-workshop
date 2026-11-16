@@ -1,13 +1,23 @@
 /* Keep the load indicator moving on the compositor while the scene is prepared. */
 #travel.art-ready .travel-party{
-  animation:party-run .54s steps(1,end) infinite,carrier-step .54s ease-in-out infinite;
+  animation:carrier-step .54s ease-in-out infinite;
+  background-image:none;
   will-change:transform;
+}
+#travel .travel-sprite{position:absolute;inset:0;overflow:hidden;z-index:0;pointer-events:none}
+#travel .travel-sprite-sheet{position:absolute;left:0;top:0;display:block;width:300%;height:200%;max-width:none;animation:carrier-frames .54s steps(1,end) infinite;will-change:transform}
+#travel .travel-vessel{z-index:1}
+@keyframes carrier-frames{
+  0%{transform:translate3d(0,0,0)}
+  33.3333%{transform:translate3d(-33.333333%,0,0)}
+  66.6667%{transform:translate3d(-66.666667%,0,0)}
 }
 @keyframes carrier-step{
   0%,100%{transform:translate3d(-3px,0,0) rotate(-.5deg)}
   50%{transform:translate3d(3px,-6px,0) rotate(.5deg)}
 }
 @media(prefers-reduced-motion:reduce){
-  #travel.art-ready .travel-party{animation:none;will-change:auto}
+  :root:not([data-motion="full"]) #travel.art-ready .travel-party,:root:not([data-motion="full"]) #travel .travel-sprite-sheet{animation:none;will-change:auto}
 }
-.reduced-motion #travel.art-ready .travel-party{animation:none;will-change:auto}
+[data-motion="reduced"] #travel.art-ready .travel-party,[data-motion="reduced"] #travel .travel-sprite-sheet{animation:none;will-change:auto}
+.reduced-motion #travel.art-ready .travel-party,.reduced-motion #travel .travel-sprite-sheet{animation:none;will-change:auto}

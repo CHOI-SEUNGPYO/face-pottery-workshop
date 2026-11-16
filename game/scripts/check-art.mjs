@@ -218,9 +218,12 @@ try{
       assert.ok(Math.abs(motion[500][1]-.07)<.001,'pot rests on the kiln bed while firing');
       if(review){await page.evaluate(()=>window.togi.world.setFiringProgress(.42));await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));await page.screenshot({path:'asset/review/art-firing-interior.png'});}
       await page.evaluate(()=>window.togi.world.setFiringProgress(null));
-      await page.evaluate(()=>window.togi.world.toggleKiln());
-      assert.equal(await page.evaluate(()=>window.togi.world.firingView.group.getObjectByName('Cutaway_shell').visible),false,'kiln model opens with the cutaway control');
-      await page.evaluate(()=>window.togi.world.toggleKiln());
+      assert.equal(await page.locator('[data-action="kiln-inside"]').count(),0,'firing has no manual interior-view control');
+      assert.equal(await page.evaluate(()=>window.togi.world.firingView.group.getObjectByName('Cutaway_shell').visible),true,'idle kiln is closed');
+      await page.evaluate(()=>window.togi.world.setFiringProgress(.42));
+      assert.equal(await page.evaluate(()=>window.togi.world.firingView.group.getObjectByName('Cutaway_shell').visible),false,'firing still shows its automatic explanatory cutaway');
+      await page.evaluate(()=>window.togi.world.setFiringProgress(null));
+      assert.equal(await page.evaluate(()=>window.togi.world.firingView.group.getObjectByName('Cutaway_shell').visible),true,'finished kiln closes automatically');
     }
   }
   await page.evaluate(()=>window.togi.go('body'));

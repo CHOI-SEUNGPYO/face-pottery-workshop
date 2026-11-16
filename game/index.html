@@ -5,6 +5,13 @@
   <meta name="theme-color" content="#f2dcaf"><meta name="description" content="경산 소월리 얼굴모양토기를 관찰하고 나만의 토기를 빚는 창작 체험">
   <link rel="icon" type="image/svg+xml" href="/asset/runtime/ui/pottery-icon.svg">
   <title>얼굴모양토기 — 작은 흙 공방</title>
+  <script>
+    try {
+      const motion = localStorage.getItem('togi-reduced');
+      if (motion === 'true' || motion === 'false')
+        document.documentElement.dataset.motion = motion === 'true' ? 'reduced' : 'full';
+    } catch {}
+  </script>
   <style>
     #loading{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;flex-direction:column;background:#f4e6ca;color:#624b32;text-align:center;padding:24px;font:15px/1.6 sans-serif}
     .loading-friends{display:flex;align-items:flex-end;justify-content:center;gap:14px;flex:none;height:106px;margin:0 0 20px}
@@ -15,7 +22,8 @@
     #loading::after,#travel::after{content:"";display:block;flex:none;width:64px;height:4px;margin-top:8px;border-radius:3px;background:#b18a4d;animation:loading-ready-pulse 1s ease-in-out infinite alternate;will-change:transform,opacity}
     @keyframes loading-friend-step{0%,100%{transform:translate3d(0,0,0) rotate(-1deg)}50%{transform:translate3d(0,-8px,0) rotate(1deg)}}
     @keyframes loading-ready-pulse{from{transform:scaleX(.4);opacity:.45}to{transform:scaleX(1);opacity:.9}}
-    @media(prefers-reduced-motion:reduce){#loading .loading-friends img,#travel .loading-friends img,#loading::after,#travel::after{animation:none;will-change:auto}}
+    @media(prefers-reduced-motion:reduce){:root:not([data-motion="full"]) #loading .loading-friends img,:root:not([data-motion="full"]) #travel .loading-friends img,:root:not([data-motion="full"]) #loading::after,:root:not([data-motion="full"]) #travel::after{animation:none;will-change:auto}}
+    [data-motion="reduced"] #loading .loading-friends img,[data-motion="reduced"] #travel .loading-friends img,[data-motion="reduced"] #loading::after,[data-motion="reduced"] #travel::after{animation:none;will-change:auto}
     .reduced-motion #loading .loading-friends img,.reduced-motion #travel .loading-friends img,.reduced-motion #loading::after,.reduced-motion #travel::after{animation:none;will-change:auto}
     #loading p{margin:12px 0;max-width:260px;word-break:keep-all}
   </style>

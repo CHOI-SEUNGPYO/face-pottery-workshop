@@ -4,6 +4,7 @@ import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import {MeshBVH,acceleratedRaycast} from 'three-mesh-bvh';
 import { asset, characterImage } from "./assets";
+import {getReducedMotion} from './motion';
 import { PotteryView } from "./pottery-view";
 import {ArtAssets,artGroups,type ArtGroup} from './art-assets';
 import {createArtifactExample} from './artifact-example';
@@ -118,7 +119,7 @@ export class World {
   ray = new T.Raycaster();
   stage: SceneId = "welcome";
   paused = false;
-  reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  reduced = getReducedMotion();
   viewPreset: ViewPreset = "stage";
   private elevation = 15;
   private azimuth = 0;
@@ -885,8 +886,6 @@ export class World {
     }
     this.refresh(previous!==p||progress===null);
   }
-  get kilnCutaway(){return this.firingView.cutaway;}
-  toggleKiln(){this.firingView.setCutaway(!this.firingView.cutaway);this.refresh(true);}
   get assemblyHeight(){return this.digLevel+.72+this.siruHeight;}
   async placeOnSiru(){
     const from=this.pottery.root.position.clone(),to=new T.Vector3(0,this.assemblyHeight,0);

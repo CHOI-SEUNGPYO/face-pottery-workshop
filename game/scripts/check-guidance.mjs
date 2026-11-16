@@ -70,9 +70,25 @@ try{
   const rough=await page.evaluate(()=>JSON.stringify(window.togi.save.document.features));
   await page.locator('[data-tool="refine"]').click();await settle();
   assert.equal(await page.locator('.refine-nudge').count(),1,'selecting the tool does not dismiss the refinement reminder');
+  await page.evaluate(()=>{
+    const outline=document.querySelector('#opening-outline');
+    window.__feedbackCleared=new Promise((resolve,reject)=>{
+      let started;
+      const timeout=setTimeout(()=>{observer.disconnect();reject(new Error('Refinement outline did not clear'));},10000);
+      const observer=new MutationObserver(()=>{
+        if(outline.dataset.state==='finished'&&started===undefined)started=performance.now();
+        if(started!==undefined&&outline.style.display==='none'){
+          clearTimeout(timeout);observer.disconnect();resolve({duration:performance.now()-started,path:outline.querySelector('path').getAttribute('d')});
+        }
+      });observer.observe(outline,{attributes:true,childList:true,subtree:true});
+    });
+  });
   await draw([{x:cx,y:cy},{x:cx+9,y:cy+4},{x:cx+19,y:cy+7},{x:cx+5,y:cy+1}]);
   assert.notEqual(await page.evaluate(()=>JSON.stringify(window.togi.save.document.features)),rough,'rubbing the opening refines it');
   assert.equal(await page.locator('.refine-nudge').count(),0,'successful refinement clears the reminder');
+  const feedback=await page.evaluate(()=>window.__feedbackCleared);
+  assert.ok(feedback.duration<650,`refinement glow clears promptly (${feedback.duration}ms)`);
+  assert.equal(feedback.path,null,'completed refinement leaves no screen-space outline');
   await page.locator('[data-action="undo"]').click();assert.equal(await page.evaluate(()=>JSON.stringify(window.togi.save.document.features)),rough,'one rub is one undo');
   await page.locator('[data-action="undo"]').click();
   await page.locator('[data-tool="carve"]').click();
@@ -105,7 +121,7 @@ try{
   assert.equal(await page.locator('.turn-demonstration i').first().evaluate(el=>getComputedStyle(el).animationName),'none');
   assert.equal(await page.evaluate(()=>window.togi.world.demonstratingFaces),false);
   assert.deepEqual(errors,[]);
-  await writeFile('asset/review/guidance-check.json',JSON.stringify({tour,initial,expanded,status:'pass'},null,2));
+  await writeFile('asset/review/guidance-check.json',JSON.stringify({tour,initial,expanded,feedback,status:'pass'},null,2));
   console.log('PASS: stable mouth controls, three-face tour, touch ellipse/closure/refinement, AI example and saved-art isolation.');
 }catch(error){await page?.screenshot({path:'asset/review/guidance-failure.png'});throw error;}
 finally{await browser?.close();await server.close();}
