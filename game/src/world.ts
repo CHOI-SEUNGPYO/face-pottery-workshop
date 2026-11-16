@@ -444,7 +444,9 @@ export class World {
       stage === "excavation" ? -0.18 : 0,
       0,
     );
-    this.siru.scale.setScalar(1);
+    // Fit before burial bounds and soil coverage are built so excavation and
+    // assembly show the same steamer, including when either stage is resumed.
+    this.siru.scale.setScalar(outdoors?this.fittedSiruScale:1);
     this.stand.position.copy(this.pottery.root.position);
     this.mask = s.excavationMask;
     this.siru.rotation.x = stage === "excavation" ? -Math.PI / 2 : 0;
@@ -507,7 +509,6 @@ export class World {
       this.pottery.root.rotation.x=this.siru.rotation.x=0;
       this.site.position.x=this.soil.position.x=this.earth.position.x=-3.8;
       this.siru.position.set(0,this.digLevel+.72,0);
-      this.siru.scale.setScalar(this.fittedSiruScale);
       this.pottery.root.position.set(placed?0:-.83*Math.max(1,this.siru.scale.x),placed?this.assemblyHeight:this.digLevel+.72,placed?0:.15);
     }
     const color=museumStage?0x253941:outdoors||stage==='firing'?0xc1d0ca:0xdcd5c8;

@@ -139,6 +139,17 @@ try{
       for(const viewport of [{width:1366,height:768},{width:740,height:360},{width:390,height:844},{width:768,height:1024}]){
         await page.setViewportSize(viewport);
         await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+        if(viewport.width===390){
+          await page.evaluate(()=>{
+            const w=window.togi.world;window.__reviewSoil=w.terrain.mask.slice();
+            w.terrain.mask.fill(255);w.terrain.configure(w.terrain.mask,w.terrain.findBounds);w.setView('stage');
+          });
+          await page.screenshot({path:'asset/review/fitted-siru-excavation-mobile.png'});
+          await page.evaluate(()=>{
+            const w=window.togi.world;w.terrain.mask.set(window.__reviewSoil);
+            w.terrain.configure(w.terrain.mask,w.terrain.findBounds);w.refresh();delete window.__reviewSoil;
+          });
+        }
         const area=await page.locator('.work-area').boundingBox(),x=area.x+area.width/2,y=area.y+area.height/2;
         for(const delta of [-900,1800]){
           // Real secondary-button drags exercise the same orbit route as a player.

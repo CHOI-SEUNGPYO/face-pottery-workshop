@@ -31,6 +31,8 @@ try{
   assert.equal(await page.locator('html').getAttribute('data-motion'),'full','published build retains the game motion choice over the OS setting');
   await page.locator('[data-action="new"]').click();await settle();
   assert.ok(await page.locator('.turn-demonstration').isVisible());
+  assert.equal(await page.locator('.turn-demonstration i').count(),1);
+  assert.equal(await page.locator('.turn-demonstration span').textContent(),'빈 곳을 끌어 돌려요');
   await page.locator('[data-action="next"]').click();await settle();
   await page.evaluate(()=>{
     window.__faces=new Set();

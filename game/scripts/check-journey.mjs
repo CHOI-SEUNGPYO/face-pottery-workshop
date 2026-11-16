@@ -39,7 +39,7 @@ async function pinch(page,point){
 async function siteState(page){return page.evaluate(()=>{
  const {world:w,save:s}=window.togi;
  return {level:w.terrain.surfaceLevel,ground:w.terrain.heightAt(-1.4,-1),site:w.site.children.length,
-  placement:[...w.pottery.root.position],siru:[...w.siru.position],mask:Array.from(s.excavationMask),doc:Array.from(s.document.outerXYZ)};
+  placement:[...w.pottery.root.position],siru:[...w.siru.position],siruScale:w.siru.scale.x,mask:Array.from(s.excavationMask),doc:Array.from(s.document.outerXYZ)};
 });}
 async function project(page,point){return page.evaluate(point=>{
  const p=window.togi.world.camera.position.clone().set(...point).project(window.togi.world.camera);
@@ -138,6 +138,31 @@ try{
    await page.locator('[data-action="undo"]').click();await page.locator('[data-action="undo"]').click();
 
    await page.evaluate(()=>{window.togi.save.rotation=0;});await go(page,'excavation');
+   const buriedFit=await page.evaluate(()=>{
+    const w=window.togi.world,d=window.togi.save.document,original=[d.outerXYZ.slice(),d.innerXYZ.slice()],initial=w.siru.scale.x;
+    const cases=[];
+    for(const factor of [.65,1.4]){
+     for(const [j,points] of [d.outerXYZ,d.innerXYZ].entries()){
+      points.set(original[j]);for(let i=0;i<points.length;i+=3){points[i]*=factor;points[i+2]*=factor;}
+     }
+     w.update();w.setStage('excavation',true);
+     const box=w.pottery.body.geometry.boundingBox.clone().makeEmpty();
+     w.siru.traverseVisible(o=>{if(o.isMesh){o.geometry.computeBoundingBox();box.union(o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld));}});
+     const excavationScale=w.siru.scale.x,target={...w.terrain.findBounds[1]},floor=box.min.y,top=box.max.y,soilTop=w.terrain.surfaceLevel;
+     w.setStage('assembly',true);
+     cases.push({factor,excavationScale,assemblyScale:w.siru.scale.x,floor,top,soilTop,
+      boundsMatch:Math.abs(target.minX-box.min.x)<.001&&Math.abs(target.maxX-box.max.x)<.001&&Math.abs(target.minZ-box.min.z)<.001&&Math.abs(target.maxZ-box.max.z)<.001});
+    }
+    d.outerXYZ.set(original[0]);d.innerXYZ.set(original[1]);w.update();w.setStage('excavation',true);
+    return {initial,cases,restored:w.siru.scale.x};
+   });
+   for(const fit of buriedFit.cases){
+    assert.ok(Math.abs(fit.excavationScale/buriedFit.initial-fit.factor)<.001,'buried siru follows small and large pot bases');
+    assert.equal(fit.assemblyScale,fit.excavationScale,'siru size stays the same from excavation to assembly');
+    assert.ok(Math.abs(fit.floor+.23)<.001,'scaled siru rests on the excavation floor');
+    assert.ok(fit.soilTop>fit.top&&fit.boundsMatch,'soil cover and discovery bounds use the fitted size');
+   }
+   assert.ok(Math.abs(buriedFit.restored-buriedFit.initial)<.001);
    const buried=await siteState(page);assert.ok(buried.site>0);assert.ok(Math.abs(buried.ground-buried.level)<.003);
    const start=await project(page,[-.5,buried.level,.2]),end=await project(page,[.45,buried.level,.2]);
    if(viewport.width<800){

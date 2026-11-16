@@ -21,6 +21,9 @@ try{
   assert.ok(await page.evaluate(()=>window.__loaderEnd-window.__loaderStart>=880),'loading has a legible minimum duration');
   await page.locator('[data-action="new"]').click();await settle();
   assert.ok(await page.locator('.turn-demonstration').isVisible(),'new artwork immediately teaches rotation');
+  assert.equal(await page.locator('.turn-demonstration i').count(),1,'the cue demonstrates one finger on the background');
+  assert.equal(await page.locator('.turn-demonstration span').textContent(),'빈 곳을 끌어 돌려요');
+  await page.screenshot({path:'asset/review/single-finger-rotation-mobile.png'});
   await page.locator('[data-action="next"]').click();await settle();
   const range=page.locator('[data-form-range="mouth-width"]');
   const initial=await page.evaluate(()=>({radius:window.togi.save.document.mouth.innerRadius,height:window.togi.save.document.mouth.center[1]}));
@@ -136,7 +139,11 @@ try{
   await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:20,y:cy,id:1}]});
   assert.equal(await page.evaluate(()=>window.togi.world.demonstratingFaces),false,'touch interrupts the demo immediately');
   await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+  const cameraBefore=await page.evaluate(()=>window.togi.world.camera.position.toArray());
   await draw([{x:20,y:cy},{x:40,y:cy},{x:65,y:cy}]);
+  await settle();
+  assert.notDeepEqual(await page.evaluate(()=>window.togi.world.camera.position.toArray()),cameraBefore,'one-finger background drag rotates the view');
+  assert.equal(await page.evaluate(()=>JSON.stringify(window.togi.save.document)),artwork,'background rotation preserves the artwork');
   assert.equal(await page.locator('.turn-demonstration').isVisible(),false,'actual rotation dismisses the cue');
   await page.locator('[data-action="help"]').click();await page.locator('[data-action="turn-guide"]').click();
   assert.ok(await page.locator('.turn-demonstration').isVisible(),'help replays the demonstration');
@@ -155,6 +162,7 @@ try{
   await page.locator('[data-action="help"]').click();await page.locator('[data-action="turn-guide"]').click();
   assert.ok(await page.locator('.turn-demonstration').isVisible(),'reduced motion keeps a static gesture hint');
   assert.equal(await page.locator('.turn-demonstration i').first().evaluate(el=>getComputedStyle(el).animationName),'none');
+  assert.equal(await page.locator('.turn-demonstration span').textContent(),'빈 곳을 끌어 돌려요','desktop and mobile use the same rotation cue');
   assert.equal(await page.evaluate(()=>window.togi.world.demonstratingFaces),false);
   assert.deepEqual(errors,[]);
   await writeFile('asset/review/guidance-check.json',JSON.stringify({tour,initial,expanded,tip,feedback,status:'pass'},null,2));

@@ -11,8 +11,7 @@
 body #hud .scene-heading:has(.face-aspects) .eyebrow{padding-right:76px}
 .turn-demonstration{position:absolute;width:172px;height:78px;transform:translateX(-50%);pointer-events:none;z-index:2;color:#fff9eb;filter:drop-shadow(0 1px 3px #44301ecc);text-align:center}
 .turn-demonstration[hidden]{display:none}
-.turn-demonstration i{position:absolute;width:19px;height:29px;top:21px;left:64px;border:2px solid #fff9eb;border-radius:12px;background:#735539b0;animation:finger-swipe 1.8s ease-in-out infinite}
-.turn-demonstration i+i{left:88px;animation-delay:.025s}
+.turn-demonstration i{position:absolute;width:19px;height:29px;top:21px;left:75px;border:2px solid #fff9eb;border-radius:12px;background:#735539b0;animation:finger-swipe 1.8s ease-in-out infinite}
 .turn-demonstration svg{width:140px;height:36px;fill:none;stroke:#fff9eb;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
 .turn-demonstration span{display:block;position:absolute;inset:55px 0 auto;font-size:11px;font-weight:600;line-height:1.4}
 @keyframes finger-swipe{0%,15%{transform:translateX(-27px);opacity:.1}30%{opacity:1}80%{transform:translateX(27px);opacity:1}100%{transform:translateX(27px);opacity:0}}
