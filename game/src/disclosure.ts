@@ -6,7 +6,7 @@ export function museumHomeLink() {
 }
 
 export function museumVisitMarkup() {
-  return `<aside class="museum-visit" aria-label="박물관 방문 안내"><strong>다음 만남은 경산시립박물관에서</strong><p>게임에서 만난 얼굴모양토기는 경산시립박물관 특별전에서 소개된 유물이에요.</p><small>실물을 보고 싶다면 방문 전 공식 홈페이지에서 현재 전시 여부와 관람 안내를 확인해 주세요.</small>${museumHomeLink()}</aside>`;
+  return `<aside class="museum-visit" aria-label="박물관 방문 안내"><strong>경산시립박물관에서 만나 보세요</strong><p>이야기의 시작이 된 실제 얼굴모양토기를 직접 살펴보세요.</p><small>공식 홈페이지에서 관람 시간과 휴관일을 확인할 수 있어요.</small>${museumHomeLink()}</aside>`;
 }
 
 // Draw after every sticker and selection overlay so the disclosure remains

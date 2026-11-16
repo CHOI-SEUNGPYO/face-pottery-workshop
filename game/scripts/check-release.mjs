@@ -60,7 +60,7 @@ try{
   await page.locator('[data-action="ending-credits"]').click();
   assert.match(await page.locator('.artifact-label').textContent(),/透刻人面文甕形土器/);
   const visit=page.locator('.museum-ending .museum-visit');
-  assert.match(await visit.textContent(),/얼굴모양토기는 경산시립박물관 특별전에서 소개된 유물/);
+  assert.match(await visit.textContent(),/경산시립박물관에서 만나 보세요/);
   for(const viewport of [{width:320,height:568},{width:768,height:1024},report.viewport]){
     await page.setViewportSize(viewport);await visit.scrollIntoViewIfNeeded();
     const box=await visit.boundingBox();assert.ok(box.x>=0&&box.x+box.width<=viewport.width,'museum visit invitation fits the screen');
