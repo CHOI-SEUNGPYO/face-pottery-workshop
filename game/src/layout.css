@@ -35,9 +35,9 @@ body #hud .story-dock{position:fixed;top:100px;right:24px;width:220px;pointer-ev
 .story-teaser>img{width:54px;height:76px;object-fit:contain;border-radius:9px;flex-shrink:0}
 .story-teaser>span{display:flex;flex-direction:column;gap:6px;min-width:0}
 .story-teaser span{white-space:normal;overflow-wrap:anywhere}
-.story-teaser small{font-size:9px;color:#997346}.story-teaser strong{font:14px/1.4 Round}
-.story-teaser span span{font-size:11px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
-.story-teaser em{font-style:normal;font-size:10px;color:#986227}
+.story-teaser small{font-size:10px;color:#997346}.story-teaser strong{font:16px/1.4 Round}
+.story-teaser span span{font-size:12px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.story-teaser em{font-style:normal;font-size:11px;color:#986227}
 body #hud .actionbar{position:relative;display:block;pointer-events:auto;padding:0;background:none;border:0;box-shadow:none;z-index:8}
 body #hud .actionbar summary{list-style:none;display:flex;gap:8px;align-items:center;justify-content:center;min-height:46px;padding:0 15px;border:1px solid #dfc59c;border-radius:18px;background:#fff9eef5;box-shadow:0 4px 14px #694b2410;cursor:pointer;font-size:13px;white-space:nowrap}
 .actionbar summary::-webkit-details-marker{display:none}.actionbar summary svg{width:20px;height:20px}

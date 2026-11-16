@@ -17,6 +17,7 @@ import {museum,museumAsset} from './museum';
 import {outdoorSite,museumRoom,setEnvironmentMaterials} from './environments';
 import {
   clamp,
+  COLS,
   isHole,
   surfacePoint,
   surfaceNormal,
@@ -101,6 +102,7 @@ export class World {
   private courtyard=new T.Group();
   private assemblyBench=new T.Group();
   private siruHeight=.70;
+  private siruRimRadius=.25;
   private fieldProps = new T.Group();
   private firingView=new FiringView();
   private firingProgress:number|null=null;
@@ -265,6 +267,17 @@ export class World {
       // triangle for every brush sample, including the still-buried surface.
       siru.traverse(o=>{if(o instanceof T.Mesh){o.geometry.boundsTree=new MeshBVH(o.geometry);o.raycast=acceleratedRaycast;}});
       siru.position.y-=siruBounds.min.y;this.siruHeight=siruBounds.max.y-siruBounds.min.y;
+      siru.updateWorldMatrix(true,true);
+      let radius=0;const point=new T.Vector3();
+      siru.traverse(object=>{
+        if(!(object instanceof T.Mesh)||object.userData.siruHandle)return;
+        const positions=object.geometry.getAttribute('position');
+        for(let i=0;i<positions.count;i++){
+          point.fromBufferAttribute(positions,i).applyMatrix4(object.matrixWorld);
+          if(point.y>=this.siruHeight*.94)radius=Math.max(radius,Math.hypot(point.x,point.z));
+        }
+      });
+      if(radius>0)this.siruRimRadius=radius;
       this.siru.add(siru);
       this.fieldProps.add(this.art.model('field-tools'));this.site.add(this.fieldProps);
       this.courtyard.add(this.art.model('courtyard'));
@@ -494,7 +507,8 @@ export class World {
       this.pottery.root.rotation.x=this.siru.rotation.x=0;
       this.site.position.x=this.soil.position.x=this.earth.position.x=-3.8;
       this.siru.position.set(0,this.digLevel+.72,0);
-      this.pottery.root.position.set(placed?0:-.83,placed?this.assemblyHeight:this.digLevel+.72,placed?0:.15);
+      this.siru.scale.setScalar(this.fittedSiruScale);
+      this.pottery.root.position.set(placed?0:-.83*Math.max(1,this.siru.scale.x),placed?this.assemblyHeight:this.digLevel+.72,placed?0:.15);
     }
     const color=museumStage?0x253941:outdoors||stage==='firing'?0xc1d0ca:0xdcd5c8;
     this.scene.background=new T.Color(color);
@@ -886,7 +900,14 @@ export class World {
     }
     this.refresh(previous!==p||progress===null);
   }
-  get assemblyHeight(){return this.digLevel+.72+this.siruHeight;}
+  private get fittedSiruScale(){
+    const points=this.getSave().document.outerXYZ;
+    let radius=0;
+    // Match the support to the authored bottom ring, not the wide shoulders.
+    for(let i=0;i<COLS;i++)radius=Math.max(radius,Math.hypot(points[i*3],points[i*3+2]));
+    return clamp(radius/this.siruRimRadius*1.04,.25,3);
+  }
+  get assemblyHeight(){return this.digLevel+.72+this.siruHeight*this.fittedSiruScale;}
   async placeOnSiru(){
     const from=this.pottery.root.position.clone(),to=new T.Vector3(0,this.assemblyHeight,0);
     const start=performance.now(),duration=this.reduced?0:650;

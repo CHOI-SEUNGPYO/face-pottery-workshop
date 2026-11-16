@@ -151,7 +151,18 @@ try{
    assert.equal(dug.ground,buried.ground,'remote soil stays flat');
    if(process.env.TOGI_REVIEW==='1'){await mkdir('asset/review',{recursive:true});await page.screenshot({path:`asset/review/dug-${viewport.width}.png`});}
    // Resume assembly in a freshly created World, without entering excavation first.
-   await go(page,'assembly');const assembly=await siteState(page);
+   await go(page,'assembly');
+   const fit=await page.evaluate(()=>{
+    const w=window.togi.world,d=window.togi.save.document,original=[d.outerXYZ.slice(),d.innerXYZ.slice()];
+    const initial=w.siru.scale.x;
+    for(const points of [d.outerXYZ,d.innerXYZ])for(let i=0;i<points.length;i+=3){points[i]*=1.4;points[i+2]*=1.4;}
+    w.update();w.setStage('assembly',true);const larger=w.siru.scale.x;
+    d.outerXYZ.set(original[0]);d.innerXYZ.set(original[1]);w.update();w.setStage('assembly',true);
+    return {initial,larger,restored:w.siru.scale.x};
+   });
+   assert.ok(Math.abs(fit.larger/fit.initial-1.4)<.001,'siru automatically follows the pot base width');
+   assert.ok(Math.abs(fit.restored-fit.initial)<.001,'restoring the artwork restores its fitted siru');
+   const assembly=await siteState(page);
    await page.reload();await page.waitForSelector('#loading',{state:'detached'});await page.locator('[data-action="continue"]').click();await settle(page);
    assert.equal(await page.locator('body').getAttribute('data-stage'),'assembly');assert.deepEqual(await siteState(page),assembly,'assembly resume restores the same site and mask');
    const placementPoints=await page.evaluate(()=>{

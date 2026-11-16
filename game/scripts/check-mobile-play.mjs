@@ -107,6 +107,7 @@ try{
     for(const y of [280,310,340,370,400,430])await drag({x:92,y},{x:300,y},16);
   assert.ok(await page.locator('[data-action="next"]').isEnabled(),'finger brushing alone discovers both artifacts');
   await activate('[data-action="next"]');await audit('assembly');
+  assert.equal(await page.locator('#siru-size').count(),0,'siru sizing is automatic');
   const poses=await page.evaluate(()=>{const w=window.togi.world,p=w.pottery.root.position;return{from:[p.x,p.y+.48,p.z],to:[0,w.assemblyHeight,0]};});
   const from=await project(poses.from),to=await project(poses.to);
   // Check the lifted pose while the finger is still held, before completion
@@ -116,6 +117,8 @@ try{
   await audit('assembly');
   await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
   await page.waitForFunction(()=>window.togi.save.assembledRevision===window.togi.save.document.revision);
+  await audit('assembly');
+  assert.ok(await page.evaluate(()=>Math.abs(window.togi.world.pottery.root.position.y-window.togi.world.assemblyHeight)<.001),'resizing after placement keeps the pot on the siru');
   await audit('assembly');await activate('[data-action="next"]');await audit('compare');
   for(const which of ['own','reference']){
     const before=await page.evaluate(which=>{const w=window.togi.world;return (which==='own'?w.pottery.root:w.referenceArtifact).rotation.y;},which);
