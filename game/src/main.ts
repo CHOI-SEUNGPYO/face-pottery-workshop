@@ -306,7 +306,7 @@ function updateUI() {
   if (stage === "assembly")
     extras = `<div class="find-event"><strong>${save.assembledRevision===save.document.revision?'함께 놓았어요!':'흙 속에서 만난 두 유물'}</strong><p>토기를 끌거나 아래 버튼을 눌러 시루 위에 얹어 보세요.</p>${button("place", "시루에 얹기", "place", "secondary",save.assembledRevision===save.document.revision)}</div>`;
   if (stage === "ending")
-    extras = `<div class="ending-links">${button("ending-credits", "유물 사진·마무리", "story", "secondary")}${button("new", "새 작품 만들기", "plus", "secondary")}</div>`;
+    extras = `<div class="ending-links">${button("ending-credits", "유물 사진·마무리", "story", "secondary")}${button("photo", "사진 남기기 · 선택", "photo", "secondary optional-photo")}</div>`;
   hud.innerHTML =
     header +
     `<div class="work-area" aria-hidden="true"></div><div class="scene-info"><section class="scene-heading"><p class="eyebrow">${c.eyebrow}</p><h1>${c.title}</h1><p class="scene-instruction">${instruction}</p></section>
@@ -319,7 +319,7 @@ function updateUI() {
     ${storyCard(stage)}
     <footer><div class="left-actions">${button("previous", "이전", "previous", "round icon-only")}${isEdit ? button("undo", "되돌리기", "undo", "round icon-only", !history.undoStack.length) + button("redo", "다시 실행", "redo", "round icon-only", !history.redoStack.length) : button("home", "처음 화면", "home", "round icon-only")}</div>
     ${stage==='faces'?actionbar(drawingLabel,`<div class="tools" role="toolbar" aria-label="작업 도구">${c.tools.map((t) => `<button data-tool="${t}" class="tool ${tool === t ? "selected" : ""}" aria-pressed="${tool === t}" aria-label="${toolLabels[t]}">${icon(t)}<span>${t==='refine'?'구멍 다듬기':toolLabels[t]}</span></button>`).join("")}</div>${toolGuide(tool,carveMode)}`,'drawing-actions'):''}
-    ${stage==='ending'?button('photo','사진 남기기 · 선택','photo','secondary next-button optional-photo'):button("next", primaryLabel, "next", "primary next-button")}</footer>`;
+    ${stage==='ending'?button('finish-home','완료하고 처음으로','home','primary next-button'):button("next", primaryLabel, "next", "primary next-button")}</footer>`;
   arrangeHUD();
   if(world.inGallery)hud.querySelector('.scene-heading')?.insertAdjacentHTML('beforeend',`<p class="gallery-disclosure">오른쪽 · ${EXAMPLE_LABEL}<small>참고 유물: ${e(museum.artifact?.academicName??'얼굴모양토기')} · 형태와 색은 달라요.</small></p>`);
   if(stage==='faces'){
@@ -574,6 +574,9 @@ document.addEventListener("click", async (e) => {
     return;
   }
   const a = el.dataset.action!;
+  if(a==='finish-home'){
+    await persist();closeModal();await go('welcome');return;
+  }
   if(a==='turn-guide'){
     closeModal();rotationHint=true;
     if(stage==='faces')world.startFaceTour();

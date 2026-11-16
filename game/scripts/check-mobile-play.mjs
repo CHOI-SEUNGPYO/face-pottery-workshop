@@ -140,6 +140,14 @@ try{
   await page.locator('.album-image img').waitFor();await activate('[data-action="album-next"]');await activate('[data-action="album-back"]');
   await activate('.ending-actions [data-action="close"]');await audit('ending');
   assert.deepEqual(await page.evaluate(()=>Array.from(window.togi.save.document.outerXYZ)),artwork,'the finished artwork survives the photo and museum flows');
+  await activate('[data-action="ending-credits"]');
+  await activate('.ending-actions [data-action="finish-home"]');await audit('welcome');
+  assert.equal(await page.locator('dialog').evaluate(el=>el.open),false,'completion closes the credits');
+  await activate('[data-action="continue"]');await audit('ending');
+  assert.deepEqual(await page.evaluate(()=>Array.from(window.togi.save.document.outerXYZ)),artwork,'completion preserves the finished artwork for continuing');
+  await activate('footer [data-action="finish-home"]');await audit('welcome');
+  await page.reload();await page.locator('#loading').waitFor({state:'detached'});
+  await activate('[data-action="continue"]');await audit('ending');
   assert.deepEqual(report.errors,[]);report.status='pass';
   console.log('PASS: new artwork → touch shaping/drawing → full firing → touch excavation → lift/drop → exhibit rotation → PNG → museum → ending.');
 }catch(error){
