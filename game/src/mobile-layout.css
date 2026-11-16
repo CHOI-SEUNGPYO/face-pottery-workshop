@@ -1,5 +1,5 @@
 /* Mobile controls share two rails; the artwork owns the space between them. */
-body #hud .scene-instruction{font-size:13px;line-height:1.65;margin:0;color:#725239}
+body #hud .scene-instruction{display:block;font-size:13px;line-height:1.65;margin:0;color:#725239}
 body #hud .story-compact-icon,.kiln-help-brief,.instruction-brief{display:none}
 .sticker-controls[hidden]{display:none!important}
 .photo-editor .photo-icon{flex:none;width:44px;min-width:44px;height:44px;padding:10px}
@@ -59,7 +59,15 @@ body #hud .story-compact-icon,.kiln-help-brief,.instruction-brief{display:none}
  body #hud .drawing-modes button{min-height:44px;padding:5px;font-size:12px;background:transparent;box-shadow:none;border-radius:9px}
  body #hud .drawing-modes button[aria-pressed="true"]{background:#eadfc7}
  body #hud .settings-dock{left:12px;right:12px;width:auto;bottom:calc(var(--mobile-bottom) + 56px);padding:6px 10px;border-radius:14px;box-shadow:0 3px 14px #503c2718}
- body #hud .settings-dock:has(.edit-actions){width:132px;left:auto;padding:0}
+ body #hud .settings-dock:has(.form-controls){left:auto;width:auto;padding:0;border:0;background:none;box-shadow:none}
+ body #hud .form-controls{display:block}
+ body #hud .settings-dock .smooth-button{padding:7px 14px}
+ body #hud .settings-dock:has(.edit-actions){width:auto;left:12px;padding:0}
+ body #hud .edit-actions>summary{display:none}
+ body #hud .edit-actions .action-panel{position:static;width:100%;padding:5px;border-radius:14px;animation:none;box-shadow:0 3px 14px #503c2718}
+ body #hud .edit-links{grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
+ body #hud .edit-links button{min-width:0;gap:5px;background:transparent}
+ body #hud .edit-links svg{width:18px;height:18px}
  body #hud .settings-dock button{min-height:44px;padding:7px 10px;font-size:12px;border-radius:10px;box-shadow:none}
  body #hud .settings-dock .smooth-button{min-height:44px}
  body #hud .firing-status{gap:3px 10px;grid-template-columns:1fr auto}
@@ -79,6 +87,16 @@ body #hud .story-compact-icon,.kiln-help-brief,.instruction-brief{display:none}
  body #hud .context-label{position:static;transform:none;max-width:none;margin-top:4px;padding:3px 8px;font-size:10px;line-height:1.4;display:inline-block;background:#fff9eef2;border-radius:6px;color:#634a30}
  body #toast{top:158px;padding:8px 12px;font-size:12px;border-radius:10px}
 
+ body[data-stage="welcome"] #hud .welcome-copy{top:64px;padding:12px 16px}
+ body[data-stage="welcome"] #hud .welcome-copy h1{font-size:27px;line-height:1.18;margin-bottom:8px}
+ body[data-stage="welcome"] #hud .welcome-copy>.eyebrow{display:none}
+ body[data-stage="welcome"] #hud .welcome-description{font-size:12px!important;line-height:1.45!important;margin:0 0 8px!important}
+ body[data-stage="welcome"] #hud .ai-notice{font-size:10px;line-height:1.45;margin-bottom:10px}
+ body[data-stage="welcome"] #hud .partner-marks.compact{margin-bottom:6px}
+ body[data-stage="welcome"] #hud .partner-marks.compact .huss-mark{height:28px;width:40px}
+ body[data-stage="welcome"] #hud .partner-marks.compact .museum-mark{height:34px;width:55px}
+ body[data-stage="welcome"] #hud .welcome-actions .large{min-height:44px;padding:9px 16px}
+
  /* Photo controls only appear when a sticker is selected. */
  body dialog:has(.photo-editor){width:calc(100vw - 16px);max-width:none;max-height:calc(100dvh - 16px);padding:12px;border-radius:18px}
  body dialog:has(.photo-editor) .modal-close{top:6px;right:6px;width:44px;height:44px;min-width:44px;border-radius:12px;padding:10px;box-shadow:none}
@@ -97,6 +115,21 @@ body #hud .story-compact-icon,.kiln-help-brief,.instruction-brief{display:none}
  .photo-actions button{min-width:0;min-height:44px;padding:8px 6px;border-radius:11px;font-size:12px;box-shadow:none}
  .photo-actions .secondary{background:transparent;border:1px solid #dfcaa7}
  .photo-status{font-size:11px;line-height:1.5;margin:8px 0 0}
+}
+
+/* An opened landscape menu stays in the left rail, outside the pottery. */
+@media(max-width:950px) and (max-height:599px) and (orientation:landscape){
+ body #hud:has(.drawing-actions[open]) .scene-info{display:none}
+ body #hud .drawing-actions[open] .action-panel{left:0;bottom:calc(100% + 8px);width:138px;padding:5px;border-radius:12px}
+ body #hud .drawing-actions .tools{gap:3px}
+ body #hud .drawing-actions .tool{min-height:48px;flex-direction:column;gap:2px;padding:3px 1px;box-shadow:none}
+ body #hud .drawing-actions .tool span{font-size:9px;white-space:normal;line-height:1.2}
+ body #hud .drawing-actions .tool svg{width:17px;height:17px}
+ body #hud .drawing-actions .tool-coach{margin:0}
+ body #hud .drawing-actions .tool-coach h2,body #hud .drawing-actions .tool-coach p{display:none}
+ body #hud .drawing-actions .drawing-modes{margin:4px 0 0;gap:3px}
+ body #hud .drawing-actions .drawing-modes button{min-height:44px;padding:4px;font-size:11px;box-shadow:none}
+ body #hud header .round,body #hud .left-actions .round{width:44px;min-width:44px;height:44px}
 }
 
 @media(max-height:599px) and (orientation:landscape){

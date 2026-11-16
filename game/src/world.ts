@@ -569,6 +569,15 @@ export class World {
         new T.Vector3(0.55, 1.55, 0.55),
       );
     if (this.siru.visible) bounds.expandByObject(this.siru);
+    if(this.stage==='assembly'&&this.getSave().assembledRevision!==this.getSave().document.revision){
+      // Reserve the lifted pose before the player starts dragging. Refitting
+      // under their finger would move the target; fitting only after the drop
+      // lets the vessel rise behind the heading during the placement animation.
+      const lifted=new T.Box3().setFromObject(this.pottery.root);
+      const offset=new T.Vector3(0,this.assemblyHeight+.20,0).sub(this.pottery.root.position);
+      lifted.translate(offset);
+      bounds.union(lifted);
+    }
     // Once found, frame the two artifacts rather than the full excavation pit.
     if (this.stage === "excavation") bounds.expandByObject(this.soil);
     if(this.stage==='compare'||this.stage==='ending'){

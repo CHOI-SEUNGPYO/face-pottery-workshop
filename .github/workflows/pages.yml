@@ -54,6 +54,7 @@ jobs:
           - {suite: journey, width: '1366'}
           - {suite: journey, width: '740'}
           - {suite: journey, width: '390'}
+          - {suite: mobile, width: all}
           - {suite: art, width: all}
           - {suite: performance, width: all}
     env:

@@ -92,7 +92,7 @@ let world: World;
 let photoEditor:PhotoEditor|null=null,returnToInspect=false,travelling=false,digComplete=false;
 function syncPause(){if(!world)return;world.paused=dialog.open;fireLast=performance.now();if(!world.paused)world.refresh();}
 const portraitPhone=()=>matchMedia('(max-width:600px) and (orientation:portrait)').matches;
-function closeActions(){hud.querySelectorAll<HTMLDetailsElement>('details[open]').forEach(d=>{if(!portraitPhone()||!d.classList.contains('drawing-actions'))d.open=false;});}
+function closeActions(){hud.querySelectorAll<HTMLDetailsElement>('details[open]').forEach(d=>{if(!portraitPhone()||!d.matches('.drawing-actions,.edit-actions'))d.open=false;});}
 document.addEventListener('pointerdown',event=>{if(!(event.target as HTMLElement).closest('details.actionbar'))closeActions();});
 document.addEventListener('toggle',event=>{const el=event.target;if(el instanceof HTMLDetailsElement&&el.open&&el.classList.contains('actionbar'))hud.querySelectorAll<HTMLDetailsElement>('details[open]').forEach(d=>{if(d!==el)d.open=false;});},true);
 document.addEventListener('keydown',event=>{if(event.key==='Escape')closeActions();});
@@ -129,12 +129,11 @@ function layoutUI() {
   const w = innerWidth,
     h = innerHeight,
     compact = w < 1100 || h < 600;
-  const drawing=hud.querySelector<HTMLDetailsElement>('.drawing-actions');
-  if(drawing){
+  for(const actions of hud.querySelectorAll<HTMLDetailsElement>('.drawing-actions,.edit-actions')){
     const phone=portraitPhone();
-    if(phone)drawing.open=true;
-    else if(drawing.dataset.phone==='true')drawing.open=false;
-    drawing.dataset.phone=String(phone);
+    if(phone)actions.open=true;
+    else if(actions.dataset.phone==='true')actions.open=false;
+    actions.dataset.phone=String(phone);
   }
   let left = 28,
     top = 140,
