@@ -354,12 +354,13 @@ export class World {
   get faceAspect(){return ((Math.round((this.getSave().rotation*180/Math.PI-this.azimuth)/120)%3)+3)%3+1;}
   startFaceTour(){
     if(this.reduced||this.stage!=='faces')return;
-    const start=performance.now()+480;
+    const start=Math.max(performance.now()+650,this.transition+200);
     this.faceTour={start,last:start,elapsed:0,azimuth:this.azimuth};this.refresh();
   }
   stopFaceTour(){if(this.faceTour){this.faceTour=null;this.compose(true);this.refresh();}}
   resize() {
-    this.stopFaceTour();
+    // Mobile browser chrome and orientation changes must not consume the tour.
+    // Resize its framing while preserving the pending/active demonstration.
     const w = this.host.clientWidth,
       h = this.host.clientHeight;
     // Cap fill rate on high-DPI displays; the exported photo keeps full resolution.

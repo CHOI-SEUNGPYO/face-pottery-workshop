@@ -177,6 +177,11 @@ try{
     assert.deepEqual(after.camera,state.camera,'turning an exhibit does not orbit the room');
    }
    await page.locator('[data-action="next"]').click();
+   await settle(page);
+   assert.equal(await page.getAttribute('body','data-stage'),'ending');
+   assert.equal(await page.locator('.photo-editor').count(),0,'finishing never requires a photo');
+   await page.locator('[data-action="ending-credits"]').click();await checkMuseumEnding(page);
+   await page.locator('[data-action="photo"]').click();
    await page.evaluate(()=>document.fonts.ready);
    for(const name of ['경산이','독이','압이'])await page.locator(`[data-sticker="${name}"]`).click();
    assert.match(await page.locator('.photo-editor .eyebrow').textContent(),/AI\(인공지능\) 생성·편집 콘텐츠 포함/);

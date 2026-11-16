@@ -56,6 +56,10 @@ try {
       // One-click holes remain available; drawing keeps deliberate corners.
       for (const tool of ["carve", "pierce"]) {
         await choose(tool);
+        if(tool==='carve'){
+          await page.locator('.drawing-actions summary').click();
+          await page.locator('[data-action="draw-opening"]').click();
+        }
         const kind = tool === "carve" ? "hole" : "raised-hole";
         await page.mouse.click(x, y);
         assert.equal((await saved()).length, 1);

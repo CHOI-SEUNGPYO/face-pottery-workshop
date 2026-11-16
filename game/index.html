@@ -1,2 +1,26 @@
 <!doctype html>
-<html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#f2dcaf"><meta name="description" content="따뜻한 공방에서 흙을 빚고 나만의 얼굴토기를 발견하는 창작 체험"><link rel="icon" type="image/svg+xml" href="/asset/runtime/ui/pottery-icon.svg"><title>얼굴토기 — 작은 흙 공방</title></head><body><div id="app"></div><script type="module" src="/src/main.ts"></script></body></html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#f2dcaf"><meta name="description" content="경산 소월리 얼굴모양토기를 관찰하고 나만의 토기를 빚는 창작 체험">
+  <link rel="icon" type="image/svg+xml" href="/asset/runtime/ui/pottery-icon.svg">
+  <title>얼굴토기 — 작은 흙 공방</title>
+  <style>
+    #loading{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;flex-direction:column;background:#f4e6ca;color:#624b32;text-align:center;padding:24px;font:15px/1.6 sans-serif}
+    .loading-friends{display:flex;align-items:flex-end;justify-content:center;gap:14px;flex:none;height:106px;margin:0 0 20px}
+    .loading-friends img{display:block;width:66px;height:104px;object-fit:contain;flex:none}
+    #loading p{margin:12px 0;max-width:260px;word-break:keep-all}
+  </style>
+</head>
+<body>
+  <div id="loading" role="status" aria-live="polite">
+    <div class="loading-friends" role="img" aria-label="경산이, 독이, 압이가 함께 준비하고 있어요">
+      <img src="/asset/runtime/characters/gyeongsani-volume-v2.webp" alt="" width="66" height="104" fetchpriority="high">
+      <img src="/asset/runtime/characters/doki-volume-v2.webp" alt="" width="66" height="104" fetchpriority="high">
+      <img src="/asset/runtime/characters/api-volume-v2.webp" alt="" width="66" height="104" fetchpriority="high">
+    </div>
+    <p>친구들과 작은 흙 공방을 준비하고 있어요</p>
+  </div>
+  <div id="app"></div><script type="module" src="/src/main.ts"></script>
+</body>
+</html>

@@ -45,7 +45,7 @@ export const scenes: Record<
   mouth: {
     title: "입구도 나답게",
     eyebrow: "02 · 입구 다듬기",
-    instruction: "아래 조절 막대로 입구 넓이와 테두리 높이를 바꿔요.",
+    instruction: "조절 막대로 입구 넓이와 테두리 높이를 바꿔요.",
     character: "경산이",
     speech: "입구의 둥근 테두리를 살펴봐!\n크기도 조금씩 바꿔 볼까?",
     next: "얼굴 만들기",
@@ -75,7 +75,7 @@ export const scenes: Record<
   firing: {
     title: "흙이 토기가 되는 시간",
     eyebrow: "05 · 말리고 굽기",
-    instruction: "가마는 흙으로 빚은 그릇을 굽는 시설이에요. 안에서 굽고 식히는 과정을 살펴봐요.",
+    instruction: "토기를 굽는 가마 안에서 굽고 식히는 과정을 살펴봐요.",
     character: "경산이",
     speech: "안쪽을 볼 수 있게 벽을 열어 보여줄게!\n실제로는 벽을 닫고 구워.",
     next: "발굴하러 가기",
@@ -105,20 +105,20 @@ export const scenes: Record<
   compare: {
     title: "닮은 곳, 다른 곳을 찾아요",
     eyebrow: "08 · 실제 유물과 비교",
-    instruction: "각 토기를 잡고 좌우로 돌려 보세요. 오른쪽은 실물 사진과 스캔 영상을 참고한 3D 재현이에요.",
+    instruction: "내 토기와 AI 재현 예시를 각각 잡고 돌려 보세요.",
     character: "경산이",
     speech: "실제 유물에는 세 얼굴이 있어.\n네 작품은 어떤 이야기를 들려줄까?",
-    next: "사진 찍고 꾸미기",
+    next: "전시 마무리",
     tools: [],
     elevation: 15,
   },
   ending: {
     title: "세상에 하나뿐인 내 얼굴토기",
     eyebrow: "우리의 작은 전시회",
-    instruction: "내 토기를 잡고 돌려 가장 마음에 드는 모습을 사진으로 남겨요.",
+    instruction: "유물 사진을 보거나 새 작품을 만들어요. 사진은 선택이에요.",
     character: "경산이",
     speech: "너의 손끝에서 멋진 이야기가 태어났어!",
-    next: "사진 찍기",
+    next: "유물 사진·마무리",
     tools: [],
     elevation: 18,
   },
@@ -182,4 +182,6 @@ export const toolHelp: Record<
 export interface StoryBlock {
   kind: "fact" | "interpretation" | "imagination";
   text: string;
+  sources?: string[];
+  question?: string;
 }

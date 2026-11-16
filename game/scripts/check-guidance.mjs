@@ -19,7 +19,9 @@ try{
   await page.addInitScript(()=>{window.__loaderStart=performance.now();new MutationObserver((_,o)=>{if(document.body?.dataset.stage&&!document.querySelector('#loading')){window.__loaderEnd=performance.now();o.disconnect();}}).observe(document,{childList:true,subtree:true});});
   await page.goto(url);await page.locator('#loading').waitFor({state:'detached'});await page.evaluate(()=>document.fonts.ready);
   assert.ok(await page.evaluate(()=>window.__loaderEnd-window.__loaderStart>=880),'loading has a legible minimum duration');
-  await page.locator('[data-action="new"]').click();await settle();await page.locator('[data-action="next"]').click();await settle();
+  await page.locator('[data-action="new"]').click();await settle();
+  assert.ok(await page.locator('.turn-demonstration').isVisible(),'new artwork immediately teaches rotation');
+  await page.locator('[data-action="next"]').click();await settle();
   const range=page.locator('[data-form-range="mouth-width"]');
   const initial=await page.evaluate(()=>({radius:window.togi.save.document.mouth.innerRadius,height:window.togi.save.document.mouth.center[1]}));
   const rect=await range.boundingBox();await range.focus();await range.press('End');await settle();
@@ -40,9 +42,12 @@ try{
     };requestAnimationFrame(tick);});
   });
   await page.locator('[data-action="next"]').click();
+  await page.setViewportSize({width:390,height:680});
+  assert.ok(await page.evaluate(()=>window.togi.world.demonstratingFaces),'mobile browser resize does not cancel the tour');
   const tour=await page.evaluate(()=>window.__tourResult);
+  await page.setViewportSize({width:390,height:696});await settle();
   assert.deepEqual(tour.aspects,[1,2,3]);assert.equal(tour.end,tour.start);assert.ok(tour.unchanged);
-  assert.equal(await page.locator('.turn-demonstration').isVisible(),false);
+  assert.ok(await page.locator('.turn-demonstration').isVisible(),'gesture cue stays until a real rotation');
   const delayed=await page.evaluate(async()=>{
     const w=window.togi.world;w.startFaceTour();
     w.faceTour.start=performance.now()-5000;w.faceTour.last=w.faceTour.start;
@@ -64,8 +69,10 @@ try{
   await page.screenshot({path:'asset/review/touch-hole-tools.png'});
   const rough=await page.evaluate(()=>JSON.stringify(window.togi.save.document.features));
   await page.locator('[data-tool="refine"]').click();await settle();
+  assert.equal(await page.locator('.refine-nudge').count(),1,'selecting the tool does not dismiss the refinement reminder');
   await draw([{x:cx,y:cy},{x:cx+9,y:cy+4},{x:cx+19,y:cy+7},{x:cx+5,y:cy+1}]);
   assert.notEqual(await page.evaluate(()=>JSON.stringify(window.togi.save.document.features)),rough,'rubbing the opening refines it');
+  assert.equal(await page.locator('.refine-nudge').count(),0,'successful refinement clears the reminder');
   await page.locator('[data-action="undo"]').click();assert.equal(await page.evaluate(()=>JSON.stringify(window.togi.save.document.features)),rough,'one rub is one undo');
   await page.locator('[data-action="undo"]').click();
   await page.locator('[data-tool="carve"]').click();
@@ -77,6 +84,10 @@ try{
   await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:20,y:cy,id:1}]});
   assert.equal(await page.evaluate(()=>window.togi.world.demonstratingFaces),false,'touch interrupts the demo immediately');
   await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+  await draw([{x:20,y:cy},{x:40,y:cy},{x:65,y:cy}]);
+  assert.equal(await page.locator('.turn-demonstration').isVisible(),false,'actual rotation dismisses the cue');
+  await page.locator('[data-action="help"]').click();await page.locator('[data-action="turn-guide"]').click();
+  assert.ok(await page.locator('.turn-demonstration').isVisible(),'help replays the demonstration');
   await page.evaluate(()=>window.togi.go('compare'));await settle();
   assert.ok(await page.locator('.gallery-disclosure').textContent().then(t=>t.includes('AI가 게임 도구로 만든')));
   const own=await page.evaluate(()=>JSON.stringify(window.togi.save.document));assert.equal(own,artwork);
@@ -87,7 +98,11 @@ try{
   assert.equal(await page.evaluate(()=>JSON.stringify(window.togi.save.document)),artwork,'turning the AI example never changes the player artwork');
   await page.setViewportSize({width:1366,height:768});await settle();
   await page.screenshot({path:'asset/review/ai-game-example-desktop.png'});
-  await page.evaluate(()=>{window.togi.world.reduced=true;window.togi.world.startFaceTour();});
+  await page.evaluate(()=>{window.togi.world.reduced=true;document.body.classList.add('reduced-motion');});
+  await page.evaluate(()=>window.togi.go('faces'));await settle();
+  await page.locator('[data-action="help"]').click();await page.locator('[data-action="turn-guide"]').click();
+  assert.ok(await page.locator('.turn-demonstration').isVisible(),'reduced motion keeps a static gesture hint');
+  assert.equal(await page.locator('.turn-demonstration i').first().evaluate(el=>getComputedStyle(el).animationName),'none');
   assert.equal(await page.evaluate(()=>window.togi.world.demonstratingFaces),false);
   assert.deepEqual(errors,[]);
   await writeFile('asset/review/guidance-check.json',JSON.stringify({tour,initial,expanded,status:'pass'},null,2));

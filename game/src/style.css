@@ -1042,10 +1042,6 @@ dialog h2 {
   text-align: center;
   padding: 25px;
 }
-.loading-pot {
-  font-size: 70px;
-  animation: breathe 2s ease-in-out infinite;
-}
 #loading p {
   font-size: 17px;
 }
@@ -1053,11 +1049,6 @@ dialog h2 {
   background: #ffd770;
   padding: 15px 25px;
   border-radius: 22px;
-}
-@keyframes breathe {
-  50% {
-    transform: scale(1.07);
-  }
 }
 
 

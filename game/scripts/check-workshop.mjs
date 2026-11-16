@@ -200,7 +200,9 @@ try{
   await page.locator('[data-action="story-next"]').click();assert.equal(await page.locator('.fact-badge').textContent(),'게임 속 상상');
   assert.ok((await page.locator('.story-copy').textContent()).includes('3D 스캔은 아니며'),'the model is described as a photo-informed reconstruction');
   await page.locator('[data-action="story-next"]').click();assert.equal(await page.locator('.fact-badge').textContent(),'연구자의 해석');
-  await page.locator('[data-action="close"]').click();await page.locator('[data-action="next"]').click();await page.waitForSelector('.photo-editor canvas');
+  await page.locator('[data-action="close"]').click();await page.locator('[data-action="next"]').click();await page.waitForFunction(()=>document.body.dataset.stage==='ending');
+  assert.equal(await page.locator('.photo-editor').count(),0,'photography is optional');
+  await page.locator('[data-action="photo"]').click();await page.waitForSelector('.photo-editor canvas');
   assert.ok(await page.locator('.sticker-controls').isHidden(),'unselected sticker controls do not take photo space');
   if(width===1366){for(const viewport of [{width:390,height:696},{width:320,height:568},{width:740,height:360},{width:768,height:1024}]){await page.setViewportSize(viewport);await photoLayout(page);}await page.setViewportSize({width:1366,height:768});}
   assert.equal(await page.locator('[data-sticker]').count(),3);await page.locator('[data-sticker="경산이"]').click();

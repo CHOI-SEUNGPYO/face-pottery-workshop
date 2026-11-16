@@ -110,3 +110,18 @@ body dialog:has(.museum-album,.museum-credits,.museum-ending) .modal-close{right
  .partner-marks.compact .huss-mark{height:25px;width:35px}.partner-marks.compact .museum-mark{height:30px;width:48px}
 }
 @media(max-width:360px){.album-tabs small{display:none}.album-tabs button{padding:8px 10px;font-size:11px}}
+
+/* Shared catalogue labels stay inside the scrollable museum panels. */
+.artifact-label{margin:20px 0;padding:20px;border:1px solid #d8cbb3;border-radius:12px;background:#f4eddf;text-align:left;color:#493b29}
+.artifact-label>small{font-size:11px;line-height:1.5;color:#796348}
+.artifact-label h3{font-size:22px;line-height:1.4;margin:6px 0 0;word-break:keep-all;overflow-wrap:anywhere}
+.artifact-label .artifact-hanja{font-size:14px;letter-spacing:.06em;margin:3px 0 12px;color:#796348}
+.artifact-label p{font-size:13px;line-height:1.8;margin:8px 0}
+.artifact-label dl{display:grid;grid-template-columns:48px 1fr;gap:9px 12px;margin:16px 0;font-size:12px;line-height:1.7}
+.artifact-label dt{font-weight:700;color:#796348}.artifact-label dd{margin:0}
+.artifact-label summary{cursor:pointer;min-height:44px;align-content:center;font-size:12px;font-weight:600}
+.research-sources{margin-top:16px;padding-top:10px;border-top:1px solid #d8cbb3;display:grid;gap:2px;font-size:11px;line-height:1.6}
+.research-sources small{font-weight:700;color:#796348}.research-sources a{display:block;padding:10px 0;min-height:44px;box-sizing:border-box;color:#316c70;text-underline-offset:3px;overflow-wrap:anywhere}
+.observation-question{padding:12px 14px;border-left:3px solid #b99b63;background:#f4eddf;border-radius:0 8px 8px 0;font-size:13px;line-height:1.7}.observation-question strong{display:block;font-size:11px;margin-bottom:4px;color:#796348}
+.research-bibliography{margin-top:28px}.research-bibliography>p{font-size:13px;line-height:1.8}
+@media(max-width:600px){.artifact-label{padding:14px;margin:16px 0}.artifact-label h3{font-size:20px}.artifact-label dl{grid-template-columns:38px 1fr;gap:8px}.artifact-label p{font-size:12px}}

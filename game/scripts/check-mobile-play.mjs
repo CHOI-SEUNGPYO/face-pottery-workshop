@@ -118,7 +118,11 @@ try{
     assert.ok(await page.evaluate(({which,before})=>{const w=window.togi.world;return (which==='own'?w.pottery.root:w.referenceArtifact).rotation.y>before+.1;},{which,before}));
   }
   const artwork=await page.evaluate(()=>Array.from(window.togi.save.document.outerXYZ));
-  await activate('[data-action="next"]');await page.locator('.photo-editor canvas').waitFor();await activate('[data-sticker="독이"]');
+  await activate('[data-action="next"]');await audit('ending');
+  assert.equal(await page.locator('.photo-editor').count(),0);
+  await activate('[data-action="ending-credits"]');
+  assert.match(await page.locator('.artifact-label').textContent(),/투각인면문옹형토기/);
+  await activate('.modal-close');await activate('[data-action="photo"]');await page.locator('.photo-editor canvas').waitFor();await activate('[data-sticker="독이"]');
   const c=await page.locator('.photo-editor canvas').boundingBox();
   await drag({x:c.x+c.width*600/1920,y:c.y+c.height*800/1080},{x:c.x+c.width*.65,y:c.y+c.height*.75});
   const download=page.waitForEvent('download');await activate('[data-photo="download"]');const stream=await(await download).createReadStream();

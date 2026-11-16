@@ -6,6 +6,8 @@ export type PhotoCategory='face'|'siru'|'background'|'other';
 export interface MuseumPhoto {id:string;file:string;alt:string;caption:string;credit:string;source:string;title?:string;category?:PhotoCategory}
 export interface MuseumCatalog {
   version:number;title:string;photos:MuseumPhoto[];
+  sources?:{id:string;title:string;url:string}[];
+  artifact?:{name:string;academicName:string;hanja:string;meaning:string;fields:{label:string;value:string}[];note:string;sources:string[]};
   stages:Record<SceneId,{title:string;summary:string;photo:string;blocks:StoryBlock[]}>;
   exhibits:{id:string;name:string;file:string;height:number;position:[number,number,number];rotation:number;stage:SceneId}[];
 }
@@ -14,6 +16,14 @@ export const museumAsset=(file:string)=>import.meta.env.DEV?`/asset/runtime/muse
 export const escapeHTML=(value:string)=>value.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
 export function photoFor(stage:SceneId){return museum.photos.find(p=>p.id===museum.stages[stage].photo)!;}
 export const factLabels={fact:'확인된 내용',interpretation:'연구자의 해석',imagination:'게임 속 상상'};
+export function sourceLinks(ids:string[]=[]) {
+  const sources=(museum.sources??[]).filter(source=>ids.includes(source.id));
+  return sources.length?`<div class="research-sources" aria-label="설명 근거"><small>설명 근거</small>${sources.map(s=>`<a href="${escapeHTML(s.url)}" target="_blank" rel="noopener noreferrer">${escapeHTML(s.title)} ↗</a>`).join('')}</div>`:'';
+}
+export function artifactLabel(){
+  const a=museum.artifact;if(!a)return '';
+  return `<section class="artifact-label" aria-label="실제 유물 정보"><small>실제 유물 · ${escapeHTML(a.name)}</small><h3>${escapeHTML(a.academicName)}</h3><p class="artifact-hanja">${escapeHTML(a.hanja)}</p><p>${escapeHTML(a.meaning)}</p><dl>${a.fields.map(f=>`<dt>${escapeHTML(f.label)}</dt><dd>${escapeHTML(f.value)}</dd>`).join('')}</dl><details><summary>명칭과 시대를 읽는 방법</summary><p>${escapeHTML(a.note)}</p>${sourceLinks(a.sources)}</details></section>`;
+}
 export async function loadMuseum(){
   const url=import.meta.env.DEV?'/content/museum.json':`${import.meta.env.BASE_URL}museum/catalog.json`;
   const response=await fetch(url);

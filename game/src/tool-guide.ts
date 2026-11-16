@@ -1,10 +1,10 @@
 import { toolHelp, toolLabels, type ToolId, type CarveMode } from "./content";
 
-export function toolGuide(tool: ToolId, mode: CarveMode = "opening") {
+export function toolGuide(tool: ToolId, mode: CarveMode = "round") {
   const help =
     tool === "carve"
       ? mode === "round"
-        ? {instruction: "손가락을 끌어 둥근 눈이나 입의 크기를 정해요.",result: "놓으면 구멍이 생겨요. 테두리는 다듬기로 마무리해요."}
+        ? {instruction: "끌어서 둥근 눈이나 입의 크기를 정해요.",result: "놓으면 구멍이 생겨요. 테두리는 다듬기로 마무리해요."}
         : mode === "opening"
         ? {
             instruction: "톡 누르면 작은 구멍, 그려서 닫으면 원하는 모양이 돼요.",

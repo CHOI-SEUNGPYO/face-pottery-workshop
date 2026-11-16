@@ -95,6 +95,21 @@ try{
       assert.ok((await page.locator('.gallery-disclosure').textContent()).includes('AI가 게임 도구로 만든'),'the example is visibly labelled as AI-authored');
       for(let face=0;face<3;face++){
         await page.evaluate(angle=>{window.togi.world.referenceArtifact.rotation.y=angle;window.togi.world.refresh(true);},-face*Math.PI*2/3);
+        const glazing=await page.evaluate(()=>{
+          const w=window.togi.world;w.scene.updateMatrixWorld(true);
+          const bounds=(root,precise=false)=>{
+            const b=w.pottery.body.geometry.boundingBox.clone().makeEmpty(),p=w.camera.position.clone();
+            root.traverseVisible(o=>{if(!o.isMesh)return;
+              if(precise){const positions=o.geometry.attributes.position;for(let i=0;i<positions.count;i++)b.expandByPoint(p.fromBufferAttribute(positions,i).applyMatrix4(o.matrixWorld));}
+              else{o.geometry.computeBoundingBox();b.union(o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld));}
+            });return b;
+          };
+          const own=w.scene.getObjectByName('own-exhibit-glass'),reference=w.scene.getObjectByName('reference-exhibit-glass');
+          const caseBounds=reference&&bounds(reference),potBounds=bounds(w.referenceArtifact,true);
+          return {own:own?.children.filter(o=>o.geometry?.type==='PlaneGeometry').length,reference:reference?.children.filter(o=>o.geometry?.type==='PlaneGeometry').length,contained:caseBounds?.clone().expandByScalar(.001).containsBox(potBounds),caseBounds,potBounds};
+        });
+        assert.equal(glazing.own,5);assert.equal(glazing.reference,5,'both exhibits have four glass walls and a lid');
+        assert.ok(glazing.contained,`the rotating AI example fits inside its glass case: ${JSON.stringify(glazing)}`);
         if(review){await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));await page.screenshot({path:`asset/review/art-reference-face-${face+1}.png`});}
       }
       await page.evaluate(()=>{window.togi.world.referenceArtifact.rotation.y=0;window.togi.world.refresh(true);});

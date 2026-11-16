@@ -6,6 +6,19 @@ import test from "node:test";
 import {validCatalog} from '../content/schema.mjs';
 import {advanceFiring} from '../src/firing-progress.mjs';
 
+test('museum research links resolve and older editable catalogues remain usable',async()=>{
+ const catalog=JSON.parse(await readFile('content/museum.json','utf8'));
+ assert.ok(validCatalog(catalog));
+ for(const stage of Object.values(catalog.stages))for(const block of stage.blocks){
+  if(block.kind!=='imagination')assert.ok(block.sources?.length,'historical and interpretive content identifies its evidence');
+ }
+ const broken=structuredClone(catalog);broken.stages.faces.blocks[0].sources=['missing'];
+ assert.equal(validCatalog(broken),false,'unknown citations cannot silently enter the published catalogue');
+ delete catalog.artifact;delete catalog.sources;
+ for(const stage of Object.values(catalog.stages))for(const block of stage.blocks){delete block.sources;delete block.question;}
+ assert.ok(validCatalog(catalog),'existing editor data without new metadata remains valid');
+});
+
 test('slow frames preserve every firing phase and normal playback duration',()=>{
  for(const duration of [4000,14000]){
   const phases=new Set();let progress=0;

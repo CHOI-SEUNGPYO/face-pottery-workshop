@@ -31,6 +31,7 @@ export async function checkMuseumWelcome(page,viewports=[{width:1366,height:768}
   await review(page,`welcome-${viewport.width}`);
   await page.locator('#hud [data-action="collection"]').click();
   await imagesLoaded(page,'.album-image img');
+  assert.match(await page.locator('.artifact-label').textContent(),/투각인면문옹형토기/);
   assert.equal(await page.locator('.album-photo-list button').count(),4);
   assert.ok(await page.locator('[data-action="album-previous"]').isDisabled());
   await page.keyboard.press('ArrowRight');
@@ -64,8 +65,13 @@ export async function checkMuseumWelcome(page,viewports=[{width:1366,height:768}
 }
 
 export async function checkMuseumEnding(page){
- assert.ok(await page.locator('.museum-ending').isVisible(),'finishing a photo opens the museum outro');
+ assert.ok(await page.locator('.museum-ending').isVisible(),'museum outro opens without requiring a photo');
  await imagesLoaded(page,'.museum-ending img');
+ assert.match(await page.locator('.artifact-label').textContent(),/透刻人面文甕形土器/);
+ await page.locator('.artifact-label summary').click();
+ assert.match(await page.locator('.artifact-label details').textContent(),/5세기.*6세기/);
+ assert.ok(await page.locator('.artifact-label .research-sources a').count()>=2);
+ await page.locator('.artifact-label summary').click();
  await dialogBounds(page);
  assert.match(await page.locator('.ending-partners').textContent(),/영남대학교 인문사회디지털융합인재양성사업단/);
  assert.equal(await page.locator('.ending-photos button').count(),3);
