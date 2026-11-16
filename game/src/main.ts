@@ -490,7 +490,7 @@ function startFire() {
   fireStart = performance.now();
   updateUI();
   fireElapsed=0;fireLast=performance.now();
-  const duration=world.reduced?4000:14000;
+  const duration=world.reduced?3000:7000;
   const tick=(now:number)=>{
     const delta=Math.max(0,now-fireLast);fireLast=now;
     if(!world.paused&&!document.hidden){
