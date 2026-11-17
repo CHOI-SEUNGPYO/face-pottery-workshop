@@ -6,6 +6,7 @@
 - 입력은 프레임당 한 번만 반영하고, 화면 크기가 변할 때만 예시 버퍼를 다시 맞춘다. 고정된 케이스·조명 변환을 재계산하지 않으며, 위아래 시점만 바꿀 때는 그림자를 재사용한다. 닫으면 예시 렌더러·환경맵·GPU 컨텍스트를 해제한다. 게임의 저장 작품과 촬영 내보내기 기능은 변경하지 않았다.
 - 같은 PC의 브라우저에서 모바일 390×696/DPR 3 조건으로 측정한 그리기 CPU 시간 중앙값은 56.0→0.8ms, p95는 103.0→1.1ms였다. CPU 4배 감속에서는 중앙값 57.1→4.5ms, p95 66.3→9.9ms였다. 이는 실물 휴대폰 FPS를 보장하는 수치가 아니다. 기록: `asset/review/example-performance-before.json`, `example-performance-after.json`, 같은 위치의 전후 화면.
 - `npm run verify` 전체 통과. GPU 화면의 실제 표시를 비교하고, PC·태블릿·휴대폰 터치와 키보드 상하좌우 회전, 열린 예시의 가로·세로 전환, 반복 열기·닫기, 닫은 예시 컨텍스트 해제와 게임 컨텍스트 유지, 기존 작품 보존을 확인했다. 성능 회귀 검사를 `check:examples`와 기존 배포 검사에 연결했다. 기록: `asset/review/verify-example-performance.log`. Aside의 별도 브라우저 연결은 화면 캡처가 응답하지 않아 검사 전용 Edge 브라우저의 실제 입력과 캡처를 사용했다. 공개 결과는 이어 기록한다.
+- 공개 완료: `68ad1097af7e737ba3dbde3f30a304d85a46266f`의 [검사·배포 44115902021](https://github.com/CHOI-SEUNGPYO/face-pottery-workshop/actions/runs/44115902021)가 빌드·15개 브라우저 검사·Pages 배포를 모두 통과했다. 2026-11-18 00:47 KST 공개 주소 확인에서 예시 회전·기존 제작·사진 저장·마무리도 통과했고 오류·실패 요청은 0건이다. 공개 JS `index-C1GgpuGd.js`, CSS `index-YIJGM5ps.css`, 유물 카탈로그와 예시 원본이 로컬 빌드와 바이트까지 동일하다. 기록: `asset/review/release-example-performance.log`, `release-check.json`.
 
 ## 2026-11-17 · 전체 장면의 디자인 통일과 예시 상하 회전
 
