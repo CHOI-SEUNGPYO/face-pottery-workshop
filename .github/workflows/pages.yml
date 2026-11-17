@@ -41,7 +41,7 @@ jobs:
           retention-days: 7
 
   browser:
-    name: Browser check · ${{ matrix.suite }} · ${{ matrix.width }}
+    name: Browser check · ${{ matrix.suite }} · ${{ matrix.check || matrix.width }}
     needs: build
     runs-on: windows-latest
     timeout-minutes: 20
@@ -49,7 +49,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {suite: ui, width: all}
+          - {suite: ui, width: all, check: form-controls}
+          - {suite: ui, width: all, check: interactions}
+          - {suite: ui, width: all, check: line-width}
+          - {suite: ui, width: all, check: body-guidance}
+          - {suite: ui, width: all, check: guidance}
+          - {suite: ui, width: all, check: loading}
           - {suite: workshop, width: all}
           - {suite: journey, width: '1366'}
           - {suite: journey, width: '740'}
@@ -76,12 +81,18 @@ jobs:
           name: workshop-site
           path: game/dist
       - name: Verify browser behavior
-        run: npm run check:${{ matrix.suite }}
+        run: |
+          if ('${{ matrix.suite }}' -eq 'ui') {
+            node scripts/check-${{ matrix.check }}.mjs
+          } else {
+            npm run check:${{ matrix.suite }}
+          }
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Save failed browser checks
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: browser-check-failures-${{ matrix.suite }}-${{ matrix.width }}
+          name: browser-check-failures-${{ matrix.suite }}-${{ matrix.check || matrix.width }}
           path: game/asset/review
           if-no-files-found: ignore
           retention-days: 7
