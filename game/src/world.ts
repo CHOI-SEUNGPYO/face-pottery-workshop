@@ -978,8 +978,19 @@ export class World {
     if (animated && !this.frame)
       this.frame = requestAnimationFrame(this.animate);
   };
-  createPhotoView():PhotoView {
-    const portrait=photoScene(this.pottery.root,this.scene.environment,this.camera.position.clone().sub(this.target),this.art.texture('aged-oak'));
+  createExampleView(example:GameSave):PhotoView {
+    const pottery=new PotteryView();
+    try{
+      pottery.update(structuredClone(example.document));
+      pottery.appearance(example.firedRevision===example.document.revision?1:0);
+      pottery.root.rotation.y=example.rotation;pottery.outline.visible=false;
+      const view=this.createPhotoView(pottery.root,new T.Vector3(0,.24,1)),dispose=view.dispose;
+      view.dispose=()=>{dispose();pottery.dispose();};
+      return view;
+    }catch(error){pottery.dispose();throw error;}
+  }
+  createPhotoView(artwork:T.Object3D=this.pottery.root,direction:T.Vector3=this.camera.position.clone().sub(this.target)):PhotoView {
+    const portrait=photoScene(artwork,this.scene.environment,direction,this.art.texture('aged-oak'));
     return {
       get rotation(){return portrait.own.rotation.y;},
       set rotation(value:number){portrait.own.rotation.y=value;},

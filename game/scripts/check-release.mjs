@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {mkdir,readFile,writeFile} from 'node:fs/promises';
+import {mkdir,readFile,readdir,writeFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {chromium} from 'playwright';
 
@@ -11,8 +11,10 @@ await mkdir('asset/review',{recursive:true});
 const localHTML=await readFile('dist/index.html','utf8');
 const response=await fetch(url,{cache:'no-store'});assert.equal(response.status,200);
 const html=await response.text();
-for(const path of [...localHTML.match(/\.\/assets\/index-[^"']+\.(?:js|css)/g),'./museum/catalog.json']){
-  if(path.includes('/assets/'))assert.ok(html.includes(path),`published HTML uses ${path}`);
+const exampleAsset=(await readdir('dist/assets')).find(name=>/^user-pottery\.togi-.*\.json$/.test(name));
+assert.ok(exampleAsset,'build includes the separately stored user example');
+for(const path of [...localHTML.match(/\.\/assets\/index-[^"']+\.(?:js|css)/g),'./museum/catalog.json',`./assets/${exampleAsset}`]){
+  if(path.startsWith('./assets/index-'))assert.ok(html.includes(path),`published HTML uses ${path}`);
   const local=await readFile(`dist/${path}`),res=await fetch(new URL(path,url));assert.equal(res.status,200);
   const remote=Buffer.from(await res.arrayBuffer());assert.ok(local.equals(remote),`published bytes match ${path}`);
   report.files.push({path,sha256:createHash('sha256').update(remote).digest('hex')});
@@ -29,6 +31,15 @@ try{
   assert.match(await page.locator('.welcome-purpose').textContent(),/얼굴모양토기.*눈과 입/s);
   assert.ok(await page.locator('.welcome-path').isVisible());
   await page.screenshot({path:'asset/review/release-purpose-welcome.png'});
+  await page.locator('[data-action="example-artwork"]').click();
+  const exampleCanvas=page.locator('.example-viewer canvas');await exampleCanvas.waitFor();
+  assert.match(await page.locator('.example-caption').textContent(),/플레이어.*직접.*복원품은 아니/s);
+  const exampleBefore=await exampleCanvas.evaluate(c=>c.toDataURL());
+  await exampleCanvas.press('ArrowRight');
+  await page.waitForFunction(before=>document.querySelector('.example-viewer canvas').toDataURL()!==before,exampleBefore);
+  await page.screenshot({path:'asset/review/release-user-example.png'});
+  await page.locator('.example-viewer [data-action="close"]').click();
+  report.userExampleRotation=true;
   await page.locator('[data-action="help"]').click();await page.locator('#reduce-motion').uncheck();
   await page.locator('[data-action="close"]').click();
   await page.reload();await page.locator('#loading').waitFor({state:'detached'});

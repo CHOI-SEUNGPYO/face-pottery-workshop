@@ -55,7 +55,8 @@ import {
   type FormId,
 } from "./form";
 import { SaveRepository } from "./save";
-import {downloadArtwork} from './artwork-file';
+import {downloadArtwork,readArtworkFile} from './artwork-file';
+import {ExampleViewer} from './example-viewer';
 import { AudioController } from "./audio";
 import { icon } from "./icons";
 import { characterImage } from "./assets";
@@ -113,6 +114,7 @@ let outlineAnimation:Animation|undefined;
 let refineTipUntil=0,refineTipTimer=0;
 const loadingStarted=performance.now();
 let photoEditor:PhotoEditor|null=null,returnToInspect=false,travelling=false,digComplete=false;
+let exampleViewer:ExampleViewer|null=null,exampleRequest:AbortController|null=null;
 function syncPause(){if(!world)return;world.paused=dialog.open;fireLast=performance.now();if(!world.paused)world.refresh();}
 const portraitPhone=()=>matchMedia('(max-width:600px) and (orientation:portrait)').matches;
 const desktopTools=matchMedia('(min-width:1100px) and (min-height:600px) and (hover:hover) and (pointer:fine)');
@@ -293,7 +295,7 @@ function updateUI() {
   if (stage === "welcome") {
     hud.innerHTML =
       header +
-      `<div class="work-area" aria-hidden="true"></div><section class="welcome-copy">${partnerMarks(true)}<h1>세 얼굴을 가진 토기,<br><em>내 손으로 만들어 볼까?</em></h1><figure class="welcome-artifact"><img src="${museumAsset('face-three-sides.jpg')}" alt="하나의 실제 얼굴모양토기를 세 방향에서 본 사진. 서로 다른 표정이 새겨져 있어요."><figcaption>같은 유물의 서로 다른 세 얼굴 · 실제 유물 사진<small>문화재청 제공 · 경향신문 게재</small></figcaption></figure><p class="welcome-purpose">경산 소월리의 <strong>얼굴모양토기</strong>를 살펴보고,<br>내가 빚은 몸체에 눈과 입을 만들어 보세요.</p><ol class="welcome-path" aria-label="체험 순서"><li>몸체 빚기</li><li>얼굴 만들기</li><li>유물과 비교</li></ol><p class="ai-notice">AI(인공지능) 활용 제작 · 실제 제작 과정과는 달라요.</p><div class="welcome-actions">${button("new", "얼굴모양토기 만들기", "next", "primary large")}${saved ? button("continue", "이어 만들기", "play", "secondary") : ""}</div></section><nav class="welcome-foot" aria-label="박물관과 제작 안내">${museumHomeLink()}<button data-action="credits" class="credits-link">게임 소개·제작</button></nav>`;
+      `<div class="work-area" aria-hidden="true"></div><section class="welcome-copy">${partnerMarks(true)}<h1>세 얼굴을 가진 토기,<br><em>내 손으로 만들어 볼까?</em></h1><figure class="welcome-artifact"><img src="${museumAsset('face-three-sides.jpg')}" alt="하나의 실제 얼굴모양토기를 세 방향에서 본 사진. 서로 다른 표정이 새겨져 있어요."><figcaption>같은 유물의 서로 다른 세 얼굴 · 실제 유물 사진<small>문화재청 제공 · 경향신문 게재</small></figcaption></figure><p class="welcome-purpose">경산 소월리의 <strong>얼굴모양토기</strong>를 살펴보고,<br>내가 빚은 몸체에 눈과 입을 만들어 보세요.</p><ol class="welcome-path" aria-label="체험 순서"><li>몸체 빚기</li><li>얼굴 만들기</li><li>유물과 비교</li></ol><p class="ai-notice">AI(인공지능) 활용 제작 · 실제 제작 과정과는 달라요.</p><div class="welcome-actions">${button("new", "얼굴모양토기 만들기", "next", "primary large")}${saved ? button("continue", "이어 만들기", "play", "secondary") : ""}</div><button data-action="example-artwork" class="welcome-example">직접 만든 예시 작품 둘러보기 ↗</button></section><nav class="welcome-foot" aria-label="박물관과 제작 안내">${museumHomeLink()}<button data-action="credits" class="credits-link">게임 소개·제작</button></nav>`;
     layoutUI();
     return;
   }
@@ -371,6 +373,7 @@ function modal(html: string) {
   world.stopFaceTour();
   cancelGesture();
   photoEditor?.dispose();photoEditor=null;world.paused = true;
+  exampleRequest?.abort();exampleRequest=null;exampleViewer?.dispose();exampleViewer=null;
   fireLast = performance.now();
   dialog.innerHTML = `${button("close", "닫기", "close", "round icon-only modal-close")}${html}`;
   dialog.scrollTop=0;
@@ -379,6 +382,7 @@ function modal(html: string) {
 }
 function closeModal() {
   photoEditor?.dispose();photoEditor=null;
+  exampleRequest?.abort();exampleRequest=null;exampleViewer?.dispose();exampleViewer=null;
   dialog.close();
   dialog.replaceChildren();
   syncPause();
@@ -591,6 +595,24 @@ document.addEventListener("click", async (e) => {
     return;
   }
   const a = el.dataset.action!;
+  if(a==='example-artwork'){
+    modal('<div id="example-viewer-root"><p role="status">예시 작품을 불러오고 있어요.</p></div>');
+    const root=dialog.querySelector<HTMLElement>('#example-viewer-root')!;
+    const request=new AbortController();exampleRequest=request;
+    let view:ReturnType<World['createExampleView']>|undefined;
+    try{
+      const response=await fetch(new URL('../asset/runtime/examples/user-pottery.togi.json',import.meta.url).href,{signal:request.signal});
+      if(!response.ok)throw new Error('example-unavailable');
+      const example=readArtworkFile(await response.text());
+      if(!root.isConnected||request.signal.aborted)return;
+      view=world.createExampleView(example);
+      exampleViewer=new ExampleViewer(root,view);
+    }catch{
+      view?.dispose();
+      if(root.isConnected&&!request.signal.aborted)root.innerHTML='<p role="alert">예시 작품을 불러오지 못했어요. 잠시 후 다시 열어 주세요.</p>';
+    }
+    return;
+  }
   if(a==='export-artwork'){
     const artwork=stage==='welcome'?saved:save;
     if(!artwork){toast('아직 저장한 작품이 없어요.');return;}
@@ -667,6 +689,7 @@ document.addEventListener("click", async (e) => {
     modal(
       `<div class="help-copy"><p class="eyebrow">천천히, 마음 가는 대로</p><h2>이렇게 해보세요</h2><p>${scenes[stage].instruction}</p><ul><li>손으로 빚기: 몸체를 좌우로 끌면 잡은 높이 주변이 둥글게 달라져요.</li><li>몸체 크기는 높이·넓이 손잡이로, 입구는 화면 아래나 오른쪽의 조절 막대로 바꿔요.</li><li>눈·입의 ‘그려 뚫기’로 원하는 윤곽을 그려 닫거나, 톡 눌러 작은 구멍을 만들어요. 손가락의 작은 떨림과 닫는 틈은 보정해요. ‘구멍 다듬기’로 안쪽이나 테두리를 문지르면 부드러워져요.</li><li>토기 밖을 끌면 좌우로 회전하고, 위아래로 보는 높이가 바뀌어요. 마우스 오른쪽 끌기도 사용할 수 있어요.</li><li>두 손가락을 벌리거나 오므리면 확대·축소해요. PC에서는 오른쪽 드래그와 마우스 휠을 사용해요.</li><li>되돌리기 또는 Ctrl / ⌘ + Z로 복구해요.</li></ul>${stage==="body"?button("shape-guide","몸체 빚는 동작 다시 보기","shape","secondary"):""}${["body","mouth","faces"].includes(stage)?button("turn-guide","돌리는 동작 다시 보기","rotate","secondary"):""}<label class="motion-setting"><input id="reduce-motion" type="checkbox" ${world.reduced ? "checked" : ""}> 움직임 줄이기</label><section class="help-credits"><p>${AI_CONTENT_LABEL}</p><div class="credits-actions"><button data-action="credits" class="secondary">AI 제작·출처 안내</button>${museumHomeLink()}</div></section></div>`,
     );
+    dialog.querySelector('.help-copy')!.insertAdjacentHTML('beforeend',button('example-artwork','예시 작품 둘러보기','rotate','secondary'));
     if(stage!=='welcome'||saved)dialog.querySelector('.help-copy')!.insertAdjacentHTML('beforeend',`<section class="help-credits"><h3>내 작품 따로 보관하기</h3><p>몸체와 눈·입, 선을 작품 파일로 보관해요. 현재 작품과 진행 상황은 그대로 유지돼요.</p>${button('export-artwork','작품 파일 저장','download','secondary')}</section>`);
     return;
   }
