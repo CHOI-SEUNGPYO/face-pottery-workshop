@@ -28,7 +28,10 @@ try{
     });
     const checkLayout=async()=>{
       await openTools();
-      const r=await page.locator('#line-width').boundingBox(),footer=await page.locator('footer').boundingBox(),v=page.viewportSize();
+      // A resize queues layoutUI on the next frame. Read both rectangles in
+      // the same settled frame, rather than mixing the old range with the new footer.
+      await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+      const {r,footer,v}=await page.evaluate(()=>({r:document.querySelector('#line-width').getBoundingClientRect().toJSON(),footer:document.querySelector('footer').getBoundingClientRect().toJSON(),v:{width:innerWidth,height:innerHeight}}));
       assert.ok(r&&r.height>=44&&r.width>=30,'thickness has a usable touch target');
       assert.ok(r.x>=0&&r.y>=0&&r.x+r.width<=v.width&&r.y+r.height<=footer.y,'thickness fits above navigation');
       const center=await page.evaluate(()=>{
