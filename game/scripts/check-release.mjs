@@ -33,7 +33,7 @@ try{
   await page.screenshot({path:'asset/review/release-purpose-welcome.png'});
   await page.locator('[data-action="example-artwork"]').click();
   const exampleCanvas=page.locator('.example-viewer canvas');await exampleCanvas.waitFor();
-  assert.match(await page.locator('.example-caption').textContent(),/플레이어.*직접.*복원품은 아니/s);
+  assert.match(await page.locator('.example-caption').textContent(),/게임을 만든 사람.*빚어.*복원품은 아니/s);
   const exampleBefore=await exampleCanvas.evaluate(c=>c.toDataURL());
   await exampleCanvas.press('ArrowRight');
   await page.waitForFunction(before=>document.querySelector('.example-viewer canvas').toDataURL()!==before,exampleBefore);

@@ -32,7 +32,7 @@ try{
         if(!fromWelcome)await page.locator('[data-action="help"]').click();
         await page.locator('[data-action="example-artwork"]').click();
         const canvas=page.locator('.example-viewer canvas');await canvas.waitFor();
-        assert.match(await page.locator('.example-caption').textContent(),/플레이어.*직접.*복원품은 아니/s);
+        assert.match(await page.locator('.example-caption').textContent(),/게임을 만든 사람.*빚어.*복원품은 아니/s);
         const original=await canvas.evaluate(el=>el.toDataURL()),r=await canvas.boundingBox();
         assert.ok(r.x>=0&&r.y>=0&&r.x+r.width<=viewport.width&&r.y+r.height<=viewport.height,'viewer fits the screen');
         if(viewport.width<1100){
