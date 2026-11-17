@@ -179,6 +179,9 @@ export const toolHelp: Record<
     result: "가까이 놓으면 제자리에 맞춰져요.",
   },
 };
+export const lineWidths = [.002, .004, .007, .012, .02] as const;
+export const lineWidthLabels = ['아주 가늘게', '가늘게', '보통', '굵게', '아주 굵게'] as const;
+
 export interface StoryBlock {
   kind: "fact" | "interpretation" | "imagination";
   heading?: string;

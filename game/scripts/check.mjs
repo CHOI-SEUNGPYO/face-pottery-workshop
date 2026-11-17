@@ -64,6 +64,14 @@ test(
       const home = await fetch(url);
       assert.equal(home.status, 200);
       assert.match(await home.text(), /작은 흙 공방/);
+      const cached=await fetch(url,{headers:{'If-None-Match':home.headers.get('etag')}});
+      assert.equal(cached.status,304,'unchanged HTML is revalidated without downloading it again');
+      assert.equal(await cached.text(),'');
+      assert.equal(home.headers.get('cache-control'),'no-cache','entry page always checks for updates');
+      const outdated=await fetch(url,{headers:{'If-None-Match':'"outdated"','If-Modified-Since':'Fri, 01 Jan 2100 00:00:00 GMT'}});
+      assert.equal(outdated.status,200,'a mismatched entity tag takes precedence over the date');
+      const catalogue=await fetch(url+'/museum/catalog.json');
+      assert.equal(catalogue.headers.get('cache-control'),'no-cache','editable museum content is not frozen');
       assert.equal((await fetch(url, { method: "HEAD" })).status, 200);
       assert.equal((await fetch(url, { method: "POST" })).status, 405);
       for (const path of [
@@ -81,6 +89,8 @@ test(
           `${url}/assets/${encodeURIComponent(file)}`,
         );
         assert.equal(response.status, 200, file);
+        if(/-[\w-]{8}\.[\w]+$/.test(file))assert.match(response.headers.get('cache-control'),/immutable/);
+        assert.equal((await fetch(`${url}/assets/${encodeURIComponent(file)}`,{headers:{'If-None-Match':response.headers.get('etag')}})).status,304);
         assert.deepEqual(
           Buffer.from(await response.arrayBuffer()),
           await readFile("dist/assets/" + file),

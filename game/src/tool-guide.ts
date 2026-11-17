@@ -1,6 +1,6 @@
-import { toolHelp, toolLabels, type ToolId, type CarveMode } from "./content";
+import { toolHelp, toolLabels, lineWidthLabels, type ToolId, type CarveMode } from "./content";
 
-export function toolGuide(tool: ToolId, mode: CarveMode = "opening") {
+export function toolGuide(tool: ToolId, mode: CarveMode = "opening", lineWidth = 3) {
   const help =
     tool === "carve"
       ? mode === "opening"
@@ -9,7 +9,7 @@ export function toolGuide(tool: ToolId, mode: CarveMode = "opening") {
             result: "직접 그린 모양은 그대로, 작은 손떨림만 살짝 정리해요.",
           }
         : {
-            instruction: "웃는 입이나 눈썹을 가는 선으로 새겨요.",
+            instruction: "두께를 고른 뒤 웃는 입이나 눈썹을 새겨요.",
             result: "동그랗게 그려도 구멍 대신 선으로 남아요.",
           }
       : toolHelp[tool];
@@ -20,6 +20,7 @@ export function toolGuide(tool: ToolId, mode: CarveMode = "opening") {
   return `<section class="tool-coach" data-guide="${tool}" aria-label="선택한 도구 사용법">
     <h2>${toolLabels[tool]}</h2>
     ${tool === "carve" ? modeButtons : ""}
+    ${tool === 'carve' && mode === 'line' ? `<label class="line-width-control" for="line-width"><span>선 두께</span><input id="line-width" type="range" min="1" max="5" step="1" value="${lineWidth}" aria-label="선 두께" aria-valuetext="${lineWidthLabels[lineWidth-1]}"><output for="line-width" title="${lineWidthLabels[lineWidth-1]}"><svg viewBox="0 0 32 20" aria-hidden="true"><path d="M4 10H28" stroke-width="${lineWidth*1.5}"/></svg><span>${lineWidth}</span></output></label>` : ''}
     <p id="tool-instruction">${help.instruction}</p>
   </section>`;
 }

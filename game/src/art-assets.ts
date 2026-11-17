@@ -2,7 +2,7 @@ import * as T from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {asset} from './assets';
 
-export type Surface = 'grayware'|'aged-oak'|'earth'|'plaster'|'linen'|'garden'|'foliage'|'stamped-clay'|'limestone'|'siru-clay'|'woodland';
+export type Surface = 'grayware'|'aged-oak'|'earth'|'plaster'|'linen'|'garden'|'foliage'|'limestone'|'woodland';
 export const artModels = ['craft-bench','craft-tools','studio-shell','studio-furniture','studio-collection','gallery-shell','gallery-fixtures','gallery-collection','field-tools','conservation-bench','kiln-dressing','kiln-vault','courtyard','siru'] as const;
 export type ArtModel = typeof artModels[number];
 export type ArtGroup = 'studio'|'outdoor'|'gallery';
@@ -27,7 +27,6 @@ export class ArtAssets {
         texture.wrapS=texture.wrapT=T.RepeatWrapping;
         texture.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());
         this.textures.set(name,texture);
-        if(name==='siru-clay')texture.repeat.set(3,2);
       })().catch(error=>{this.textureJobs.delete(name);throw error;});
       this.textureJobs.set(name,job);return job;
     }));

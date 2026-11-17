@@ -34,6 +34,8 @@ export interface SurfaceFeature {
   /** Legacy detached clay, retained in saves but removed for display. */
   islands?: UV[][];
   width: number;
+  /** Explicit surface width for new strokes; absent on legacy artwork. */
+  strokeWidth?: number;
 }
 export const MAX_FEATURES = 256;
 export const MAX_CONTOUR_POINTS = 1024;
@@ -326,6 +328,7 @@ export function validateSave(value: unknown): value is GameSave {
         Number.isFinite(f.width) &&
         f.width > 0 &&
         f.width < 0.1 &&
+        (f.strokeWidth === undefined || (f.kind === 'groove' && Number.isFinite(f.strokeWidth) && f.strokeWidth >= .002 && f.strokeWidth <= .02)) &&
         Array.isArray(f.points) &&
         f.points.length >= (f.kind === "groove" ? 2 : 3) &&
         f.points.length <= MAX_CONTOUR_POINTS &&

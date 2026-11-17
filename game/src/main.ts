@@ -28,11 +28,14 @@ import {
   scenes,
   toolLabels,
   toolHelp,
+  lineWidths,
+  lineWidthLabels,
   type ToolId,
   type CarveMode,
 } from "./content";
 import { World } from "./world";
 import { toolGuide } from "./tool-guide";
+import {BodyGuide} from './body-guide';
 import { finishStroke, strokeIntent, tapOpening, closeFingerLoop, type StrokePoint } from "./stroke";
 import { placeOpening, type OpeningPlacement, type ScreenPoint } from "./opening-placement";
 import {
@@ -84,6 +87,7 @@ let save = newSave(),
   stage: SceneId = "welcome",
   tool: ToolId = "shape",
   carveMode: CarveMode = "opening",
+  lineWidth = 3,
   fireStart = 0,
   fireTimer = 0,
   fireElapsed = 0,
@@ -95,6 +99,15 @@ const history = new History(),
   audio = new AudioController();
 let world: World;
 let faceTourShown=false, rotationHint=true, refineNudge=false, outlineTimer=0, outlineDeadline=0;
+let bodyGuide:BodyGuide|undefined,bodyGuideShown=false;
+function stopBodyGuide(){bodyGuide?.stop();}
+function startBodyGuide(){
+  stopBodyGuide();bodyGuideShown=true;
+  bodyGuide=new BodyGuide(world,save.document,hud,()=>{bodyGuide=undefined;syncFaceGuidance();});
+  syncFaceGuidance();
+}
+for(const event of ['pointerdown','keydown','wheel'])document.addEventListener(event,stopBodyGuide,{capture:true,passive:true});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)stopBodyGuide();});
 let outlineAnimation:Animation|undefined;
 let refineTipUntil=0,refineTipTimer=0;
 const loadingStarted=performance.now();
@@ -318,7 +331,7 @@ function updateUI() {
     ${['body','mouth','faces'].includes(stage)?`<div class="turn-demonstration" aria-hidden="true" hidden><i></i><svg viewBox="0 0 140 36"><path d="M12 22 Q70 -5 128 22 M115 9 L128 22 L110 25"/></svg><span>빈 곳을 끌어 돌려요</span></div>`:''}
     ${storyCard(stage)}
     <footer><div class="left-actions">${button("previous", "이전", "previous", "round icon-only")}${isEdit ? button("undo", "되돌리기", "undo", "round icon-only", !history.undoStack.length) + button("redo", "다시 실행", "redo", "round icon-only", !history.redoStack.length) : button("home", "처음 화면", "home", "round icon-only")}</div>
-    ${stage==='faces'?actionbar(drawingLabel,`<div class="tools" role="toolbar" aria-label="작업 도구">${c.tools.map((t) => `<button data-tool="${t}" class="tool ${tool === t ? "selected" : ""}" aria-pressed="${tool === t}" aria-label="${toolLabels[t]}">${icon(t)}<span>${t==='refine'?'구멍 다듬기':toolLabels[t]}</span></button>`).join("")}</div>${toolGuide(tool,carveMode)}`,'drawing-actions'):''}
+    ${stage==='faces'?actionbar(drawingLabel,`<div class="tools" role="toolbar" aria-label="작업 도구">${c.tools.map((t) => `<button data-tool="${t}" class="tool ${tool === t ? "selected" : ""}" aria-pressed="${tool === t}" aria-label="${toolLabels[t]}">${icon(t)}<span>${t==='refine'?'구멍 다듬기':toolLabels[t]}</span></button>`).join("")}</div>${toolGuide(tool,carveMode,lineWidth)}`,'drawing-actions'):''}
     ${stage==='ending'?button('finish-home','완료하고 처음으로','home','primary next-button'):button("next", primaryLabel, "next", "primary next-button")}</footer>`;
   arrangeHUD();
   if(world.inGallery)hud.querySelector('.scene-heading')?.insertAdjacentHTML('beforeend',`<p class="gallery-disclosure">오른쪽 · ${EXAMPLE_LABEL}<small>참고 유물: ${e(museum.artifact?.academicName??'얼굴모양토기')} · 형태와 색은 달라요.</small></p>`);
@@ -352,6 +365,7 @@ function arrangeHUD() {
   for(const duplicate of extras.querySelectorAll('#tool-instruction'))duplicate.removeAttribute('id');
 }
 function modal(html: string) {
+  stopBodyGuide();
   clearRefineTip();
   world.stopFaceTour();
   cancelGesture();
@@ -408,6 +422,7 @@ function showStory(photoId?:string,target:SceneId=stage) {
   if(focusAction)Array.from(dialog.querySelectorAll<HTMLButtonElement>('button')).find(b=>b.dataset.action===focusAction)?.focus({preventScroll:true});
 }
 async function go(next: SceneId) {
+  stopBodyGuide();
   clearRefineTip();
   cancelGesture();
   clearTimeout(toastTimer);
@@ -435,6 +450,7 @@ async function go(next: SceneId) {
       el.animate([{opacity:0,transform:'translateY(7px)'},{opacity:1,transform:'translateY(0)'}],{duration:260,delay:i*25,easing:'ease-out'});
   }
   if(next==='faces'&&!faceTourShown){faceTourShown=true;rotationHint=true;world.startFaceTour();syncFaceGuidance();}
+  if(next==='body'&&!bodyGuideShown)startBodyGuide();
   // Prepare the next environment while the player reviews or places their pot.
   // Failed preloads are retried with visible feedback when entering that scene.
   if(next==='inspect')void world.prepareScene('firing').catch(()=>{});
@@ -582,6 +598,7 @@ document.addEventListener("click", async (e) => {
     if(stage==='faces')world.startFaceTour();
     syncFaceGuidance();world.refresh();return;
   }
+  if(a==='shape-guide'){closeModal();startBodyGuide();return;}
   if(a==='photo'&&world.inGallery){
     let view:ReturnType<World['createPhotoView']>|undefined;
     try{
@@ -640,7 +657,7 @@ document.addEventListener("click", async (e) => {
   }
   if (a === "help") {
     modal(
-      `<div class="help-copy"><p class="eyebrow">천천히, 마음 가는 대로</p><h2>이렇게 해보세요</h2><p>${scenes[stage].instruction}</p><ul><li>손으로 빚기: 몸체를 좌우로 끌면 잡은 높이 주변이 둥글게 달라져요.</li><li>몸체 크기는 높이·넓이 손잡이로, 입구는 화면 아래나 오른쪽의 조절 막대로 바꿔요.</li><li>눈·입의 ‘그려 뚫기’로 원하는 윤곽을 그려 닫거나, 톡 눌러 작은 구멍을 만들어요. 손가락의 작은 떨림과 닫는 틈은 보정해요. ‘구멍 다듬기’로 안쪽이나 테두리를 문지르면 부드러워져요.</li><li>토기 밖을 끌면 좌우로 회전하고, 위아래로 보는 높이가 바뀌어요. 마우스 오른쪽 끌기도 사용할 수 있어요.</li><li>두 손가락을 벌리거나 오므리면 확대·축소해요. PC에서는 오른쪽 드래그와 마우스 휠을 사용해요.</li><li>되돌리기 또는 Ctrl / ⌘ + Z로 복구해요.</li></ul>${["body","mouth","faces"].includes(stage)?button("turn-guide","돌리는 동작 다시 보기","rotate","secondary"):""}<label class="motion-setting"><input id="reduce-motion" type="checkbox" ${world.reduced ? "checked" : ""}> 움직임 줄이기</label><section class="help-credits"><p>${AI_CONTENT_LABEL}</p><div class="credits-actions"><button data-action="credits" class="secondary">AI 제작·출처 안내</button>${museumHomeLink()}</div></section></div>`,
+      `<div class="help-copy"><p class="eyebrow">천천히, 마음 가는 대로</p><h2>이렇게 해보세요</h2><p>${scenes[stage].instruction}</p><ul><li>손으로 빚기: 몸체를 좌우로 끌면 잡은 높이 주변이 둥글게 달라져요.</li><li>몸체 크기는 높이·넓이 손잡이로, 입구는 화면 아래나 오른쪽의 조절 막대로 바꿔요.</li><li>눈·입의 ‘그려 뚫기’로 원하는 윤곽을 그려 닫거나, 톡 눌러 작은 구멍을 만들어요. 손가락의 작은 떨림과 닫는 틈은 보정해요. ‘구멍 다듬기’로 안쪽이나 테두리를 문지르면 부드러워져요.</li><li>토기 밖을 끌면 좌우로 회전하고, 위아래로 보는 높이가 바뀌어요. 마우스 오른쪽 끌기도 사용할 수 있어요.</li><li>두 손가락을 벌리거나 오므리면 확대·축소해요. PC에서는 오른쪽 드래그와 마우스 휠을 사용해요.</li><li>되돌리기 또는 Ctrl / ⌘ + Z로 복구해요.</li></ul>${stage==="body"?button("shape-guide","몸체 빚는 동작 다시 보기","shape","secondary"):""}${["body","mouth","faces"].includes(stage)?button("turn-guide","돌리는 동작 다시 보기","rotate","secondary"):""}<label class="motion-setting"><input id="reduce-motion" type="checkbox" ${world.reduced ? "checked" : ""}> 움직임 줄이기</label><section class="help-credits"><p>${AI_CONTENT_LABEL}</p><div class="credits-actions"><button data-action="credits" class="secondary">AI 제작·출처 안내</button>${museumHomeLink()}</div></section></div>`,
     );
     return;
   }
@@ -752,6 +769,7 @@ systemMotion.addEventListener('change',()=>{
   if(input)input.checked=reduced;
 });
 function aNew() {
+  bodyGuideShown=false;
   faceTourShown=false;rotationHint=true;refineNudge=false;carveMode='opening';
   returnToInspect=false;
   save = newSave();
@@ -872,6 +890,17 @@ function finishFormEdit(refreshUI = true) {
   }
   hud.querySelector<HTMLElement>(".form-handles .dragging")?.classList.remove("dragging");
 }
+document.addEventListener("input", (e) => {
+  const input=e.target;
+  if(!(input instanceof HTMLInputElement)||input.id!=='line-width')return;
+  const value=Number(input.value);
+  if(!Number.isFinite(value))return;
+  lineWidth=clamp(Math.round(value),1,5);
+  const label=lineWidthLabels[lineWidth-1],output=input.parentElement!.querySelector('output')!;
+  input.setAttribute('aria-valuetext',label);output.title=label;
+  output.querySelector('path')!.setAttribute('stroke-width',String(lineWidth*1.5));
+  output.querySelector('span')!.textContent=String(lineWidth);
+});
 document.addEventListener("input", (e) => {
   const el = e.target as HTMLInputElement,
     key = el.dataset.formRange as FormKey | undefined;
@@ -1072,7 +1101,7 @@ function syncFaceGuidance(){
   if(!['body','mouth','faces'].includes(stage))return;
   hud.querySelectorAll<HTMLElement>('[data-face]').forEach(el=>el.classList.toggle('active',Number(el.dataset.face)===world.faceAspect));
   const demo=hud.querySelector<HTMLElement>('.turn-demonstration'),area=hud.querySelector('.work-area')?.getBoundingClientRect();
-  if(demo&&area){demo.hidden=performance.now()<refineTipUntil||(!rotationHint&&!world.demonstratingFaces);demo.style.left=`${area.left+area.width/2}px`;demo.style.top=`${Math.max(area.top,area.bottom-88)}px`;}
+  if(demo&&area){demo.hidden=!!bodyGuide||performance.now()<refineTipUntil||(!rotationHint&&!world.demonstratingFaces);demo.style.left=`${area.left+area.width/2}px`;demo.style.top=`${Math.max(area.top,area.bottom-88)}px`;}
 }
 function projectOutline(points: UV[]): ScreenPoint[] {
   const rect = world.renderer.domElement.getBoundingClientRect();
@@ -1091,8 +1120,8 @@ function showOpening(placement: OpeningPlacement) {
     : placement.outline;
   drawOutline(points, placement.samples ? "ready" : "outside", true);
 }
-function commitFeature(points: UV[], kind: "hole" | "raised-hole" | "groove", width: number, before: ReturnType<typeof cloneDoc>) {
-  const feature={id:uid(),kind,points,width};
+function commitFeature(points: UV[], kind: "hole" | "raised-hole" | "groove", width: number, before: ReturnType<typeof cloneDoc>, strokeWidth?: number) {
+  const feature={id:uid(),kind,points,width,...(strokeWidth===undefined?{}:{strokeWidth})};
   if(crossToolOverlap(save.document,feature)){toast('눈·입과 옆 구멍이 겹치는 부분이 있어요. 빈 흙 위에 그려 주세요.');return false;}
   const issue = addSurfaceFeature(save.document, feature);
   if (issue) {
@@ -1224,7 +1253,7 @@ function flushPointer() {
       const closed = strokeIntent(screen,gesture.touch).closed;
       if (closed) showOpening(locateOpening(screen));
       else drawOutline(screen, "drawing", false);
-    } else world.previewStroke(finishStroke(gesture.samples));
+    } else world.previewStroke(finishStroke(gesture.samples),lineWidths[lineWidth-1]);
   }
   if (gesture?.kind === "brush") {
     const cov = world.coverage(),
@@ -1422,7 +1451,8 @@ function bindPointer() {
         if(commitFeature(points,g.kind === "pierce" ? "raised-hole" : "hole", width, g.before))openingFeedback(points);
       } else {
         const points = finishStroke(g.samples);
-        if (points.length >= 2) commitFeature(points, "groove", width, g.before);
+        const strokeWidth=lineWidths[lineWidth-1];
+        if (points.length >= 2) commitFeature(points, "groove", strokeWidth/readForm(save.document).height, g.before, strokeWidth);
       }
     } else if (g.kind === "place") {
       if (
@@ -1486,7 +1516,7 @@ async function boot() {
     world.onRender = ()=>{
       // A slow 3D frame can postpone timers. Clear expired feedback before paint.
       if(outlineDeadline&&performance.now()>=outlineDeadline)clearOpening();
-      positionFormHandles();syncFaceGuidance();
+      positionFormHandles();bodyGuide?.layout();syncFaceGuidance();
     };
     world.onExhibit=target=>showStory(photoFor(target).id,target);
     world.reduced=syncReducedMotion();

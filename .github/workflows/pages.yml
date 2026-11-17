@@ -57,6 +57,7 @@ jobs:
           - {suite: mobile, width: all}
           - {suite: art, width: all}
           - {suite: performance, width: all}
+          - {suite: optimization, width: all}
     env:
       TOGI_JOURNEY_WIDTH: ${{ matrix.width }}
     defaults:

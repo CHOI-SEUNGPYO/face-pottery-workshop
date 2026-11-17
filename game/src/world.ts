@@ -727,12 +727,13 @@ export class World {
       this.transition = 0;
     } else this.transition = performance.now() + 450;
   }
-  previewStroke(points: UV[]) {
+  previewStroke(points: UV[], width = .007) {
     const d = this.getSave().document;
     this.stroke.setPoints(
       points.map((p) =>
         surfacePoint(d, ...p).addScaledVector(surfaceNormal(d, ...p), 0.004),
       ),
+      width,
     );
     this.refresh();
   }

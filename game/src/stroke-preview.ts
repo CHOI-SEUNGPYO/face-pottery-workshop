@@ -1,17 +1,20 @@
-import { Group, Vector3 } from "three";
+import { DynamicDrawUsage, Group, Vector3, type InterleavedBufferAttribute } from "three";
 import { Line2 } from "three/addons/lines/Line2.js";
 import { LineGeometry } from "three/addons/lines/LineGeometry.js";
 import { LineMaterial } from "three/addons/lines/LineMaterial.js";
+import {MAX_STROKE_POINTS} from './stroke';
 
-/** Pixel-width lines remain readable on bright clay at every view and zoom. */
+/** Preview follows the chosen physical width on the pottery surface. */
 export class StrokePreview extends Group {
-  private geometry = new LineGeometry();
+  private geometry = new LineGeometry().setPositions(new Float32Array(MAX_STROKE_POINTS*3));
+  private buffer = (this.geometry.getAttribute('instanceStart') as InterleavedBufferAttribute).data;
   private lines = [
     new Line2(
       this.geometry,
       new LineMaterial({
         color: 0xfff6df,
-        linewidth: 7,
+        linewidth: .0098,
+        worldUnits: true,
         depthTest: false,
         depthWrite: false,
         toneMapped: false,
@@ -21,7 +24,8 @@ export class StrokePreview extends Group {
       this.geometry,
       new LineMaterial({
         color: 0x663a28,
-        linewidth: 3.5,
+        linewidth: .007,
+        worldUnits: true,
         depthTest: false,
         depthWrite: false,
         toneMapped: false,
@@ -31,18 +35,32 @@ export class StrokePreview extends Group {
   constructor() {
     super();
     this.visible = false;
+    this.buffer.setUsage(DynamicDrawUsage);
+    this.geometry.instanceCount=0;
     this.lines.forEach((line, i) => {
       line.renderOrder = 9 + i;
       this.add(line);
     });
   }
-  setPoints(points: Vector3[]) {
-    this.visible = points.length > 1;
+  setPoints(points: Vector3[], width = .007) {
+    const count=Math.min(points.length,MAX_STROKE_POINTS);
+    this.geometry.instanceCount=Math.max(0,count-1);
+    this.visible = count > 1;
     if (!this.visible) return;
-    this.geometry.dispose();
-    this.geometry = new LineGeometry().setPositions(
-      points.flatMap((p) => p.toArray()),
-    );
-    for (const line of this.lines) line.geometry = this.geometry;
+    this.lines[0].material.linewidth=width*1.4;
+    this.lines[1].material.linewidth=width;
+    const data=this.buffer.array,box=this.geometry.boundingBox!;
+    box.makeEmpty();
+    for(let i=0;i<count;i++){
+      box.expandByPoint(points[i]);
+      if(i===count-1)break;
+      const a=points[i],b=points[i+1],k=i*6;
+      data[k]=a.x;data[k+1]=a.y;data[k+2]=a.z;
+      data[k+3]=b.x;data[k+4]=b.y;data[k+5]=b.z;
+    }
+    // Shorter strokes draw only their active segments; old buffer tails stay hidden.
+    box.getBoundingSphere(this.geometry.boundingSphere!);
+    this.buffer.clearUpdateRanges();this.buffer.addUpdateRange(0,(count-1)*6);
+    this.buffer.needsUpdate=true;
   }
 }

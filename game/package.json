@@ -11,14 +11,15 @@
     "edit-story": "node scripts/museum-editor.mjs",
     "typecheck": "tsc --noEmit",
     "check:openings": "node scripts/check-openings.mjs",
-    "check:ui": "node scripts/check-form-controls.mjs && node scripts/check-interactions.mjs && node scripts/check-guidance.mjs && node scripts/check-loading.mjs",
+    "check:ui": "node scripts/check-form-controls.mjs && node scripts/check-interactions.mjs && node scripts/check-line-width.mjs && node scripts/check-body-guidance.mjs && node scripts/check-guidance.mjs && node scripts/check-loading.mjs",
     "check:workshop": "node scripts/check-workshop.mjs",
     "check:journey": "node scripts/check-journey.mjs",
     "check:mobile": "node scripts/check-mobile-play.mjs",
     "check:art": "node scripts/check-art.mjs",
     "check:performance": "node scripts/check-excavation-performance.mjs",
+    "check:optimization": "node scripts/check-optimization.mjs",
     "build:art": "node scripts/build-art-assets.mjs",
-    "verify": "npm run build && npm run check:openings && npm test && npm run check:ui && npm run check:workshop && npm run check:journey && npm run check:mobile && npm run check:art && npm run check:performance",
+    "verify": "npm run build && npm run check:openings && npm test && npm run check:ui && npm run check:workshop && npm run check:journey && npm run check:mobile && npm run check:art && npm run check:performance && npm run check:optimization",
     "test": "node --test scripts/check.mjs"
   },
   "engines": {

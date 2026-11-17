@@ -9,6 +9,10 @@ import {
 } from "./model";
 
 export const formHeights = [0, 0.12, 0.3, 0.5, 0.7, 0.88, 1];
+const circle = Array.from({length:COLS},(_,i)=>{
+  const angle=(i/COLS)*Math.PI*2;
+  return [Math.sin(angle),Math.cos(angle)] as const;
+});
 export const forms = {
   round: {
     label: "동글동글",
@@ -69,9 +73,10 @@ export function applyForm(doc: PotteryDocument, value: SoftForm) {
     const v = j / ROWS,
       r = formRadius(form, Math.min(1, v / shoulder));
     for (let i = 0; i < COLS; i++) {
-      const a = (i / COLS) * Math.PI * 2,
-        k = (j * COLS + i) * 3;
-      doc.outerXYZ.set([r * Math.sin(a), v * form.height, r * Math.cos(a)], k);
+      const k = (j * COLS + i) * 3;
+      doc.outerXYZ[k] = r * circle[i][0];
+      doc.outerXYZ[k + 1] = v * form.height;
+      doc.outerXYZ[k + 2] = r * circle[i][1];
     }
   }
   doc.innerXYZ = alignedInterior(doc);

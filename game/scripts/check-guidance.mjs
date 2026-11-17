@@ -20,7 +20,8 @@ try{
   await page.goto(url);await page.locator('#loading').waitFor({state:'detached'});await page.evaluate(()=>document.fonts.ready);
   assert.ok(await page.evaluate(()=>window.__loaderEnd-window.__loaderStart>=880),'loading has a legible minimum duration');
   await page.locator('[data-action="new"]').click();await settle();
-  assert.ok(await page.locator('.turn-demonstration').isVisible(),'new artwork immediately teaches rotation');
+  await page.locator('.body-demonstration').waitFor({state:'detached'});
+  assert.ok(await page.locator('.turn-demonstration').isVisible(),'rotation is taught after the body shaping demonstration');
   assert.equal(await page.locator('.turn-demonstration i').count(),1,'the cue demonstrates one finger on the background');
   assert.equal(await page.locator('.turn-demonstration span').textContent(),'빈 곳을 끌어 돌려요');
   await page.screenshot({path:'asset/review/single-finger-rotation-mobile.png'});

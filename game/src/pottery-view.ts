@@ -141,6 +141,9 @@ export class PotteryView {
   interior = this.material.clone();
   tunnel = this.plain.clone();
   private shapeCache = "";
+  private rimPositions = new Float32Array(COLS * 18);
+  private capPositions = new Float32Array(COLS * 9);
+  private floorPositions = new Float32Array(COLS * 36);
   constructor() {
     this.inkTexture.wrapS = T.RepeatWrapping;
     this.inkTexture.colorSpace = T.SRGBColorSpace;
@@ -160,9 +163,12 @@ export class PotteryView {
     this.body.raycast = acceleratedRaycast;
     this.inner = new T.Mesh(geometry(true), this.interior);
     this.walls = new T.Mesh(new T.BufferGeometry(), [this.tunnel, this.plain]);
-    this.rim = new T.Mesh(new T.BufferGeometry(), this.plain);
-    this.cap = new T.Mesh(new T.BufferGeometry(), this.plain);
-    this.floor = new T.Mesh(new T.BufferGeometry(), this.plain);
+    const dynamicGeometry = (positions:Float32Array) => new T.BufferGeometry().setAttribute(
+      'position',new T.BufferAttribute(positions,3).setUsage(T.DynamicDrawUsage),
+    );
+    this.rim = new T.Mesh(dynamicGeometry(this.rimPositions), this.plain);
+    this.cap = new T.Mesh(dynamicGeometry(this.capPositions), this.plain);
+    this.floor = new T.Mesh(dynamicGeometry(this.floorPositions), this.plain);
     for (const m of [
       this.body,
       this.inner,
@@ -201,13 +207,11 @@ export class PotteryView {
       mesh.geometry.computeVertexNormals();
       // Average duplicated seam normals to avoid a lighting stripe.
       const normals = mesh.geometry.getAttribute("normal") as T.BufferAttribute;
+      const n=new T.Vector3(),other=new T.Vector3();
       for (let j = 0; j <= ROWS; j++) {
         const a = j * (COLS + 1),
-          b = a + COLS,
-          n = new T.Vector3()
-            .fromBufferAttribute(normals, a)
-            .add(new T.Vector3().fromBufferAttribute(normals, b))
-            .normalize();
+          b = a + COLS;
+        n.fromBufferAttribute(normals, a).add(other.fromBufferAttribute(normals, b)).normalize();
         normals.setXYZ(a, n.x, n.y, n.z);
         normals.setXYZ(b, n.x, n.y, n.z);
       }
@@ -219,11 +223,13 @@ export class PotteryView {
         else mesh.geometry.boundsTree = new MeshBVH(mesh.geometry);
       }
     }
-    const rim: number[] = [],
-      caps: number[] = [],
-      floor: number[] = [];
-    const tri = (array: number[], a: T.Vector3, b: T.Vector3, c: T.Vector3) =>
-      array.push(...a.toArray(), ...b.toArray(), ...c.toArray());
+    // Topology is fixed here: update the same GPU buffers throughout a drag.
+    const tri = (array:Float32Array,offset:number,a:T.Vector3,b:T.Vector3,c:T.Vector3) => {
+      array[offset]=a.x;array[offset+1]=a.y;array[offset+2]=a.z;
+      array[offset+3]=b.x;array[offset+4]=b.y;array[offset+5]=b.z;
+      array[offset+6]=c.x;array[offset+7]=c.y;array[offset+8]=c.z;
+    };
+    const centre=new T.Vector3(...d.mouth.center),bottom=new T.Vector3(),insideBottom=new T.Vector3(0,.035,0);
     for (let i = 0; i < COLS; i++) {
       const u = i / COLS,
         v = (i + 1) / COLS,
@@ -231,35 +237,33 @@ export class PotteryView {
         p = surfacePoint(d, v, 1),
         a = surfacePoint(d, u, 1, true),
         b = surfacePoint(d, v, 1, true);
-      tri(rim, o, p, a);
-      tri(rim, p, b, a);
-      tri(caps, new T.Vector3(...d.mouth.center), a, b);
+      tri(this.rimPositions,i*18,o,p,a);
+      tri(this.rimPositions,i*18+9,p,b,a);
+      tri(this.capPositions,i*9,centre,a,b);
       const bo = surfacePoint(d, u, 0),
         bp = surfacePoint(d, v, 0),
         bi = surfacePoint(d, u, 0, true),
         bj = surfacePoint(d, v, 0, true);
-      tri(floor, new T.Vector3(0, 0, 0), bp, bo);
-      tri(floor, new T.Vector3(0, 0.035, 0), bi, bj);
-      tri(floor, bo, bp, bi);
-      tri(floor, bp, bj, bi);
+      tri(this.floorPositions,i*36,bottom,bp,bo);
+      tri(this.floorPositions,i*36+9,insideBottom,bi,bj);
+      tri(this.floorPositions,i*36+18,bo,bp,bi);
+      tri(this.floorPositions,i*36+27,bp,bj,bi);
     }
     this.walls.geometry.dispose();
     this.walls.geometry = openingGeometry(d);
-    for (const [m, a] of [
-      [this.rim, rim],
-      [this.cap, caps],
-      [this.floor, floor],
-    ] as const) {
-      m.geometry.dispose();
-      m.geometry = new T.BufferGeometry();
-      m.geometry.setAttribute("position", new T.Float32BufferAttribute(a, 3));
+    for (const m of [this.rim,this.cap,this.floor]) {
+      m.geometry.getAttribute('position').needsUpdate=true;
       m.geometry.computeVertexNormals();
+      m.geometry.computeBoundingSphere();
+      m.geometry.computeBoundingBox();
     }
     this.cap.visible = !d.mouth.opened;
     if (features) this.paint(d);
   }
   paint(d: PotteryDocument) {
-    const key = JSON.stringify([d.features, d.form, d.revision]);
+    // Hole masks are in UV space and do not change when the body is resized.
+    // Engraved lines use a physical width, so those still follow shape changes.
+    const key = JSON.stringify([d.features,d.features.some(f=>f.kind==='groove')?[d.form,d.revision]:null]);
     if (key === this.shapeCache) return;
     this.shapeCache = key;
     const mask = this.mask.getContext("2d")!,
@@ -284,7 +288,7 @@ export class PotteryView {
     };
     for (const f of d.features) {
       if (f.kind === "groove") {
-        const width = clamp(f.width * height, 0.0018, 0.0055);
+        const width = f.strokeWidth ?? clamp(f.width * height, 0.0018, 0.0055);
         const edge = grooveRibbon(d, f.points, width * 0.7);
         const core = grooveRibbon(d, f.points, width * 0.5);
         for (const shift of [-1, 0, 1]) {

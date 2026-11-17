@@ -34,6 +34,15 @@ try{
   await page.reload();await page.locator('#loading').waitFor({state:'detached'});
   assert.equal(await page.locator('html').getAttribute('data-motion'),'full','published build retains the game motion choice over the OS setting');
   await page.locator('[data-action="new"]').click();await settle();
+  await page.locator('.body-demonstration').waitFor({state:'visible'});
+  report.bodyMotion=await page.locator('.body-guide-trace').evaluate(async el=>{
+    const paths=new Set(),end=performance.now()+650;
+    do{paths.add(el.getAttribute('d'));await new Promise(requestAnimationFrame);}while(performance.now()<end);
+    return paths.size;
+  });
+  assert.ok(report.bodyMotion>3,'published body contour demonstrates sculpting');
+  await page.screenshot({path:'asset/review/release-body-guidance.png'});
+  await page.locator('.body-demonstration').waitFor({state:'detached'});
   assert.ok(await page.locator('.turn-demonstration').isVisible());
   assert.equal(await page.locator('.turn-demonstration i').count(),1);
   assert.equal(await page.locator('.turn-demonstration span').textContent(),'빈 곳을 끌어 돌려요');
@@ -64,6 +73,15 @@ try{
   await page.waitForFunction(()=>!document.querySelector('.refine-nudge'));
   await page.locator('#opening-outline').waitFor({state:'hidden',timeout:1500});
   assert.equal(await page.locator('#opening-outline path').first().getAttribute('d'),null,'published refinement clears its outline');
+  await page.locator('[data-tool="carve"]').click();await page.locator('[data-action="draw-line"]').click();
+  await page.locator('#line-width').focus();await page.locator('#line-width').press('End');
+  assert.equal(await page.locator('#line-width').inputValue(),'5');
+  const lineArea=await page.locator('.work-area').boundingBox(),lineX=lineArea.x+lineArea.width/2,lineY=lineArea.y+lineArea.height*.64;
+  await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:lineX-24,y:lineY,id:1}]});
+  for(let i=1;i<=12;i++)await touch.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:lineX-24+i*4,y:lineY,id:1}]});
+  await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+  await page.waitForFunction(()=>new Promise(resolve=>{const r=indexedDB.open('togi-workshop-v2',1);r.onsuccess=()=>{const db=r.result,q=db.transaction('state').objectStore('state').get('current');q.onsuccess=()=>{resolve(q.result.document.features.some(f=>f.kind==='groove'&&f.strokeWidth===.02));db.close();};};}));
+  report.lineWidthSaved=true;
   await page.locator('[data-action="next"]').click();await settle();
   await page.locator('[data-action="next"]').click();
   await page.locator('#travel.art-ready').waitFor({state:'visible'});

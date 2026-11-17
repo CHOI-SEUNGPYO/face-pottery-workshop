@@ -1,6 +1,18 @@
 /* Motion teaches gestures without adding another panel over the clay. */
+.body-demonstration{position:fixed;inset:0;z-index:3;pointer-events:none}
+.body-demonstration[hidden]{display:none}
+.body-demonstration>svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;fill:none;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 1px 2px #65452699)}
+.body-guide-rest{stroke:#fff5db;stroke-width:1.5;stroke-dasharray:4 5;opacity:.5}
+.body-guide-trace{stroke:#fff5db;stroke-width:3}
+.body-guide-finger circle{fill:#ffedaa55;stroke:#fff5db;stroke-width:1.5}
+.body-guide-finger path{fill:#795638e6;stroke:#fff5db;stroke-width:2}
+body #hud .body-demonstration>span{position:absolute;transform:translateX(-50%);box-sizing:border-box;padding:6px 10px;border-radius:12px;background:#fff7e8ed;color:#72502e;font-size:11px;line-height:1.4;text-align:center;white-space:nowrap;box-shadow:0 2px 7px #63421b16}
 .mouth-controls{display:grid;grid-template-columns:1fr;gap:6px}
 .mouth-controls label{display:flex;flex-direction:column;gap:0;font-size:12px;color:#694e32;min-width:0}
+body #hud .line-width-control{display:flex;align-items:center;gap:8px;min-height:44px;color:#694e32;font-size:11px;white-space:nowrap;margin:2px 0 0}
+body #hud .line-width-control input{flex:1;width:0;min-width:30px;height:44px;margin:0;accent-color:#9b733c;touch-action:none}
+body #hud .line-width-control output{display:flex;align-items:center;gap:3px;font-size:11px;font-variant-numeric:tabular-nums}
+body #hud .line-width-control svg{width:26px;height:20px;fill:none;stroke:#795439;stroke-linecap:round}
 .mouth-controls input{display:block;width:100%;min-width:0;height:44px;margin:0;accent-color:#9b733c;touch-action:none}
 .scene-heading:has(.face-aspects){position:relative}
 .face-aspects{display:flex;position:absolute;top:7px;right:8px;gap:3px;pointer-events:none}

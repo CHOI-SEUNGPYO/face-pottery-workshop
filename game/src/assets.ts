@@ -1,13 +1,15 @@
 const files = import.meta.glob(
   [
-    "../asset/runtime/characters/*.png",
-    "../asset/runtime/characters/*.webp",
-    "../asset/runtime/models/*.glb",
+    // Keep originals in the project, but ship only the models used by the game.
+    "../asset/runtime/characters/*-volume-v2.webp",
+    "../asset/runtime/models/{craft-bench,studio-shell,studio-furniture,studio-collection,gallery-shell,gallery-fixtures,gallery-collection,field-tools,conservation-bench,kiln-dressing,kiln-vault,courtyard}-v3.glb",
+    "../asset/runtime/models/craft-tools-v2.glb",
+    "../asset/runtime/models/siru-v4.glb",
+    "../asset/runtime/models/display-stand.glb",
     "../asset/runtime/audio/*.wav",
-    "../asset/runtime/animations/*.png",
-    "../asset/runtime/animations/*.webp",
-    "../asset/runtime/materials/*.jpg",
-    "../asset/runtime/materials/*.webp",
+    "../asset/runtime/animations/{party-travel,face-pot}.png",
+    "../asset/runtime/materials/{grayware,aged-oak,earth,plaster,linen,garden,limestone,woodland}-v1.jpg",
+    "../asset/runtime/materials/foliage-v1.webp",
   ],
   {
     eager: true,
@@ -24,7 +26,6 @@ const characterNames: Record<string, string> = {
   압이: "api",
   독이: "doki",
   경산이: "gyeongsani",
-  소월이: "sowoli",
 };
 export const characterImage = (name: string) =>
-  asset(`characters/${characterNames[name]}${name==='소월이'?'.png':'-volume-v2.webp'}`);
+  asset(`characters/${characterNames[name]}-volume-v2.webp`);

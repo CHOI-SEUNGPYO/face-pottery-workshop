@@ -1,4 +1,5 @@
 import type { UV } from "./model";
+export const MAX_STROKE_POINTS = 512;
 
 export interface StrokePoint {
   x: number;
@@ -138,7 +139,7 @@ export function finishStroke(points: StrokePoint[], closed = false, touch = fals
   };
   let tolerance = touch ? 0.55 : 0.22,
     result = simplify(tolerance);
-  while (result.length > 512) {
+  while (result.length > MAX_STROKE_POINTS) {
     tolerance *= 1.5;
     result = simplify(tolerance);
   }
