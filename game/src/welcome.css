@@ -1,38 +1,71 @@
-/* Show the real object and the making task before the first interaction. */
-body[data-stage="welcome"] #hud .welcome-copy{top:14%;padding:20px 24px}
-body[data-stage="welcome"] #hud .welcome-copy h1{font-size:clamp(24px,2.5vw,36px);line-height:1.3;margin:0 0 12px;letter-spacing:-.5px}
-.welcome-artifact{margin:0 0 12px;padding:8px;background:#e9e6df;border-radius:10px}
-.welcome-artifact img{display:block;width:100%;height:140px;object-fit:contain}
-.welcome-artifact figcaption{font-size:10px;line-height:1.4;margin:6px 0 0;text-align:center;color:#645b4b}
-.welcome-artifact figcaption small{display:block;font-size:8px;margin-top:2px}
-.welcome-purpose{font:14px/1.65 Pretendard,sans-serif;margin:0 0 12px;word-break:keep-all}
-.welcome-path{display:flex;gap:5px;list-style:none;padding:0;margin:0 0 12px;font:12px/1.5 Pretendard,sans-serif;color:#755433}
-.welcome-path li+li:before{content:'→';margin-right:5px;color:#a48a5b}
-body[data-stage="welcome"] #hud .ai-notice{font-size:10px;line-height:1.5;margin:0 0 10px}
-body[data-stage="welcome"] #hud .welcome-actions{flex-wrap:wrap;gap:8px}
-body[data-stage="welcome"] #hud .welcome-actions button{font-size:14px;min-height:44px;padding:10px 16px}
-body[data-stage="welcome"] .partner-marks.compact{margin-bottom:10px}
+/* The introduction explains the goal; the open space belongs to the clay. */
+body[data-stage="welcome"] #hud .welcome-copy{position:fixed;left:4vw;top:106px;width:35vw;max-width:430px;padding:22px 24px;background:var(--paper);border:1px solid var(--line);border-radius:14px;box-shadow:0 6px 24px #403b3110;box-sizing:border-box}
+body[data-stage="welcome"] #hud .welcome-copy h1{font-size:clamp(24px,2.3vw,33px);line-height:1.3;letter-spacing:-1px;margin:12px 0 16px;word-break:keep-all}
+.welcome-copy h1 em{color:#9a623c}
+.welcome-artifact{margin:0 0 12px;padding:6px 8px;background:#ece9e1;border-radius:8px}
+.welcome-artifact img{display:block;width:100%;height:112px;object-fit:contain}
+.welcome-artifact figcaption{font-size:10px;line-height:1.5;text-align:center;color:#665e50;margin-top:4px}
+.welcome-artifact figcaption small{display:block;font-size:8px;color:#807564}
+.welcome-purpose{font:13px/1.65 Pretendard,sans-serif;margin:0 0 12px;word-break:keep-all}
+.welcome-path{display:flex;gap:7px;list-style:none;padding:0;margin:0 0 12px;font-size:11px;color:#7e6a50}
+.welcome-path li+li::before{content:'→';margin-right:7px;color:#a38d6d}
+.welcome-copy .ai-notice{font:10px/1.5 Pretendard,sans-serif;margin:0 0 16px;color:#796e5f}
+body[data-stage="welcome"] #hud .partner-marks.compact{margin:0;gap:14px}
+body[data-stage="welcome"] #hud .partner-marks.compact .huss-mark{height:28px;width:46px}
+body[data-stage="welcome"] #hud .partner-marks.compact .museum-mark{height:32px;width:70px}
+body[data-stage="welcome"] #hud .partner-marks.compact>span{height:24px}
+.welcome-actions{display:flex;flex-wrap:wrap;gap:8px;margin:0}
+body[data-stage="welcome"] #hud .welcome-actions button{font-size:13px;min-height:44px;padding:10px 14px;border-radius:10px;white-space:nowrap}
+.welcome-start .welcome-example{font-size:12px;margin:4px 0 0;min-height:44px}
+@media(min-width:601px) and (max-width:1099px) and (min-height:600px){
+ body[data-stage="welcome"] #hud .welcome-copy{left:24px;top:90px;width:42vw;padding:18px}
+ body[data-stage="welcome"] #hud .welcome-copy h1{font-size:26px}
+ .welcome-artifact img{height:100px}
+}
 @media(max-width:600px) and (orientation:portrait){
- body[data-stage="welcome"] #hud .welcome-copy{top:68px;left:14px;width:calc(100% - 28px);padding:12px 16px}
- body[data-stage="welcome"] #hud .welcome-copy h1{font-size:25px;margin:0 0 8px}
- .welcome-artifact{margin-bottom:8px;padding:6px}.welcome-artifact img{height:108px}
- .welcome-artifact figcaption{font-size:9px;margin-top:4px}
- .welcome-purpose{font-size:12px;line-height:1.5;margin-bottom:8px}.welcome-path{font-size:11px;margin-bottom:8px}
- body[data-stage="welcome"] #hud .welcome-actions button{font-size:12px;padding:10px 12px}
+ body[data-stage="welcome"] #hud .welcome-copy{left:12px;top:64px;width:calc(100% - 24px);max-width:none;padding:12px 14px;border-radius:12px;box-shadow:none}
+ body[data-stage="welcome"] #hud .welcome-copy h1{font-size:22px;line-height:1.25;margin:8px 0 10px;letter-spacing:-.6px}
+ body[data-stage="welcome"] #hud .partner-marks.compact .huss-mark{height:20px;width:36px}
+ body[data-stage="welcome"] #hud .partner-marks.compact .museum-mark{height:22px;width:55px}
+ body[data-stage="welcome"] #hud .partner-marks.compact>span{height:18px}
+ .welcome-artifact{padding:5px;margin-bottom:8px}
+ .welcome-artifact img{height:62px}
+ .welcome-artifact figcaption{font-size:8px;margin-top:2px}
+ .welcome-artifact figcaption small{font-size:7px}
+ .welcome-purpose{font-size:11px;line-height:1.45;margin:0 0 6px}
+ .welcome-path{font-size:9px;gap:5px;margin:0 0 6px}
+ .welcome-copy .ai-notice{font-size:9px;line-height:1.4;margin:0}
+ .welcome-start{position:fixed;left:12px;right:12px;bottom:calc(max(8px,env(safe-area-inset-bottom)) + 60px);padding:7px 9px 3px;border:1px solid var(--line);border-radius:12px;background:var(--paper)}
+ .welcome-actions{flex-wrap:nowrap;gap:6px}
+ body[data-stage="welcome"] #hud .welcome-actions button{flex:1;font-size:12px;padding:8px;gap:5px}
+ .welcome-start .welcome-example{display:flex;width:100%;margin:0;min-height:44px;padding:8px;font-size:11px;text-decoration:none}
+ body #hud .welcome-foot{left:12px;right:12px;bottom:max(8px,env(safe-area-inset-bottom));height:48px;border-radius:10px}
+ .welcome-foot .museum-home-link,.welcome-foot .credits-link{font-size:11px;padding:6px 8px}
 }
 @media(max-width:600px) and (max-height:650px) and (orientation:portrait){
- body[data-stage="welcome"] #hud .welcome-copy h1{font-size:22px}
- .welcome-artifact img{height:78px}.welcome-artifact figcaption{font-size:8px}
- body[data-stage="welcome"] #hud .ai-notice{font-size:9px;margin-bottom:6px}
- body[data-stage="welcome"] .partner-marks.compact{margin-bottom:6px}
+ body[data-stage="welcome"] #hud .welcome-copy{padding:9px 12px}
+ body[data-stage="welcome"] #hud .welcome-copy h1{font-size:19px;margin:6px 0}
+ .welcome-artifact img{height:36px}
+ .welcome-artifact figcaption small{display:none}
+ .welcome-purpose{font-size:10px;margin-bottom:4px}
+ .welcome-path{font-size:8px;margin-bottom:4px;gap:4px}
+ .welcome-start{display:flex;align-items:center;gap:6px;padding:5px}
+ .welcome-actions{flex:1;gap:4px;flex-wrap:nowrap;min-width:0}
+ body[data-stage="welcome"] #hud .welcome-actions button{font-size:10px;padding:6px;flex:1;min-width:0;white-space:normal}
+ body[data-stage="welcome"] #hud .welcome-actions button svg{display:none}
+ body[data-stage="welcome"] #hud .welcome-actions button span{white-space:normal;word-break:keep-all}
+ .welcome-start .welcome-example{width:70px;flex:none;line-height:1.35;gap:3px;flex-direction:column;padding:3px;font-size:10px}
 }
-@media(max-height:600px) and (orientation:landscape){
- body[data-stage="welcome"] #hud .welcome-copy{top:68px!important;left:18px;width:calc(100% - 36px)!important;max-width:900px;padding:12px 16px;display:grid;grid-template-columns:minmax(180px,1fr) 1.2fr;gap:6px 20px}
- body[data-stage="welcome"] .welcome-copy .partner-marks{grid-column:2;margin:0;position:absolute;right:16px;top:12px;transform:scale(.75);transform-origin:top right}
- body[data-stage="welcome"] #hud .welcome-copy h1{grid-column:2;font-size:20px!important;margin:0!important;padding-right:85px}
- .welcome-artifact{grid-column:1;grid-row:1/6;margin:0;align-self:stretch;display:flex;flex-direction:column;justify-content:center}
- .welcome-artifact img{height:130px}.welcome-artifact figcaption{font-size:9px}
- .welcome-purpose,.welcome-path,.welcome-copy .ai-notice,.welcome-actions{grid-column:2;margin:0!important}
- .welcome-purpose{font-size:11px;line-height:1.4}.welcome-path{font-size:10px}
- body[data-stage="welcome"] #hud .welcome-actions button{font-size:11px;padding:8px 12px}
+@media(max-height:599px) and (orientation:landscape){
+ body[data-stage="welcome"] #hud .welcome-copy{top:64px;left:16px;width:calc(100% - 32px);max-width:840px;padding:12px 16px;display:grid;grid-template-columns:minmax(160px,.8fr) minmax(0,1.2fr);gap:6px 18px}
+ body[data-stage="welcome"] #hud .welcome-copy h1{grid-column:2;font-size:21px;line-height:1.25;margin:0;padding-right:60px}
+ body[data-stage="welcome"] #hud .partner-marks.compact{position:absolute;top:8px;right:12px;transform:scale(.65);transform-origin:top right}
+ .welcome-artifact{grid-column:1;grid-row:1/5;margin:0;align-self:start;padding:5px}
+ .welcome-artifact img{height:96px}.welcome-artifact figcaption{font-size:8px}.welcome-artifact figcaption small{font-size:7px}
+ .welcome-purpose,.welcome-path,.welcome-copy .ai-notice,.welcome-start{grid-column:2;margin:0}
+ .welcome-purpose{font-size:11px;line-height:1.5}.welcome-path{font-size:9px}.welcome-copy .ai-notice{font-size:9px}
+ .welcome-start{display:flex;align-items:center;gap:7px;grid-column:1/-1}
+ .welcome-actions{flex:1;flex-wrap:nowrap;gap:6px}
+ body[data-stage="welcome"] #hud .welcome-actions button{font-size:11px;padding:8px 10px}
+ .welcome-start .welcome-example{font-size:11px;margin:0;padding:6px}
 }

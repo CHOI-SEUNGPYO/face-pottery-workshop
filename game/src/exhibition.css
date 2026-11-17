@@ -72,8 +72,6 @@ body .photo-editor canvas{width:min(100%,calc((100dvh - 230px) * 16 / 9));aspect
  .photo-editor .photo-actions button{width:100%;min-width:0;font-size:12px;padding:8px 6px;margin:0}
  .photo-editor .photo-status{font-size:10px;line-height:1.5}
 }
-@media(max-width:600px) and (max-height:650px) and (orientation:portrait){body[data-stage="welcome"] #hud .welcome-actions{flex-wrap:nowrap}body[data-stage="welcome"] #hud .welcome-actions button{padding:8px;font-size:11px;gap:5px}.welcome-artifact img{height:58px}.welcome-example{margin-top:0;font-size:12px}}
-@media(max-height:600px) and (orientation:landscape){.welcome-artifact{grid-row:1/5}.welcome-artifact img{height:90px}.welcome-example{grid-column:1;grid-row:5;min-height:44px;margin:0;padding:4px;font-size:11px}}
 @media(max-height:500px) and (orientation:landscape){
  body dialog:has(.example-viewer,.photo-editor){padding:12px;width:calc(100vw - 20px);max-height:calc(100dvh - 16px);border-radius:12px}
  body dialog:has(.example-viewer,.photo-editor) .modal-close{top:8px;right:8px}

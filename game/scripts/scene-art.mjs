@@ -6,16 +6,14 @@ export function buildScenes(c){
   const stone=material('Honed warm limestone',0xe7e4dd,'limestone',.9);
   const dark=material('Museum bronze charcoal',0x414742,null,.7,.1);
   const wallMat=material('Warm museum plaster',0xddd5c6,'plaster',.92);
-  const panel=material('Museum orange interpretation panel',0xd58227,null,.8);
-  const navy=material('Gyeongsan deep blue case backing',0x0d2e4a,null,.85);
-  const museumWall=material('Gyeongsan warm charcoal wall',0x44403d,null,.93);
-  const museumFloor=material('Gyeongsan amber parquet',0xe9ae70,'aged-oak',.38);
-  const shelfWood=material('Pale solid maple exhibit shelves',0xf5e6cb,'aged-oak',.6);
-  const oakFloor=material('Studio parquet',0xbeaa89,'aged-oak',.62);
+  const panel=material('Muted clay interpretation panel',0xb18e69,null,.95);
+  const navy=material('Museum sage gray case backing',0x62716e,null,.95);
+  const museumWall=material('Warm gray museum wall',0xa49d8f,null,.98);
+  const shelfWood=material('Pale exhibit shelving',0xc9c2ae,'limestone',.9);
   const glass=material('Clear exhibit glazing',0xc0dedf,null,.16);
   glass.transparent=true;glass.opacity=.045;glass.depthWrite=false;glass.side=T.DoubleSide;
   const soil=material('Courtyard compacted earth',0xaaa99a,'earth',1);
-  const leaves=material('Natural leaf clusters',0x839a65,'foliage',.95);leaves.side=T.DoubleSide;leaves.alphaTest=.5;
+  const leaves=material('Natural leaf clusters',0x9ba68c,'foliage',1);leaves.side=T.DoubleSide;leaves.alphaTest=.5;
   const shrubMat=material('Planting bed',0x52664b,'earth',1);
   const records=[];
   function exhibit(g,index,x,y,z,scale=.7,angle=0){
@@ -37,18 +35,7 @@ export function buildScenes(c){
     for(let x=-width/2+1;x<width/2;x+=1)box(g,'Floor joint',.006,.002,depth,grout,x,base+.001,z,0);
     for(let dz=-depth/2+1;dz<depth/2;dz+=1)box(g,'Floor joint',width,.002,.006,grout,0,base+.001,z+dz,0);
   }
-  function parquet(g,base,width,depth,z=0,finish=oakFloor){
-    box(g,'Parquet subfloor',width,.08,depth,darkWood,0,base-.045,z,0);
-    for(let row=0;row<Math.ceil(depth/.24);row++){
-      const zz=z-depth/2+(row+.5)*.24;
-      for(let i=0;i<Math.ceil(width/1.1)+1;i++){
-        const start=-width/2+i*1.1-(row%3)*.33,end=Math.min(width/2,start+1.096),lo=Math.max(-width/2,start);
-        if(end<=lo)continue;
-        box(g,'Staggered parquet board',end-lo,.025,.236,finish,(end+lo)/2,base-.0125,zz,.003);
-      }
-    }
-  }
-  const studio=group('Studio shell');parquet(studio,-1.12,10,10,.8);
+  const studio=group('Studio shell');tiledFloor(studio,-1.12,10,10,.8);
   const back=group('Studio window wall');back.position.z=-3.7;back.userData.wall=true;back.userData.inward=[0,0,1];studio.add(back);
   box(back,'Wall below window',10,1.62,.12,wallMat,0,-.31,0,.008);
   box(back,'Continuous wall above window',10,.6,.12,wallMat,0,2.6,0,.008);
@@ -65,14 +52,16 @@ export function buildScenes(c){
   const cabinets=group('Studio cabinetry'),collection=group('Studio ceramics');
   for(const x of [-3,3]){
     const cabinet=group('Cabinet against window wall');cabinet.userData.wallFixture=true;cabinet.position.set(x,0,-3.35);cabinets.add(cabinet);
-    box(cabinet,'Inset cabinet back',1.82,3.15,.07,darkWood,0,.485,-.15);
+    box(cabinet,'Inset cabinet back',1.82,3.15,.07,wallMat,0,.485,-.15);
     for(const sx of [-.94,.94])box(cabinet,'Cabinet side',.09,3.2,.50,wood,sx,.48,.06);
     for(const y of [-1.08,-.65,.20,1.05,2.12])box(cabinet,'Recessed shelf',1.94,.07,.53,wood,0,y,.07);
     for(const row of [0,1,2])for(const i of [0,1])exhibit(collection,(row*2+i+(x>0?3:0))%pottery.length,x+(i-.5)*.86,[-.61,.24,1.09][row],-3.23,.65,i*.2);
     for(const y of [.16,1.01,2.08])box(cabinet,'Under shelf light',1.7,.012,.018,lamp,0,y,.23);
   }
   const bench=group('Finite oak studio worktable');
-  box(bench,'Thick single oak top',3.85,.13,2.05,wood,0,-.067,0,.04);
+  const worktop=material('Matte sage worktable surface',0x9ba598,'limestone',1);
+  box(bench,'Solid worktable with muted stone top',3.85,.13,2.05,worktop,0,-.067,0,.04);
+  box(bench,'Oak front edge',3.85,.045,.035,wood,0,-.11,1.03,.008);
   for(const x of [-1.65,1.65])for(const z of [-.75,.75])box(bench,'Table leg',.14,.99,.14,darkWood,x,-.625,z);
   for(const z of [-.84,.84])box(bench,'Apron',3.5,.18,.08,darkWood,0,-.24,z);
   for(const x of [-1.66,1.66])box(bench,'Side apron',.08,.18,1.7,darkWood,x,-.24,0);
@@ -84,7 +73,7 @@ export function buildScenes(c){
 
   // Reference: supplied Gyeongsan Museum VR views, 03 pottery shelves,
   // 05 central showcase and 06 gallery passage. Room proportions serve gameplay.
-  const gallery=group('Museum gallery shell');parquet(gallery,-.86,12,12,.6,museumFloor);
+  const gallery=group('Museum gallery shell');tiledFloor(gallery,-.86,12,12,.6);
   for(const [name,x,z,a,w]of [['back',0,-4.4,0,12],['left',-6,.6,Math.PI/2,10],['right',6,.6,-Math.PI/2,10],['entrance',0,5.6,Math.PI,12]]){
     const face=wall(gallery,`Gallery ${name} wall`,x,z,a,w,-.86,4.3,museumWall);
     box(face,'Black lighting track',w-.4,.045,.04,dark,0,3.18,.34);
@@ -96,8 +85,9 @@ export function buildScenes(c){
   }
   const fixtures=group('Permanent gallery fixtures'),galleryPots=group('Gallery ceramics');
   for(const x of [-.78,.9]){
-    box(fixtures,'Dark showcase plinth',1.36,.78,1.30,dark,x,-.45,0,.015);
-    box(fixtures,'Pale exhibit platform',1.32,.06,1.26,shelfWood,x,-.03,0,.008);
+    box(fixtures,'Warm limestone showcase plinth',1.36,.78,1.30,stone,x,-.45,0,.015);
+    box(fixtures,'Fine bronze plinth reveal',1.34,.015,1.28,bronze,x,-.067,0,.003);
+    box(fixtures,'Pale exhibit platform',1.32,.06,1.26,stone,x,-.03,0,.008);
     box(fixtures,'Recessed plinth foot',1.20,.08,1.16,dark,x,-.82,0,.006);
   }
   const cabinet=group('Gyeongsan pottery wall showcase');cabinet.userData.wallFixture=true;cabinet.position.z=-3.95;fixtures.add(cabinet);
@@ -109,13 +99,13 @@ export function buildScenes(c){
   for(const x of [-2.75,-1.15]){
     for(const side of [-.72,.72])box(cabinet,'Pale upright shelf',.085,2.65,.46,shelfWood,x+side,.71,-.02);
     for(const y of [-.56,.06,.68,1.30,1.92])box(cabinet,'Pottery shelf with rounded edge',1.51,.055,.49,shelfWood,x,y,.005,.008);
-    for(let row=0;row<4;row++)for(let col=0;col<3;col++){
+    for(let row=0;row<4;row++)for(let col=0;col<2;col++){
       const index=[5,6,4,6,5,6,0,2,4,5,6,4][row*3+col];
-      exhibit(galleryPots,index,x+(col-1)*.44,[-.5325,.0875,.7075,1.3275][row],-3.94,.41,.25*col);
+      exhibit(galleryPots,index,x+(col-.5)*.72,[-.5325,.0875,.7075,1.3275][row],-3.94,.41,.25*col);
     }
   }
   // Broad jars sit on individual supports beside the small-vessel shelving.
-  for(const [x,index,s,y]of [[.50,3,1.6,-.16],[1.90,0,1.1,-.16],[3.24,3,1.75,-.16]]){
+  for(const [x,index,s,y]of [[.80,3,1.35,-.16],[3.0,0,1.2,-.16]]){
     if(y>-.5){box(cabinet,'Individual gray exhibit riser',.84,.425,.65,dark,x,-.3725,.10);}
     exhibit(galleryPots,index,x,y,y>-.5?-3.88:-3.50,s,x*.3);
   }
@@ -132,7 +122,7 @@ export function buildScenes(c){
   const gravel=material('Weathered gray sandstone',0x797e72,'limestone',1);
   // A high resolution scenic surround uses the full image per quarter turn.
   // A low resolution spherical skybox enlarged individual leaves across the view.
-  const woodland=material('Distant woodland surround',0xd8ded4,'woodland',1);
+  const woodland=material('Distant woodland surround',0xc9cec2,'woodland',1);
   woodland.side=T.BackSide;
   const surroundGeometry=new T.CylinderGeometry(24,24,12,128,1,true),surroundUV=surroundGeometry.getAttribute('uv');
   for(let i=0;i<surroundUV.count;i++)surroundUV.setXY(i,surroundUV.getX(i)*4,.34+surroundUV.getY(i)*.66);
@@ -179,14 +169,14 @@ export function buildScenes(c){
     const sector=group('Woodland sector '+i),a=(i+.5)*Math.PI/4;
     sector.userData.forestSector=true;sector.userData.outward=[Math.cos(a),0,Math.sin(a)];yard.add(sector);return sector;
   });
-  for(let band=0;band<2;band++)for(let i=0;i<24+band*8;i++){
-    const angle=i/(24+band*8)*Math.PI*2+band*.17,radius=9+band*4+Math.sin(i*2.4)*.65;
+  for(let band=0;band<1;band++)for(let i=0;i<16;i++){
+    const angle=i/16*Math.PI*2,radius=11+Math.sin(i*2.4)*.65;
     const tree=treeTemplates[i%treeTemplates.length].clone();tree.name='Woodland beyond the boundary';
     delete tree.userData.forestSector;
     const sector=forestSectors[Math.floor(angle/(Math.PI/4))%8];
     tree.position.set(Math.cos(angle)*radius,0,Math.sin(angle)*radius);
-    tree.scale.setScalar(1.45+(i%4)*.19+band*.25);tree.rotation.y=i*1.7;sector.add(tree);
-    for(let k=0;k<3;k++){
+    tree.scale.setScalar(1.1+(i%4)*.12);tree.rotation.y=i*1.7;sector.add(tree);
+    for(let k=0;k<2;k++){
       const shrub=mesh(sector,'Woodland undergrowth',new T.PlaneGeometry(2.8,1.5),leaves,tree.position.x,.65,tree.position.z);
       shrub.rotation.y=angle+k*Math.PI/3;
     }
@@ -195,6 +185,12 @@ export function buildScenes(c){
   for(let i=0;i<48;i++){
     const x=i<24?-6:6,z=-4.4+(i%24)*.43;
     for(let k=0;k<2;k++){const p=mesh(yard,'Border shrub',new T.PlaneGeometry(.85,.75),leaves,x+Math.sin(i*2.4)*.25,.38,z);p.rotation.y=i*1.3+k*1.57;}
+  }
+  // A low continuous understory closes the rear border without another wall
+  // of tall trees. Its silhouette stays beneath the kiln and shelter roofs.
+  for(let i=0;i<26;i++)for(let k=0;k<3;k++){
+    const p=mesh(yard,'Rear understory',new T.PlaneGeometry(1.15,.95),leaves,-6+i*.48,.48,-6+Math.sin(i*2.4)*.25);
+    p.rotation.y=i*.9+k*Math.PI/3;
   }
   const equipment=group('Organised excavation tools');
   for(let i=0;i<12;i++){
@@ -217,7 +213,7 @@ export function buildScenes(c){
   box(kilnyard,'Preparation bench',1.4,.09,.7,wood,-2.1,.58,-1.0);
   for(const x of [-2.65,-1.55])for(const z of [-1.22,-.78])box(kilnyard,'Preparation bench leg',.08,.55,.08,darkWood,x,.275,z);
   place(kilnyard,tools.find(t=>t[0]==='water-bowl')[1],-2.4,.63,-1.05,1);
-  const kilnClay=material('Ash weathered kiln plaster',0x9a826b,'plaster',1);
+  const kilnClay=material('Ash weathered kiln plaster',0xb3a08a,'plaster',1);
   const newVault=vault.clone();newVault.traverse(o=>{
     if(o.name==='Earthen foundation'){o.material=soil;o.scale.y=.8;}
     if(['Uneven earthen vault','Thick earth facade with open firemouth','Exposed arch edging'].includes(o.name))o.material=kilnClay;

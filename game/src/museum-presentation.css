@@ -7,10 +7,7 @@
 .partner-marks.compact{gap:16px;margin-bottom:18px;justify-content:flex-start}
 .partner-marks.compact .huss-mark{width:64px;height:46px}
 .partner-marks.compact .museum-mark{width:85px;height:55px}
-body[data-stage="welcome"] #hud .welcome-copy{top:18%;padding:24px 28px}
-body[data-stage="welcome"] #hud .welcome-copy .eyebrow{font-size:10px;letter-spacing:.8px;margin-bottom:12px}
-body[data-stage="welcome"] #hud .welcome-copy h1{font-size:clamp(30px,4vw,58px);margin-bottom:20px}
-body[data-stage="welcome"] #hud .welcome-description{font-size:15px;line-height:1.7}
+
 .ending-links{display:grid;gap:10px}.ending-links button{width:100%;font-size:13px}
 .kiln-help{pointer-events:auto;min-height:44px;margin-top:12px;width:100%;padding:8px 10px;background:#e8dbc0;border-radius:10px;font-size:11px;line-height:1.5}
 .kiln-guide>p,.kiln-guide section p{font-size:14px;line-height:1.8}
@@ -74,15 +71,14 @@ body dialog:has(.museum-album,.museum-credits,.museum-ending) .modal-close{right
 
 @media(max-width:1099px),(max-height:599px){
  .partner-marks.compact{margin-bottom:10px;gap:12px}.partner-marks.compact .huss-mark{width:45px;height:32px}.partner-marks.compact .museum-mark{width:65px;height:42px}.partner-marks.compact>span{height:26px}
- body[data-stage="welcome"] #hud .welcome-copy{top:17%;padding:20px}
+
  .museum-credits,.museum-ending{padding:28px}.museum-credits h2,.museum-ending h2{font-size:28px}
 }
 @media(max-height:600px) and (orientation:landscape){
  .kiln-help{margin-top:8px;font-size:10px;padding:6px;min-height:44px}
- body[data-stage="welcome"] #hud .welcome-copy{top:68px!important;padding:10px 16px}
- body[data-stage="welcome"] #hud .welcome-copy h1{font-size:24px!important;margin-bottom:8px!important}
+
  .partner-marks.compact{margin-bottom:7px}.partner-marks.compact .huss-mark{width:38px;height:27px}.partner-marks.compact .museum-mark{width:49px;height:32px}
- body[data-stage="welcome"] #hud .welcome-copy .ai-notice{font-size:10px;line-height:1.5;margin-bottom:8px}
+
  .museum-album{gap:7px;padding:14px 20px 10px;height:calc(100dvh - 26px)}
  body dialog:has(.museum-album,.museum-credits,.museum-ending){max-height:calc(100dvh - 24px)}
  .album-heading h2{font-size:20px}.album-heading>p:last-child{display:none}.museum-album .eyebrow{font-size:9px;margin-bottom:3px}
@@ -92,8 +88,7 @@ body dialog:has(.museum-album,.museum-credits,.museum-ending) .modal-close{right
 }
 @media(max-width:600px) and (orientation:portrait){
  .kiln-help{width:auto;margin-top:8px}.kiln-flow{gap:6px}.kiln-flow>div{padding:12px 5px}.kiln-flow strong{font-size:11px}.kiln-flow p{font-size:10px}.kiln-flow>b{font-size:14px}
- body[data-stage="welcome"] #hud .welcome-copy{top:78px;padding:14px 20px}
- body[data-stage="welcome"] #hud .welcome-copy h1{font-size:32px;margin-bottom:12px}
+
  .partner-marks.compact{margin-bottom:8px}
  body #hud .story-button{width:44px;height:44px;min-width:44px;padding:10px}body #hud .story-button span{display:none}
  body dialog:has(.museum-album,.museum-credits,.museum-ending){width:calc(100vw - 20px);max-height:calc(100dvh - 20px);border-radius:16px}
@@ -112,8 +107,7 @@ body dialog:has(.museum-album,.museum-credits,.museum-ending) .modal-close{right
  .ending-actions{gap:6px}.ending-actions button{font-size:12px;padding:10px 12px}
 }
 @media(max-width:600px) and (max-height:650px) and (orientation:portrait){
- body[data-stage="welcome"] #hud .welcome-copy h1{font-size:27px}
- body[data-stage="welcome"] #hud .welcome-copy .ai-notice{font-size:11px;line-height:1.5;margin-bottom:8px}
+
  .partner-marks.compact .huss-mark{height:25px;width:35px}.partner-marks.compact .museum-mark{height:30px;width:48px}
 }
 @media(max-width:360px){.album-tabs small{display:none}.album-tabs button{padding:8px 10px;font-size:11px}}

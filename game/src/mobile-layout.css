@@ -14,10 +14,10 @@ body #hud .story-compact-icon,body #hud .story-mobile-label,.kiln-help-brief{dis
  body #hud .brand-pot svg{width:22px;height:22px}
  body #hud .brand small.ai-mark{font-size:10px;line-height:1.5}
  body #hud header nav{gap:4px}
- body #hud header .round{height:44px;width:44px;min-width:44px;padding:11px;border-radius:14px;box-shadow:0 2px 0 #a7854c66}
+ body #hud header .round{height:44px;width:44px;min-width:44px;padding:11px;border-radius:14px;box-shadow:0 1px 5px #403b3112}
  body #hud header .round svg{width:21px;height:21px}
  body #hud .story-dock{top:var(--mobile-top);right:108px;left:auto;bottom:auto;width:96px;height:48px;z-index:3}
- body #hud .story-teaser{width:96px;height:48px;min-height:48px;padding:6px 8px;border-radius:12px;gap:7px;justify-content:center;box-shadow:0 2px 0 #a7854c66}
+ body #hud .story-teaser{width:96px;height:48px;min-height:48px;padding:6px 8px;border-radius:12px;gap:7px;justify-content:center;box-shadow:0 1px 5px #403b3112}
  body #hud .story-mobile-label{display:block;font-size:13px;font-weight:600;line-height:1.3;text-align:left;white-space:nowrap;color:#624525}
  body #hud .story-teaser>img,body #hud .story-teaser-copy{display:none}
  body #hud .story-compact-icon{display:flex;align-items:center;justify-content:center}
@@ -35,9 +35,9 @@ body #hud .story-compact-icon,body #hud .story-mobile-label,.kiln-help-brief{dis
 
  body #hud footer{left:12px;right:12px;bottom:var(--mobile-bottom);gap:8px;height:44px}
  body #hud .left-actions{gap:4px;flex:none}
- body #hud .left-actions .round{width:44px;min-width:44px;height:44px;padding:10px;border-radius:14px;box-shadow:0 2px 0 #a7854c66}
+ body #hud .left-actions .round{width:44px;min-width:44px;height:44px;padding:10px;border-radius:14px;box-shadow:0 1px 5px #403b3112}
  body #hud .left-actions svg{width:20px;height:20px}
- body #hud .next-button{min-width:0;min-height:44px;height:auto;max-width:calc(100% - 144px);padding:8px 11px;font-size:12px;border-radius:14px;gap:5px;box-shadow:0 2px 0 #a7854c66;line-height:1.25}
+ body #hud .next-button{min-width:0;min-height:44px;height:auto;max-width:calc(100% - 144px);padding:8px 11px;font-size:12px;border-radius:14px;gap:5px;box-shadow:0 1px 5px #403b3112;line-height:1.25}
  body #hud .next-button svg{width:18px;height:18px;flex-shrink:0}
  body #hud .next-button span{white-space:normal;text-wrap:pretty}
  body #hud .guide-stack{left:12px;right:12px;width:auto;bottom:calc(var(--mobile-bottom) + 56px);gap:0}
@@ -48,12 +48,12 @@ body #hud .story-compact-icon,body #hud .story-mobile-label,.kiln-help-brief{dis
  body #hud .tool{flex-direction:column;gap:3px;min-height:48px;max-width:none;padding:5px 2px;border-radius:10px;box-shadow:none;border-color:transparent}
  body #hud .tool svg{width:18px;height:18px}
  body #hud .tool span{font-size:10px;white-space:nowrap}
- body #hud .tool.selected{border-color:#c39b50;background:#ffe6a5}
+ body #hud .tool.selected{border-color:#c39b50;background:#ead8ad}
  body #hud .tool-coach{margin:0}
  body #hud .tool-coach h2,body #hud .tool-coach p{display:none}
  body #hud .drawing-modes{margin:4px 0 0;gap:3px;border-top:1px solid #dfcaa788;padding-top:3px}
  body #hud .drawing-modes button{min-height:44px;padding:5px;font-size:12px;background:transparent;box-shadow:none;border-radius:9px}
- body #hud .drawing-modes button[aria-pressed="true"]{background:#eadfc7}
+ body #hud .drawing-modes button[aria-pressed="true"]{background:#e9e1d1}
  body #hud .settings-dock{left:12px;right:12px;width:auto;bottom:calc(var(--mobile-bottom) + 56px);padding:6px 10px;border-radius:14px;box-shadow:0 3px 14px #503c2718}
  body #hud .settings-dock:has(.form-controls){left:auto;width:auto;padding:0;border:0;background:none;box-shadow:none}
  body #hud .form-controls{display:block}
@@ -83,15 +83,10 @@ body #hud .story-compact-icon,body #hud .story-mobile-label,.kiln-help-brief{dis
  body #hud .context-label{position:static;transform:none;max-width:none;margin-top:4px;padding:3px 8px;font-size:10px;line-height:1.4;display:inline-block;background:#fff9eef2;border-radius:6px;color:#634a30}
  body #toast{top:158px;padding:8px 12px;font-size:12px;border-radius:10px}
 
- body[data-stage="welcome"] #hud .welcome-copy{top:64px;padding:12px 16px}
- body[data-stage="welcome"] #hud .welcome-copy h1{font-size:27px;line-height:1.18;margin-bottom:8px}
- body[data-stage="welcome"] #hud .welcome-copy>.eyebrow{display:none}
- body[data-stage="welcome"] #hud .welcome-description{font-size:12px!important;line-height:1.45!important;margin:0 0 8px!important}
  body[data-stage="welcome"] #hud .ai-notice{font-size:10px;line-height:1.45;margin-bottom:10px}
  body[data-stage="welcome"] #hud .partner-marks.compact{margin-bottom:6px}
  body[data-stage="welcome"] #hud .partner-marks.compact .huss-mark{height:28px;width:40px}
  body[data-stage="welcome"] #hud .partner-marks.compact .museum-mark{height:34px;width:55px}
- body[data-stage="welcome"] #hud .welcome-actions .large{min-height:44px;padding:9px 16px}
 
 }
 

@@ -229,7 +229,11 @@
   color-scheme: light;
   --edge: clamp(20px, 2.35vw, 36px);
   --rail: clamp(220px, 20vw, 280px);
-  --shadow: 0 3px 0 #b5915d, 0 7px 18px #67451d17;
+  --shadow: 0 2px 8px #403b3110;
+  --paper: #fcf9f1f5;
+  --line: #d8cdbc;
+  --ink: #443d32;
+  --accent: #ddbd73;
 }
 * {
   box-sizing: border-box;
@@ -294,8 +298,8 @@ button span {
   width: 46px;
   height: 46px;
   border-radius: 50%;
-  background: #fff5df;
-  border: 1px solid #eed7ac;
+  background: var(--paper);
+  border: 1px solid var(--line);
   box-shadow: var(--shadow);
 }
 .icon-only span,
@@ -309,10 +313,11 @@ button span {
 .primary {
   padding: 16px 24px 20px;
   min-height: 58px;
-  background: transparent url("../asset/runtime/ui/button-primary.svg")
-    center/100% 100% no-repeat;
-  box-shadow: 0 8px 22px #85531717;
-  border-radius: 28px;
+  background: var(--accent);
+  border: 1px solid #b39860;
+  color: #3e3320;
+  box-shadow: 0 2px 6px #403b3114;
+  border-radius: 12px;
 }
 .primary svg {
   order: 2;
@@ -323,11 +328,11 @@ button span {
   padding: 18px 30px 23px;
 }
 .secondary {
-  background: transparent url("../asset/runtime/ui/button-secondary.svg")
-    center/100% 100% no-repeat;
+  background: #f0e9db;
+  border: 1px solid var(--line);
   padding: 12px 17px 16px;
   min-height: 46px;
-  border-radius: 23px;
+  border-radius: 10px;
 }
 .small-button {
   min-height: 40px;

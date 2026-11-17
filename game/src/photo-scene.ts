@@ -3,6 +3,7 @@ import * as T from 'three';
 /** A separate portrait scene keeps gallery exhibits out of the saved photo. */
 export interface PhotoView {
   rotation:number;
+  elevation:number;
   render(context:CanvasRenderingContext2D,fullSize?:boolean):void;
   dispose():void;
 }
@@ -67,8 +68,11 @@ export function photoScene(artwork:T.Object3D,environment:T.Texture|null,directi
   scene.add(key,fill,new T.HemisphereLight(0xfff9ef,0x8b8171,.7));
   const camera=new T.PerspectiveCamera(32,1920/1080,.02,60),away=direction.clone();
   away.y=0;if(away.lengthSq()<.001)away.set(0,0,1);away.normalize();away.y=.14;away.normalize();
-  const right=new T.Vector3(away.z,0,-away.x).normalize(),up=away.clone().cross(right);
+  const right=new T.Vector3(away.z,0,-away.x).normalize();
+  let elevation=Math.asin(away.y);
   const frame=(canvasWidth:number,canvasHeight:number)=>{
+    away.set(-right.z*Math.cos(elevation),Math.sin(elevation),right.x*Math.cos(elevation));
+    const up=away.clone().cross(right);
     camera.aspect=canvasWidth/canvasHeight;
     const tan=Math.tan(T.MathUtils.degToRad(camera.fov/2));let distance=.5;
     for(const x of [framing.min.x,framing.max.x])for(const y of [framing.min.y,framing.max.y])for(const z of [framing.min.z,framing.max.z]){
@@ -79,7 +83,7 @@ export function photoScene(artwork:T.Object3D,environment:T.Texture|null,directi
     camera.lookAt(center);camera.setViewOffset(canvasWidth,canvasHeight,0,canvasHeight*.025,canvasWidth,canvasHeight);camera.updateProjectionMatrix();camera.updateMatrixWorld();
   };
   frame(1920,1080);
-  return {scene,camera,own,frame,dispose(){
+  return {scene,camera,own,frame,get elevation(){return elevation;},set elevation(value:number){elevation=T.MathUtils.clamp(value,-.10,1.30);},dispose(){
     const materials=new Set<T.Material>();
     fixtures.traverse(o=>{if(o instanceof T.Mesh){o.geometry.dispose();materials.add(o.material);}});
     materials.forEach(m=>m.dispose());surface.dispose();backdropTexture.dispose();key.shadow.map?.dispose();key.shadow.mapPass?.dispose();

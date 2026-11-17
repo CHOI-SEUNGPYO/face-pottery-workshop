@@ -57,6 +57,18 @@ try{
         await page.waitForFunction(before=>document.querySelector('.example-viewer canvas').toDataURL()!==before,original);
         const rotated=await canvas.evaluate(el=>el.toDataURL());await canvas.press('ArrowRight');
         await page.waitForFunction(before=>document.querySelector('.example-viewer canvas').toDataURL()!==before,rotated);
+        const sideView=await canvas.evaluate(el=>el.toDataURL());
+        if(viewport.width<1100){
+          const touch=await context.newCDPSession(page);
+          await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:r.x+r.width*.5,y:r.y+r.height*.35,id:1}]});
+          for(let i=1;i<=6;i++)await touch.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:r.x+r.width*.5,y:r.y+r.height*(.35+i*.04),id:1}]});
+          await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await touch.detach();
+        }else{
+          await page.mouse.move(r.x+r.width*.5,r.y+r.height*.35);await page.mouse.down();await page.mouse.move(r.x+r.width*.5,r.y+r.height*.6,{steps:6});await page.mouse.up();
+        }
+        await page.waitForFunction(before=>document.querySelector('.example-viewer canvas').toDataURL()!==before,sideView);
+        const topView=await canvas.evaluate(el=>el.toDataURL());await canvas.press('ArrowDown');
+        await page.waitForFunction(before=>document.querySelector('.example-viewer canvas').toDataURL()!==before,topView);
         if(fromWelcome)await page.screenshot({path:`asset/review/user-example-${viewport.width}.png`});
         await page.locator('.example-viewer [data-action="close"]').click();
         assert.equal(await page.locator('.example-viewer').count(),0);

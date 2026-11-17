@@ -470,9 +470,9 @@ export class World {
       sprite.scale.set(size*im.width/im.height,size,1);
       sprite.position.set(stage==='welcome'?1.12:1.8,0,stage==='welcome'?.55:1.3);
     }
-    this.key.intensity = museumStage?1.8:stage === "firing" ? 2.3 : 2.5;
-    this.ambient.intensity=museumStage?.65:1.25;
-    this.fill.intensity=museumStage?.35:.7;
+    this.key.intensity = museumStage?2.05:stage === "firing" ? 2.15 : 2.35;
+    this.ambient.intensity=museumStage?.85:1.10;
+    this.fill.intensity=museumStage?.5:.6;
     this.update();
     if(stage==='firing')this.setFiringProgress(null);
     if (outdoors) {
@@ -514,10 +514,10 @@ export class World {
       this.siru.position.set(0,this.digLevel+.72,0);
       this.pottery.root.position.set(placed?0:-.83*Math.max(1,this.siru.scale.x),placed?this.assemblyHeight:this.digLevel+.72,placed?0:.15);
     }
-    const color=museumStage?0x253941:outdoors||stage==='firing'?0xc1d0ca:0xdcd5c8;
+    const color=museumStage?0xbeb6a6:outdoors||stage==='firing'?0xc8cfc4:0xdcd5c8;
     this.scene.background=new T.Color(color);
     this.scene.backgroundIntensity=.8;
-    this.scene.fog=outdoors||stage==='firing'?null:new T.Fog(color,14,30);
+    this.scene.fog=outdoors||stage==='firing'?new T.Fog(color,18,65):new T.Fog(color,30,60);
     this.scene.environmentIntensity=museumStage?.55:.65;
     if(stage==='firing')this.firingView.update(0,this.reduced);
     this.compose(instant);
@@ -994,6 +994,8 @@ export class World {
     return {
       get rotation(){return portrait.own.rotation.y;},
       set rotation(value:number){portrait.own.rotation.y=value;},
+      get elevation(){return portrait.elevation;},
+      set elevation(value:number){portrait.elevation=value;},
       render:(context,fullSize=false)=>{
         const renderer=this.renderer,oldTarget=renderer.getRenderTarget(),oldSize=renderer.getSize(new T.Vector2()),ratio=renderer.getPixelRatio(),shadowUpdate=renderer.shadowMap.needsUpdate;
         // Reuse the existing GPU context and its environment texture. Preview

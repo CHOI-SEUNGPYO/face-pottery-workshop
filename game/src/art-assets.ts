@@ -44,7 +44,7 @@ export class ArtAssets {
             const surface=material.userData.surface as Surface|undefined;
             if(surface){material.map=this.textures.get(surface)!;if(!['foliage','garden'].includes(surface)){material.bumpMap=material.map;material.bumpScale=['limestone','linen'].includes(surface)?.001:.002;}material.needsUpdate=true;}
             if(surface==='woodland'){
-              o.material=new T.MeshBasicMaterial({map:material.map,color:material.color,side:T.BackSide,toneMapped:false});
+              o.material=new T.MeshBasicMaterial({map:material.map,color:material.color,side:T.BackSide,toneMapped:false,fog:true});
               o.castShadow=o.receiveShadow=false;
             }
           }

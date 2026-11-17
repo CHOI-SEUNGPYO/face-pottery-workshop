@@ -177,8 +177,8 @@ function layoutUI() {
       .getBoundingClientRect();
     const portrait=w<=600&&h>w;
     left = portrait ? 28 : Math.max(copy.right + (compact?16:36), w * 0.51);
-    top = portrait ? copy.bottom + 18 : compact?70:120;
-    bottom = h - 64;
+    top = portrait ? copy.bottom + 8 : compact?70:120;
+    bottom = portrait ? (hud.querySelector<HTMLElement>(".welcome-start")?.getBoundingClientRect().top ?? h-64)-12 : h-64;
   } else {
     left = compact ? 170 : 256;
     right = compact ? w-156 : w-256;
@@ -194,7 +194,7 @@ function layoutUI() {
       bottom=Math.min(...docks.map(el=>el.getBoundingClientRect().top))-12;
     }
   }
-  area.style.cssText = `left:${left}px;top:${top}px;width:${Math.max(120, right - left)}px;height:${Math.max(120, bottom - top)}px`;
+  area.style.cssText = `left:${left}px;top:${top}px;width:${Math.max(120, right - left)}px;height:${Math.max(stage==='welcome'?48:120, bottom - top)}px`;
   world.reframe();
   positionFormHandles();
   syncRefineTip();
@@ -295,7 +295,7 @@ function updateUI() {
   if (stage === "welcome") {
     hud.innerHTML =
       header +
-      `<div class="work-area" aria-hidden="true"></div><section class="welcome-copy">${partnerMarks(true)}<h1>세 얼굴을 가진 토기,<br><em>내 손으로 만들어 볼까?</em></h1><figure class="welcome-artifact"><img src="${museumAsset('face-three-sides.jpg')}" alt="하나의 실제 얼굴모양토기를 세 방향에서 본 사진. 서로 다른 표정이 새겨져 있어요."><figcaption>같은 유물의 서로 다른 세 얼굴 · 실제 유물 사진<small>문화재청 제공 · 경향신문 게재</small></figcaption></figure><p class="welcome-purpose">경산 소월리의 <strong>얼굴모양토기</strong>를 살펴보고,<br>내가 빚은 몸체에 눈과 입을 만들어 보세요.</p><ol class="welcome-path" aria-label="체험 순서"><li>몸체 빚기</li><li>얼굴 만들기</li><li>유물과 비교</li></ol><p class="ai-notice">AI(인공지능) 활용 제작 · 실제 제작 과정과는 달라요.</p><div class="welcome-actions">${button("new", "얼굴모양토기 만들기", "next", "primary large")}${saved ? button("continue", "이어 만들기", "play", "secondary") : ""}</div><button data-action="example-artwork" class="welcome-example">${icon("rotate")}예시 작품 감상</button></section><nav class="welcome-foot" aria-label="박물관과 제작 안내">${museumHomeLink()}<button data-action="credits" class="credits-link">게임 소개·제작</button></nav>`;
+      `<div class="work-area" aria-hidden="true"></div><section class="welcome-copy">${partnerMarks(true)}<h1>세 얼굴을 가진 토기,<br><em>내 손으로 만들어 볼까?</em></h1><figure class="welcome-artifact"><img src="${museumAsset('face-three-sides.jpg')}" alt="하나의 실제 얼굴모양토기를 세 방향에서 본 사진. 서로 다른 표정이 새겨져 있어요."><figcaption>같은 유물의 서로 다른 세 얼굴 · 실제 유물 사진<small>문화재청 제공 · 경향신문 게재</small></figcaption></figure><p class="welcome-purpose">경산 소월리의 <strong>얼굴모양토기</strong>를 살펴보고,<br>내가 빚은 몸체에 눈과 입을 만들어 보세요.</p><ol class="welcome-path" aria-label="체험 순서"><li>몸체 빚기</li><li>얼굴 만들기</li><li>유물과 비교</li></ol><p class="ai-notice">AI(인공지능) 활용 제작 · 실제 제작 과정과는 달라요.</p><div class="welcome-start"><div class="welcome-actions">${button("new", "얼굴모양토기 만들기", "next", "primary large")}${saved ? button("continue", "이어 만들기", "play", "secondary") : ""}</div><button data-action="example-artwork" class="welcome-example">${icon("rotate")}예시 작품 감상</button></div></section><nav class="welcome-foot" aria-label="박물관과 제작 안내">${museumHomeLink()}<button data-action="credits" class="credits-link">게임 소개·제작</button></nav>`;
     layoutUI();
     return;
   }

@@ -97,6 +97,16 @@ async function welcomeDisclosure(page,viewport){
   const selectors=['header','.welcome-copy','.welcome-foot'];
   const boxes=selectors.map(selector=>({selector,rect:document.querySelector(selector).getBoundingClientRect()}));
   const errors=[];
+  if(innerWidth<=600&&innerHeight>innerWidth){
+   const area=document.querySelector('.work-area').getBoundingClientRect();
+   const start=document.querySelector('.welcome-start').getBoundingClientRect();
+   const copy=document.querySelector('.welcome-copy').getBoundingClientRect();
+   if(area.top<copy.bottom+4||area.bottom>start.top-4)errors.push('welcome artwork overlaps explanation or actions');
+   for(const el of document.querySelectorAll('.welcome-start button')){
+    const r=el.getBoundingClientRect();
+    if(r.width<43||r.height<43||!el.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)))errors.push('unreachable welcome action');
+   }
+  }
   for(const {selector,rect:r} of boxes)if(r.x<0||r.y<0||r.right>innerWidth+1||r.bottom>innerHeight+1)errors.push(`${selector} outside viewport`);
   for(let i=0;i<boxes.length;i++)for(const b of boxes.slice(i+1)){
    const a=boxes[i],r=a.rect,s=b.rect;
