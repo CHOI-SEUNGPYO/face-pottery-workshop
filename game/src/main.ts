@@ -89,8 +89,7 @@ let save = newSave(),
   fireElapsed = 0,
   fireLast = 0,
   toastTimer = 0,
-  loaded = false,
-  photoURL = "";
+  loaded = false;
 const history = new History(),
   repository = new SaveRepository(),
   audio = new AudioController();
@@ -584,12 +583,12 @@ document.addEventListener("click", async (e) => {
     syncFaceGuidance();world.refresh();return;
   }
   if(a==='photo'&&world.inGallery){
+    let view:ReturnType<World['createPhotoView']>|undefined;
     try{
-      if(photoURL)URL.revokeObjectURL(photoURL);
-      photoURL=URL.createObjectURL(await world.capturePhoto());
       modal('<div id="photo-editor-root"></div>');
-      photoEditor=new PhotoEditor(dialog.querySelector('#photo-editor-root')!,photoURL);
-    }catch{toast('사진을 만들지 못했어요. 다시 시도해 주세요.');}
+      view=world.createPhotoView();
+      photoEditor=new PhotoEditor(dialog.querySelector('#photo-editor-root')!,view);
+    }catch{view?.dispose();closeModal();toast('사진을 만들지 못했어요. 다시 시도해 주세요.');}
     return;
   }
   if(a==='finish-photo'){closeModal();go('ending');modal(endingMarkup());return;}

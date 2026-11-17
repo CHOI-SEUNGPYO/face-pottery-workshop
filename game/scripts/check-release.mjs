@@ -106,6 +106,14 @@ try{
   await page.locator('[data-action="photo"]').click();
   assert.match(await page.locator('.photo-editor h2').textContent(),/내 작품/);
   assert.match(await page.locator('.photo-status').textContent(),/내 작품만/);
+  assert.match(await page.locator('.photo-status').textContent(),/케이스/);
+  const photoCanvas=page.locator('.photo-editor canvas');
+  await page.evaluate(()=>document.fonts.ready);
+  const photoBefore=await photoCanvas.evaluate(c=>c.toDataURL());
+  const photoBox=await photoCanvas.boundingBox();
+  await page.mouse.move(photoBox.x+photoBox.width*.5,photoBox.y+photoBox.height*.45);await page.mouse.down();
+  await page.mouse.move(photoBox.x+photoBox.width*.68,photoBox.y+photoBox.height*.45,{steps:12});await page.mouse.up();
+  assert.notEqual(await photoCanvas.evaluate(c=>c.toDataURL()),photoBefore,'published photo preview responds to rotation');
   await page.screenshot({path:'asset/review/release-own-work-photo.png'});
   await page.locator('.modal-close').click();
   await page.locator('[data-action="ending-credits"]').click();

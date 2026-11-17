@@ -223,9 +223,12 @@ try{
     window.__beforePhoto={camera:w.camera.matrixWorld.toArray(),position:w.pottery.root.position.toArray(),rotation:w.pottery.root.rotation.toArray()};
     w.renderer.render=(scene,camera)=>{
       if(scene!==w.scene){
-        const own=scene.getObjectByName('Player artwork'),box=new Box3().setFromObject(own);
+        scene.updateMatrixWorld(true);
+        const own=scene.getObjectByName('Player artwork'),box=new Box3().setFromObject(own),displayCase=scene.getObjectByName('Own display case and plinth');
         const center=box.getCenter(w.camera.position.clone()).project(camera);
-        window.__capturedPhoto={name:scene.name,reference:!!scene.getObjectByName('AI example made with game tools'),center:center.toArray(),rotation:own.rotation.toArray(),vertices:Array.from(own.children.find(m=>m.geometry===w.pottery.body.geometry).geometry.attributes.position.array)};
+        const caseBox=new Box3().setFromObject(displayCase),corners=[];
+        for(const x of [caseBox.min.x,caseBox.max.x])for(const y of [caseBox.min.y,caseBox.max.y])for(const z of [caseBox.min.z,caseBox.max.z])corners.push(w.camera.position.clone().set(x,y,z).project(camera).toArray());
+        window.__capturedPhoto={name:scene.name,reference:!!scene.getObjectByName('AI example made with game tools'),center:center.toArray(),rotation:own.rotation.toArray(),vertices:Array.from(own.children.find(m=>m.geometry===w.pottery.body.geometry).geometry.attributes.position.array),caseMatrices:displayCase.children.map(m=>m.matrixWorld.toArray()),panes:displayCase.children.filter(m=>m.material?.transparent&&m.geometry.type==='PlaneGeometry').length,corners,renderWidth:w.renderer.domElement.width};
       }
       return render(scene,camera);
     };
@@ -239,12 +242,22 @@ try{
    const photo=await page.evaluate(()=>({capture:window.__capturedPhoto,before:window.__beforePhoto,after:{camera:window.togi.world.camera.matrixWorld.toArray(),position:window.togi.world.pottery.root.position.toArray(),rotation:window.togi.world.pottery.root.rotation.toArray()},vertices:Array.from(window.togi.world.pottery.body.geometry.attributes.position.array)}));
    assert.equal(photo.capture.reference,false,'reference artwork is excluded from photography');
    assert.equal(photo.capture.name,'Player artwork portrait');
-   assert.ok(Math.abs(photo.capture.center[0])<.01&&Math.abs(photo.capture.center[1])<.1,'own work is centered with disclosure space');
+   assert.ok(Math.abs(photo.capture.center[0])<.01&&Math.abs(photo.capture.center[1])<.2,'own work is centered above its plinth');
+   assert.equal(photo.capture.panes,5,'four glass sides and a lid surround the pot');
+   assert.ok(photo.capture.corners.every(([x,y])=>Math.abs(x)<.96&&y>-.86&&y<.96),'case and plinth fit above the disclosure');
    assert.deepEqual(photo.capture.vertices,photo.vertices,'photography preserves the actual sculpted shape');
    assert.ok(photo.capture.rotation.slice(0,3).every((angle,i)=>Math.abs(angle-photo.before.rotation[i])<1e-10),'photography preserves the chosen face');
    assert.deepEqual(photo.after,photo.before,'photography does not move the gallery or artwork');
    await page.evaluate(()=>document.fonts.ready);
-   if(viewport.width===390)await page.screenshot({path:'asset/review/own-work-photo-mobile.png'});
+   const preview=await page.locator('.photo-editor canvas').boundingBox();
+   await drag(page,{x:preview.x+preview.width*.5,y:preview.y+preview.height*.45},{x:preview.x+preview.width*.68,y:preview.y+preview.height*.45});
+   const turned=await page.evaluate(()=>window.__capturedPhoto);
+   assert.ok(turned.rotation[1]>photo.capture.rotation[1]+.6,'dragging right turns the photographed pottery right');
+   assert.deepEqual(turned.caseMatrices,photo.capture.caseMatrices,'case and plinth stay still while pottery turns');
+   assert.equal(turned.renderWidth,960,'drag preview uses a bounded resolution');
+   await page.locator('.photo-editor canvas').focus();await page.keyboard.press('ArrowLeft');
+   assert.ok(await page.evaluate(()=>window.__capturedPhoto.rotation[1])<turned.rotation[1],'keyboard can rotate the photograph');
+   if(viewport.width===390)await page.screenshot({path:'asset/review/own-work-photo-case-mobile.png'});
    for(const name of ['경산이','독이','압이'])await page.locator(`[data-sticker="${name}"]`).click();
    assert.match(await page.locator('.photo-editor .eyebrow').textContent(),/AI\(인공지능\) 생성·편집 콘텐츠 포함/);
    await assertPhotoDisclosure(page);
@@ -252,7 +265,9 @@ try{
    await page.locator('[data-photo="size"]').fill('330');await page.locator('[data-photo="angle"]').fill('30');
    const canvas=await page.locator('.photo-editor canvas').boundingBox();
    const point=(x,y)=>({x:canvas.x+x/1920*canvas.width,y:canvas.y+y/1080*canvas.height});
+   const stickerAngle=await page.evaluate(()=>window.__capturedPhoto.rotation[1]);
    await drag(page,point(1000,800),point(1700,1040));
+   assert.equal(await page.evaluate(()=>window.__capturedPhoto.rotation[1]),stickerAngle,'dragging a sticker does not rotate the pot');
    await assertPhotoDisclosure(page);
    await page.locator('[data-photo="delete"]').click();
    await assertPhotoDisclosure(page);
@@ -262,6 +277,9 @@ try{
    const download=page.waitForEvent('download');await page.locator('[data-photo="download"]').click();const file=await download;
    const stream=await file.createReadStream(),chunks=[];for await(const chunk of stream)chunks.push(chunk);const png=Buffer.concat(chunks);
    assert.equal(png.readUInt32BE(16),1920);assert.equal(png.readUInt32BE(20),1080);
+   assert.equal(await page.evaluate(()=>window.__capturedPhoto.renderWidth),1920,'export renders at full resolution');
+   assert.equal(await page.evaluate(()=>window.__capturedPhoto.rotation[1]),stickerAngle,'export preserves the preview angle');
+   assert.deepEqual(await page.evaluate(()=>({camera:window.togi.world.camera.matrixWorld.toArray(),position:window.togi.world.pottery.root.position.toArray(),rotation:window.togi.world.pottery.root.rotation.toArray()})),photo.before,'rotating and exporting a photo leaves the original gallery pose intact');
    await assertPhotoDisclosure(page,png);
    if(process.env.TOGI_DISCLOSURE_REVIEW==='1'&&viewport.width===1366)await writeFile('asset/review/ai-disclosure-export.png',png);
    assert.deepEqual(await page.evaluate(()=>Array.from(window.togi.save.document.outerXYZ)),placed.doc,'photo editing preserves pottery');

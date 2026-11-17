@@ -9,12 +9,13 @@ import { PotteryView } from "./pottery-view";
 import {ArtAssets,artGroups,type ArtGroup} from './art-assets';
 import {createArtifactExample} from './artifact-example';
 import { StrokePreview } from "./stroke-preview";
+import {FaceGuide} from './face-guide';
 import { SoilTerrain, migrateSoilMask } from "./soil";
 import { scenes } from "./content";
 import { surfaceFrame } from "./surface-path";
 import { FiringView, firingFrame } from './firing';
 import {museum,museumAsset} from './museum';
-import {photoScene} from './photo-scene';
+import {photoScene,type PhotoView} from './photo-scene';
 import {outdoorSite,museumRoom,setEnvironmentMaterials} from './environments';
 import {
   clamp,
@@ -135,6 +136,7 @@ export class World {
   private goalTarget = new T.Vector3();
   private transition = 0;
   private faceTour: {start:number;last:number;elapsed:number;azimuth:number}|null=null;
+  private faceGuide=new FaceGuide();
   private observer: ResizeObserver;
   private frame = 0;
   private sprites = new Map<string, T.Sprite>();
@@ -207,7 +209,7 @@ export class World {
     );
     this.excavation.position.y = 0.45;
     this.stroke.renderOrder = 9;
-    this.pottery.root.add(this.stroke);
+    this.pottery.root.add(this.stroke,this.faceGuide);
     this.earth.rotation.x = -Math.PI / 2;
     this.earth.position.y = -0.24;
     this.earth.receiveShadow = true;
@@ -369,9 +371,10 @@ export class World {
   startFaceTour(){
     if(this.reduced||this.stage!=='faces')return;
     const start=Math.max(performance.now()+650,this.transition+200);
+    this.faceGuide.prepare(this.getSave().document,T.MathUtils.degToRad(this.azimuth)-this.pottery.root.rotation.y);
     this.faceTour={start,last:start,elapsed:0,azimuth:this.azimuth};this.refresh();
   }
-  stopFaceTour(){if(this.faceTour){this.faceTour=null;this.compose(true);this.refresh();}}
+  stopFaceTour(){if(this.faceTour){this.faceTour=null;this.faceGuide.dispose();this.compose(true);this.refresh();}}
   resize() {
     // Mobile browser chrome and orientation changes must not consume the tour.
     // Resize its framing while preserving the pending/active demonstration.
@@ -929,8 +932,13 @@ export class World {
       const t=Math.min(3,this.faceTour.elapsed/1150),step=Math.floor(t),fraction=Math.min(1,(t-step)/.72);
       const eased=fraction*fraction*(3-2*fraction);
       this.azimuth=this.faceTour.azimuth-(step+eased)*120;
-      if(t===3){this.azimuth=this.faceTour.azimuth;this.faceTour=null;}
+      if(t===3){this.azimuth=this.faceTour.azimuth;this.faceTour=null;this.faceGuide.dispose();}
       this.compose(true);this.dirty=true;
+    }
+    if(this.faceTour){
+      const fadeIn=Math.max(0,Math.min(1,(now-this.faceTour.start+650)/280));
+      const fadeOut=Math.min(1,(3450-this.faceTour.elapsed)/550);
+      this.faceGuide.show(.72*fadeIn*fadeOut,T.MathUtils.degToRad(this.azimuth)-this.pottery.root.rotation.y);
     }
     if (this.transition > now) {
       this.camera.position.lerp(this.goalPos, 0.18);
@@ -969,42 +977,31 @@ export class World {
     if (animated && !this.frame)
       this.frame = requestAnimationFrame(this.animate);
   };
-  async capturePhoto() {
-    const width = 1920,
-      height = 1080,
-      oldTarget = this.renderer.getRenderTarget(),
-      oldSize = this.renderer.getSize(new T.Vector2()),
-      ratio = this.renderer.getPixelRatio();
-    const portrait=photoScene(this.pottery.root,this.scene.environment,this.camera.position.clone().sub(this.target));
-    // A direct canvas render preserves the exact on-screen tone mapping,
-    // sprite colours and MSAA; rendering to an LDR target clips highlights.
-    try {
-      this.renderer.setPixelRatio(1);
-      this.renderer.setSize(width, height, false);
-      this.renderer.setRenderTarget(null);
-      this.renderer.shadowMap.needsUpdate=true;
-      this.renderer.render(portrait.scene, portrait.camera);
-      // toBlob snapshots the pixels now; restore the visible canvas before
-      // waiting for its asynchronous encoder, so portrait screens never stretch.
-      return new Promise<Blob>((resolve, reject) => {
-        this.renderer.domElement.toBlob(
-          (blob) =>
-            blob ? resolve(blob) : reject(new Error("Photo encoding failed")),
-          "image/png",
-        );
-      });
-    } finally {
-      this.renderer.setRenderTarget(oldTarget);
-      this.renderer.setPixelRatio(ratio);
-      this.renderer.setSize(oldSize.x, oldSize.y, false);
-      portrait.dispose();
-      this.renderer.shadowMap.needsUpdate=true;
-      this.renderer.render(this.scene, this.camera);
-    }
+  createPhotoView():PhotoView {
+    const portrait=photoScene(this.pottery.root,this.scene.environment,this.camera.position.clone().sub(this.target),this.art.texture('aged-oak'));
+    return {
+      get rotation(){return portrait.own.rotation.y;},
+      set rotation(value:number){portrait.own.rotation.y=value;},
+      render:(context,fullSize=false)=>{
+        const renderer=this.renderer,oldTarget=renderer.getRenderTarget(),oldSize=renderer.getSize(new T.Vector2()),ratio=renderer.getPixelRatio(),shadowUpdate=renderer.shadowMap.needsUpdate;
+        // Reuse the existing GPU context and its environment texture. Preview
+        // is 960px and renders only on input; export uses the full 1920px.
+        try{
+          renderer.setPixelRatio(1);renderer.setSize(fullSize?1920:960,fullSize?1080:540,false);renderer.setRenderTarget(null);
+          renderer.shadowMap.needsUpdate=true;renderer.render(portrait.scene,portrait.camera);
+          context.drawImage(renderer.domElement,0,0,1920,1080);
+        }finally{
+          renderer.setRenderTarget(oldTarget);renderer.setPixelRatio(ratio);renderer.setSize(oldSize.x,oldSize.y,false);
+          renderer.shadowMap.needsUpdate=shadowUpdate;renderer.render(this.scene,this.camera);
+        }
+      },
+      dispose:()=>portrait.dispose(),
+    };
   }
   dispose() {
     cancelAnimationFrame(this.frame);
     this.observer.disconnect();
+    this.faceGuide.dispose();
     this.pottery.dispose();
     this.gameExample?.dispose();
     this.firingView.dispose();

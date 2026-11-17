@@ -37,10 +37,13 @@ try{
   // an early face has already been rendered on a software-GPU runner.
   await page.evaluate(()=>{
     const w=window.togi.world,doc=window.togi.save.document,revision=doc.revision,xyz=Array.from(doc.outerXYZ),rotation=window.togi.save.rotation;
-    const aspects=new Set();let started=false,start;
+    const aspects=new Set(),guideFaces=new Set();let started=false,start,peak=0,faded=false;
+    const features=JSON.stringify(doc.features);
     window.__tourResult=new Promise(resolve=>{const tick=()=>{
       if(w.demonstratingFaces){if(!started){started=true;start=w.faceAspect;}aspects.add(w.faceAspect);}
-      if(started&&!w.demonstratingFaces)resolve({aspects:[...aspects].sort(),start,end:w.faceAspect,unchanged:revision===doc.revision&&xyz.every((n,i)=>n===doc.outerXYZ[i])&&rotation===window.togi.save.rotation});
+      const guide=w.pottery.root.getObjectByName('Face opening examples');
+      if(guide?.visible)guide.children.forEach((face,i)=>{const opacity=face.children[0].material.opacity;if(opacity>.4)guideFaces.add(i);peak=Math.max(peak,opacity);if(w.faceTour.elapsed>3100&&opacity>.01&&opacity<.4)faded=true;});
+      if(started&&!w.demonstratingFaces)resolve({aspects:[...aspects].sort(),guideFaces:[...guideFaces].sort(),peak,faded,guideCleared:!guide.visible&&guide.children.length===0,start,end:w.faceAspect,unchanged:revision===doc.revision&&xyz.every((n,i)=>n===doc.outerXYZ[i])&&rotation===window.togi.save.rotation&&features===JSON.stringify(doc.features)});
       else requestAnimationFrame(tick);
     };requestAnimationFrame(tick);});
   });
@@ -50,7 +53,20 @@ try{
   const tour=await page.evaluate(()=>window.__tourResult);
   await page.setViewportSize({width:390,height:696});await settle();
   assert.deepEqual(tour.aspects,[1,2,3]);assert.equal(tour.end,tour.start);assert.ok(tour.unchanged);
+  assert.deepEqual(tour.guideFaces,[0,1,2],'all three faces briefly show surface examples');
+  assert.ok(tour.peak>.6&&tour.peak<.8&&tour.faded&&tour.guideCleared,'subtle examples fade and are removed after the tour');
   assert.ok(await page.locator('.turn-demonstration').isVisible(),'gesture cue stays until a real rotation');
+  await page.evaluate(async()=>{
+    const w=window.togi.world;w.startFaceTour();w.faceTour.start=performance.now()-1000;w.faceTour.last=performance.now();w.faceTour.elapsed=1000;
+    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));w.paused=true;
+  });
+  const example=await page.evaluate(()=>{
+    const w=window.togi.world,guide=w.pottery.root.getObjectByName('Face opening examples');
+    return {lines:guide.children.reduce((sum,f)=>sum+f.children.length,0),dashed:guide.children.every(f=>f.children.every(l=>l.material.dashed&&l.material.depthTest)),backHidden:guide.children.some(f=>!f.visible),savedFeatures:window.togi.save.document.features.length};
+  });
+  assert.equal(example.lines,9);assert.ok(example.dashed&&example.backHidden);assert.equal(example.savedFeatures,0);
+  await page.screenshot({path:'asset/review/dashed-face-guide-mobile.png'});
+  await page.evaluate(()=>{window.togi.world.paused=false;window.togi.world.stopFaceTour();});
   const delayed=await page.evaluate(async()=>{
     const w=window.togi.world;w.startFaceTour();
     w.faceTour.start=performance.now()-5000;w.faceTour.last=w.faceTour.start;
@@ -138,6 +154,7 @@ try{
   await page.evaluate(()=>window.togi.world.startFaceTour());
   await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:20,y:cy,id:1}]});
   assert.equal(await page.evaluate(()=>window.togi.world.demonstratingFaces),false,'touch interrupts the demo immediately');
+  assert.equal(await page.evaluate(()=>window.togi.world.pottery.root.getObjectByName('Face opening examples').children.length),0,'touch immediately removes example marks');
   await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
   const cameraBefore=await page.evaluate(()=>window.togi.world.camera.position.toArray());
   await draw([{x:20,y:cy},{x:40,y:cy},{x:65,y:cy}]);
@@ -164,6 +181,7 @@ try{
   assert.equal(await page.locator('.turn-demonstration i').first().evaluate(el=>getComputedStyle(el).animationName),'none');
   assert.equal(await page.locator('.turn-demonstration span').textContent(),'빈 곳을 끌어 돌려요','desktop and mobile use the same rotation cue');
   assert.equal(await page.evaluate(()=>window.togi.world.demonstratingFaces),false);
+  assert.equal(await page.evaluate(()=>window.togi.world.pottery.root.getObjectByName('Face opening examples').visible),false,'reduced motion does not leave example marks behind');
   assert.deepEqual(errors,[]);
   await writeFile('asset/review/guidance-check.json',JSON.stringify({tour,initial,expanded,tip,feedback,status:'pass'},null,2));
   console.log('PASS: stable mouth controls, three-face tour, freehand holes, refinement speech bubble, AI example and saved-art isolation.');
