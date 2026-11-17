@@ -18,8 +18,9 @@
     "check:art": "node scripts/check-art.mjs",
     "check:performance": "node scripts/check-excavation-performance.mjs",
     "check:optimization": "node scripts/check-optimization.mjs",
+    "check:examples": "node scripts/check-examples.mjs",
     "build:art": "node scripts/build-art-assets.mjs",
-    "verify": "npm run build && npm run check:openings && npm test && npm run check:ui && npm run check:workshop && npm run check:journey && npm run check:mobile && npm run check:art && npm run check:performance && npm run check:optimization",
+    "verify": "npm run build && npm run check:openings && npm test && npm run check:ui && npm run check:workshop && npm run check:journey && npm run check:mobile && npm run check:art && npm run check:performance && npm run check:optimization && npm run check:examples",
     "test": "node --test scripts/check.mjs"
   },
   "engines": {
