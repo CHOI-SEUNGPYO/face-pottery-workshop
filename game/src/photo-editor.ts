@@ -2,6 +2,7 @@ import {characterImage} from './assets';
 import {icon} from './icons';
 import {AI_CONTENT_LABEL,drawPhotoDisclosure} from './disclosure';
 import type {PhotoView} from './photo-scene';
+import './exhibition.css';
 
 type Sticker={name:string;x:number;y:number;size:number;angle:number};
 /** Photo-only overlays never touch the saved pottery document. */
@@ -16,7 +17,16 @@ export class PhotoEditor {
   private frame=0;
   private drag:{kind:'sticker';pointer:number;x:number;y:number;ox:number;oy:number}|{kind:'pottery';pointer:number;x:number;angle:number}|null=null;
   constructor(private root:HTMLElement,private view:PhotoView){
-    root.innerHTML=`<div class="photo-editor"><p class="eyebrow">${AI_CONTENT_LABEL}</p><h2>내 작품을 사진으로 남겨요</h2><canvas width="1920" height="1080" tabindex="0" aria-label="사진 속 토기: 끌거나 왼쪽·오른쪽 방향키로 돌리세요. 스티커를 선택하면 스티커만 움직여요. AI 제작 표시도 함께 저장됩니다."></canvas><div class="sticker-picker" aria-label="캐릭터 스티커">${['경산이','독이','압이'].map(name=>`<button data-sticker="${name}" aria-label="${name} 스티커 추가"><img src="${characterImage(name)}" alt="">${name}</button>`).join('')}<button data-photo="undo" class="photo-icon" aria-label="꾸미기 되돌리기" title="꾸미기 되돌리기">${icon('undo')}</button></div><div class="sticker-controls"><label>크기<input data-photo="size" aria-label="스티커 크기" type="range" min="90" max="650" value="250"></label><label>회전<input data-photo="angle" aria-label="스티커 회전" type="range" min="-180" max="180" value="0"></label><button data-photo="delete" class="photo-icon" aria-label="선택한 스티커 삭제" title="선택한 스티커 삭제">${icon('erase')}</button></div><div class="photo-actions"><button data-action="retake" class="secondary">다시 찍기</button><button data-photo="download" class="primary">사진 저장</button><button data-action="finish-photo" class="secondary" aria-label="꾸미기 완료">완료</button></div><p role="status" class="photo-status">사진을 끌어 토기를 돌려 보세요. 케이스와 함께 내 작품만 저장돼요.</p></div>`;
+    root.innerHTML=`<div class="photo-editor">
+      <header class="exhibition-heading"><p class="eyebrow">${AI_CONTENT_LABEL}</p><h2>내 작품을 사진으로 남겨요</h2></header>
+      <canvas class="exhibition-canvas" width="1920" height="1080" tabindex="0" aria-label="사진 속 토기: 끌거나 왼쪽·오른쪽 방향키로 돌리세요. 스티커를 선택하면 스티커만 움직여요. AI 제작 표시도 함께 저장됩니다."></canvas>
+      <section class="photo-tools" aria-label="친구 스티커로 사진 꾸미기"><h3>친구와 함께 남겨요</h3><p class="photo-tools-note">마음에 드는 친구를 골라<br>사진 위에 놓아 보세요.</p>
+        <div class="sticker-picker" aria-label="캐릭터 스티커">${['경산이','독이','압이'].map(name=>`<button data-sticker="${name}" aria-label="${name} 스티커 추가"><img src="${characterImage(name)}" alt="">${name}</button>`).join('')}<button data-photo="undo" class="photo-icon" aria-label="꾸미기 되돌리기" title="꾸미기 되돌리기">${icon('undo')}</button></div>
+        <div class="sticker-controls"><label>크기<input data-photo="size" aria-label="스티커 크기" type="range" min="90" max="650" value="250"></label><label>회전<input data-photo="angle" aria-label="스티커 회전" type="range" min="-180" max="180" value="0"></label><button data-photo="delete" class="photo-icon" aria-label="선택한 스티커 삭제" title="선택한 스티커 삭제">${icon('erase')}</button></div>
+      </section>
+      <div class="photo-actions"><button data-action="retake" class="secondary">다시 찍기</button><button data-action="finish-photo" class="secondary" aria-label="꾸미기 완료">완료</button><button data-photo="download" class="primary">사진 저장 ${icon('download')}</button></div>
+      <p role="status" class="photo-status">사진을 끌어 토기를 돌려 보세요. 케이스와 함께 내 작품만 저장돼요.</p>
+    </div>`;
     this.canvas=root.querySelector('canvas')!;
     this.base.width=1920;this.base.height=1080;
     this.sync();this.updateView();

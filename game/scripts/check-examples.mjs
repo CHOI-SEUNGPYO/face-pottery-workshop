@@ -35,6 +35,17 @@ try{
         assert.match(await page.locator('.example-caption').textContent(),/게임을 만든 사람.*빚어.*복원품은 아니/s);
         const original=await canvas.evaluate(el=>el.toDataURL()),r=await canvas.boundingBox();
         assert.ok(r.x>=0&&r.y>=0&&r.x+r.width<=viewport.width&&r.y+r.height<=viewport.height,'viewer fits the screen');
+        const layout=await page.evaluate(()=>{
+          const dialog=document.querySelector('#dialog'),root=document.querySelector('#example-viewer-root'),errors=[];
+          if(dialog.scrollHeight>dialog.clientHeight+1)errors.push('viewer requires unnecessary scrolling');
+          if(dialog.getBoundingClientRect().bottom-root.getBoundingClientRect().bottom>30)errors.push('unnecessary empty space below the viewer');
+          for(const selector of ['.modal-close','.example-details button']){
+            const e=document.querySelector(selector),r=e.getBoundingClientRect();
+            if(r.width<43||r.height<43||r.bottom>innerHeight||!e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)))errors.push('unreachable viewer action');
+          }
+          return errors;
+        });
+        assert.deepEqual(layout,[],'viewer uses space and keeps its actions reachable');
         if(viewport.width<1100){
           const touch=await context.newCDPSession(page);
           await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:r.x+r.width*.4,y:r.y+r.height*.5,id:1}]});

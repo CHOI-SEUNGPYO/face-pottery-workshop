@@ -990,7 +990,7 @@ export class World {
     }catch(error){pottery.dispose();throw error;}
   }
   createPhotoView(artwork:T.Object3D=this.pottery.root,direction:T.Vector3=this.camera.position.clone().sub(this.target)):PhotoView {
-    const portrait=photoScene(artwork,this.scene.environment,direction,this.art.texture('aged-oak'));
+    const portrait=photoScene(artwork,this.scene.environment,direction,this.art.texture('limestone'));
     return {
       get rotation(){return portrait.own.rotation.y;},
       set rotation(value:number){portrait.own.rotation.y=value;},
@@ -999,9 +999,11 @@ export class World {
         // Reuse the existing GPU context and its environment texture. Preview
         // is 960px and renders only on input; export uses the full 1920px.
         try{
-          renderer.setPixelRatio(1);renderer.setSize(fullSize?1920:960,fullSize?1080:540,false);renderer.setRenderTarget(null);
+          const {width,height}=context.canvas,scale=fullSize?1:Math.min(1,960/Math.max(width,height));
+          portrait.frame(width,height);
+          renderer.setPixelRatio(1);renderer.setSize(Math.round(width*scale),Math.round(height*scale),false);renderer.setRenderTarget(null);
           renderer.shadowMap.needsUpdate=true;renderer.render(portrait.scene,portrait.camera);
-          context.drawImage(renderer.domElement,0,0,1920,1080);
+          context.drawImage(renderer.domElement,0,0,width,height);
         }finally{
           renderer.setRenderTarget(oldTarget);renderer.setPixelRatio(ratio);renderer.setSize(oldSize.x,oldSize.y,false);
           renderer.shadowMap.needsUpdate=shadowUpdate;renderer.render(this.scene,this.camera);
