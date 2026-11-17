@@ -13,6 +13,12 @@ try{
     const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
     const openTools=async()=>{
       const actions=page.locator('.drawing-actions');
+      // Resizing applies CSS before the queued layout opens a pinned panel.
+      // Wait for that state, rather than trying to click its now-hidden summary.
+      await page.waitForFunction(()=>{
+        const el=document.querySelector('.drawing-actions');
+        return el?.open||el?.querySelector('summary')?.checkVisibility();
+      });
       if(!await actions.evaluate(el=>el.open))await actions.locator('summary').click();
     };
     const features=()=>page.evaluate(()=>structuredClone(window.togi.save.document.features));
