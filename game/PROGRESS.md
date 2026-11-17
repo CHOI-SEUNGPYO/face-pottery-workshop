@@ -8,6 +8,7 @@
 - 공개 확인 스크립트에 몸체 안내의 실제 움직임, 5단계 선 그리기와 두께 저장 확인을 추가했다. 로컬 검사 기록은 `asset/review/verify-final-optimization.log`, 변경 전 선 미리보기 수치는 `optimization-drawing-before.json`이다. 배포·공개 확인 결과는 아래에 기록한다.
 - 첫 원격 검사에서 UI 외 모든 항목을 통과했다. 선 두께 검사가 가로에서 세로로 돌아온 직후 CSS로 숨겨진 메뉴 제목을 누르려던 대기 순서 문제를 확인했다. 도구가 펼쳐지거나 실제 메뉴 제목이 보일 때까지 기다리도록 검사만 고쳤으며, PC·태블릿·휴대폰 선 두께·화면 회전·저장 검사를 다시 통과했다. 게임 실행 코드는 변경하지 않았다.
 - 두 번째 원격 검사에서는 선 두께와 5개 화면의 몸체 안내까지 통과했지만, 6개 UI 검사를 직렬로 실행하는 작업이 20분 제한에 걸렸다. GitHub에서는 기존 6개 검사를 각각 독립 작업으로 나눴다. 검사 항목·성공 조건·실패 시 배포 차단은 유지하며, 로컬 `npm run verify`도 그대로다.
+- 공개 완료: `cdb24075bf10bb51e11829157beea9cf2afa39dc`의 [검사·배포 44010351477](https://github.com/CHOI-SEUNGPYO/face-pottery-workshop/actions/runs/44010351477)가 빌드·14개 브라우저 검사·Pages 배포를 모두 통과했다. 2026-11-17 12:44 KST [공개 주소](https://choi-seungpyo.github.io/face-pottery-workshop/) 확인에서도 몸체 안내의 실제 움직임(650ms 동안 52개 경로 상태), 5단계 선 그리기·두께 저장, 구멍 다듬기, 촬영 회전, 박물관 해설, 완료·로비·이어 만들기와 작품 보존을 통과했다. JS `index-Ds820jij.js`, CSS `index-CjVf0_WO.css`, 유물 카탈로그가 로컬 실행본과 바이트까지 동일하며 브라우저 오류·실패 요청은 0건이다. 최종 기록은 `asset/review/release-final-optimization.log`, `release-check.json`이다. PC·태블릿·모바일 크기와 터치 입력을 검사 브라우저에서 검증했으며 실물 휴대폰 성능 측정은 아니다.
 
 ## 2026-11-17 · 몸체 빚기 동작 안내
 
