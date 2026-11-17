@@ -34,9 +34,10 @@ try{
   await page.locator('[data-action="example-artwork"]').click();
   const exampleCanvas=page.locator('.example-viewer canvas');await exampleCanvas.waitFor();
   assert.match(await page.locator('.example-caption').textContent(),/게임을 만든 사람.*빚어.*복원품은 아니/s);
-  const exampleBefore=await exampleCanvas.evaluate(c=>c.toDataURL());
+  const exampleBefore=await exampleCanvas.screenshot();
   await exampleCanvas.press('ArrowRight');
-  await page.waitForFunction(before=>document.querySelector('.example-viewer canvas').toDataURL()!==before,exampleBefore);
+  await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
+  assert.notDeepEqual(await exampleCanvas.screenshot(),exampleBefore,'published example responds to rotation');
   await page.screenshot({path:'asset/review/release-user-example.png'});
   await page.locator('.example-viewer [data-action="close"]').click();
   report.userExampleRotation=true;

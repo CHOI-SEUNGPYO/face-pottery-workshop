@@ -16,6 +16,7 @@ import { surfaceFrame } from "./surface-path";
 import { FiringView, firingFrame } from './firing';
 import {museum,museumAsset} from './museum';
 import {photoScene,type PhotoView} from './photo-scene';
+import {exampleScene,type ExampleView} from './example-scene';
 import {outdoorSite,museumRoom,setEnvironmentMaterials} from './environments';
 import {
   clamp,
@@ -978,13 +979,13 @@ export class World {
     if (animated && !this.frame)
       this.frame = requestAnimationFrame(this.animate);
   };
-  createExampleView(example:GameSave):PhotoView {
+  createExampleView(example:GameSave):ExampleView {
     const pottery=new PotteryView();
     try{
       pottery.update(structuredClone(example.document));
       pottery.appearance(example.firedRevision===example.document.revision?1:0);
       pottery.root.rotation.y=example.rotation;pottery.outline.visible=false;
-      const view=this.createPhotoView(pottery.root,new T.Vector3(0,.24,1)),dispose=view.dispose;
+      const view=exampleScene(pottery.root,this.art.texture('limestone')),dispose=view.dispose;
       view.dispose=()=>{dispose();pottery.dispose();};
       return view;
     }catch(error){pottery.dispose();throw error;}

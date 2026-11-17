@@ -33,7 +33,12 @@ try{
         await page.locator('[data-action="example-artwork"]').click();
         const canvas=page.locator('.example-viewer canvas');await canvas.waitFor();
         assert.match(await page.locator('.example-caption').textContent(),/게임을 만든 사람.*빚어.*복원품은 아니/s);
-        const original=await canvas.evaluate(el=>el.toDataURL()),r=await canvas.boundingBox();
+        // Inspect the visible compositor output; the direct WebGL preview does
+        // not retain a CPU-readable copy of every frame.
+        const snapshot=async()=>{await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));return canvas.screenshot();};
+        const original=await snapshot(),r=await canvas.boundingBox();
+        await canvas.evaluate(el=>{window.exampleTestContext=el.getContext('webgl2');});
+        assert.ok(await page.evaluate(()=>!!window.exampleTestContext&&!window.exampleTestContext.isContextLost()),'example uses a live direct WebGL canvas');
         assert.ok(r.x>=0&&r.y>=0&&r.x+r.width<=viewport.width&&r.y+r.height<=viewport.height,'viewer fits the screen');
         const layout=await page.evaluate(()=>{
           const dialog=document.querySelector('#dialog'),root=document.querySelector('#example-viewer-root'),errors=[];
@@ -54,10 +59,9 @@ try{
         }else{
           await page.mouse.move(r.x+r.width*.4,r.y+r.height*.5);await page.mouse.down();await page.mouse.move(r.x+r.width*.6,r.y+r.height*.5,{steps:8});await page.mouse.up();
         }
-        await page.waitForFunction(before=>document.querySelector('.example-viewer canvas').toDataURL()!==before,original);
-        const rotated=await canvas.evaluate(el=>el.toDataURL());await canvas.press('ArrowRight');
-        await page.waitForFunction(before=>document.querySelector('.example-viewer canvas').toDataURL()!==before,rotated);
-        const sideView=await canvas.evaluate(el=>el.toDataURL());
+        const rotated=await snapshot();assert.notDeepEqual(rotated,original,'horizontal drag changes the visible artwork');
+        await canvas.press('ArrowRight');
+        const sideView=await snapshot();assert.notDeepEqual(sideView,rotated,'horizontal keyboard rotation changes the visible artwork');
         if(viewport.width<1100){
           const touch=await context.newCDPSession(page);
           await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:r.x+r.width*.5,y:r.y+r.height*.35,id:1}]});
@@ -66,12 +70,21 @@ try{
         }else{
           await page.mouse.move(r.x+r.width*.5,r.y+r.height*.35);await page.mouse.down();await page.mouse.move(r.x+r.width*.5,r.y+r.height*.6,{steps:6});await page.mouse.up();
         }
-        await page.waitForFunction(before=>document.querySelector('.example-viewer canvas').toDataURL()!==before,sideView);
-        const topView=await canvas.evaluate(el=>el.toDataURL());await canvas.press('ArrowDown');
-        await page.waitForFunction(before=>document.querySelector('.example-viewer canvas').toDataURL()!==before,topView);
+        const topView=await snapshot();assert.notDeepEqual(topView,sideView,'vertical drag changes the viewing elevation');
+        await canvas.press('ArrowDown');assert.notDeepEqual(await snapshot(),topView,'vertical keyboard rotation changes the viewing elevation');
+        if(fromWelcome&&viewport.width===390){
+          await page.setViewportSize({width:740,height:360});
+          await page.waitForFunction(()=>{const c=document.querySelector('.example-viewer canvas');return c.width===Math.max(320,Math.round(c.getBoundingClientRect().width));});
+          const landscape=await canvas.boundingBox();assert.ok(landscape.y>=0&&landscape.y+landscape.height<=360,'open example adapts to phone landscape');
+          await canvas.press('ArrowLeft');const before=await snapshot();await canvas.press('ArrowUp');assert.notDeepEqual(await snapshot(),before,'both axes still work after an orientation change');
+          await page.setViewportSize(viewport);
+          await page.waitForFunction(()=>{const c=document.querySelector('.example-viewer canvas');return c.width===Math.max(320,Math.round(c.getBoundingClientRect().width));});
+        }
         if(fromWelcome)await page.screenshot({path:`asset/review/user-example-${viewport.width}.png`});
         await page.locator('.example-viewer [data-action="close"]').click();
         assert.equal(await page.locator('.example-viewer').count(),0);
+        await page.waitForFunction(()=>window.exampleTestContext.isContextLost());
+        assert.equal(await page.evaluate(()=>window.togi.world.renderer.getContext().isContextLost()),false,'closing releases only the preview GPU context');
         assert.equal(await page.evaluate(()=>window.togi.world.renderer.info.memory.geometries),geometries,'closing releases the example and case geometry');
       };
       await checkExample(true);
