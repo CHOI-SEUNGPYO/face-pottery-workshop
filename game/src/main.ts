@@ -338,7 +338,7 @@ function updateUI() {
     ${['body','mouth','faces','inspect','compare','ending'].includes(stage) ? `<p class="background-hint">${world.inGallery?'각 토기를 끌면 따로 돌아가요':'빈 곳을 끌어 돌려요'}</p>` : ''}
     <div class="scene-extras">${extras}</div>
     <aside class="guide-bubble"><img class="guide-character" src="${characterImage(c.character)}" alt="${c.character}"><p>${c.speech.replaceAll("\n", "<br>")}</p></aside>
-    ${["excavation", "assembly"].includes(stage) ? `<div class="context-label">${stage === "excavation" ? "상상 발굴 체험" : "함께 사용했을 가능성을 살펴보는 장면"}</div>` : ""}
+    ${stage === "assembly" ? '<div class="context-label">함께 사용했을 가능성을 살펴보는 장면</div>' : ""}
     </div>${stage === "body" ? '<div class="form-handles"><button data-form-handle="height" aria-label="높이 손잡이: 위아래로 끌기" title="위아래로 끌거나 방향키로 높이 조절">↕ <span>높이</span></button><button data-form-handle="width" aria-label="넓이 손잡이: 좌우로 끌기" title="좌우로 끌거나 방향키로 넓이 조절">↔ <span>넓이</span></button></div>' : ""}
     ${['body','mouth','faces'].includes(stage)?`<div class="turn-demonstration" aria-hidden="true" hidden><i></i><svg viewBox="0 0 140 36"><path d="M12 22 Q70 -5 128 22 M115 9 L128 22 L110 25"/></svg><span>빈 곳을 끌어 돌려요</span></div>`:''}
     ${storyCard(stage)}
