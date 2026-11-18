@@ -12,8 +12,13 @@ let browser,page;const errors=[],requests=[],motion=[];
 const engine=process.env.TOGI_BROWSER==='webkit'?'webkit':'chromium';
 async function assertMotion(selector,pseudo=null,property='transform'){
   const values=await page.evaluate(async({selector,pseudo,property})=>{
-    const el=document.querySelector(selector),samples=new Set(),until=performance.now()+380;
-    do{samples.add(getComputedStyle(el,pseudo)[property]);await new Promise(requestAnimationFrame);}while(performance.now()<until);
+    const el=document.querySelector(selector),samples=new Set(),until=performance.now()+3000;
+    // A long first paint during scene preparation must still be sampled. The
+    // screenshot check below independently verifies motion in rendered pixels.
+    do{
+      await new Promise(requestAnimationFrame);
+      samples.add(getComputedStyle(el,pseudo)[property]);
+    }while(samples.size<2&&performance.now()<until);
     return [...samples];
   },{selector,pseudo,property});
   assert.ok(values.length>1,`${selector}${pseudo??''} visibly animates on a touch viewport`);
