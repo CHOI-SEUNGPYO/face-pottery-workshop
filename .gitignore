@@ -1,6 +1,7 @@
 node_modules/
 dist/
 game/asset/review/
+game/전달용/*.zip
 reference/video/*.mp4
 reference/museum/*.pptx
 04_목록/

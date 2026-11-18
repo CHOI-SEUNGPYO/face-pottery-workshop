@@ -92,7 +92,7 @@ try{
   await path(Array.from({length:49},(_,i)=>({x:centre+24*Math.cos(i*Math.PI/24),y:mouthY+12*Math.sin(i*Math.PI/24)})));
   assert.equal(await page.evaluate(()=>window.togi.save.document.features.length),3,'touch taps and a closed contour create a face');
   await resize({width:740,height:360},'faces');await activate('.drawing-actions>summary');await audit('faces');
-  await activate('[data-tool="carve"]');
+  await activate('button[data-tool="carve"]');
   assert.ok(await page.locator('[data-action="draw-line"]').isVisible(),'landscape tool selection leaves its options open');
   await activate('[data-action="draw-line"]');
   assert.ok(await page.locator('#line-width').isVisible(),'line thickness stays within reach');
