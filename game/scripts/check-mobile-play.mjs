@@ -72,6 +72,9 @@ try{
   const project=point=>page.evaluate(point=>{const w=window.togi.world,p=w.camera.position.clone().set(...point).project(w.camera);return{x:(p.x+1)*innerWidth/2,y:(1-p.y)*innerHeight/2};},point);
   await page.goto(`http://127.0.0.1:${server.httpServer.address().port}`);
   await page.locator('#loading').waitFor({state:'detached'});await page.evaluate(()=>document.fonts.ready);
+  await activate('[data-action="welcome-photo"]');
+  assert.match(await page.locator('.album-image img').getAttribute('src'),/face-three-sides/);
+  await activate('.modal-close');
   await activate('[data-action="new"]');await audit('body');
   const initial=await page.evaluate(()=>Array.from(window.togi.save.document.outerXYZ));
   const h=await page.locator('[data-form-handle="height"]').boundingBox();
@@ -89,6 +92,10 @@ try{
   await path(Array.from({length:49},(_,i)=>({x:centre+24*Math.cos(i*Math.PI/24),y:mouthY+12*Math.sin(i*Math.PI/24)})));
   assert.equal(await page.evaluate(()=>window.togi.save.document.features.length),3,'touch taps and a closed contour create a face');
   await resize({width:740,height:360},'faces');await activate('.drawing-actions>summary');await audit('faces');
+  await activate('[data-tool="carve"]');
+  assert.ok(await page.locator('[data-action="draw-line"]').isVisible(),'landscape tool selection leaves its options open');
+  await activate('[data-action="draw-line"]');
+  assert.ok(await page.locator('#line-width').isVisible(),'line thickness stays within reach');
   await activate('[data-tool="refine"]');await resize({width:320,height:568},'faces');await resize(portrait,'faces');
   await activate('[data-action="next"]');await audit('inspect');
   assert.ok(await page.locator('[data-action="edit-faces"]').isVisible(),'editing choices are immediately available');
@@ -101,11 +108,13 @@ try{
   await mkdir('asset/review',{recursive:true});await page.screenshot({path:'asset/review/story-phone-reader.png'});
   await activate('.modal-close');
   await audit('firing');await activate('[data-action="next"]');await audit('excavation');
+  assert.deepEqual(await page.locator('#dig-progress progress').evaluateAll(items=>items.map(el=>el.value)),[0,0]);
   for(let pass=0;pass<6&&await page.locator('[data-action="next"]').isDisabled();pass++)
     // Soil fills the path between touch samples; dense synthetic moves just
     // stall CI's software renderer without exercising another behavior.
     for(const y of [280,310,340,370,400,430])await drag({x:92,y},{x:300,y},16);
   assert.ok(await page.locator('[data-action="next"]').isEnabled(),'finger brushing alone discovers both artifacts');
+  assert.deepEqual(await page.locator('#dig-progress progress').evaluateAll(items=>items.map(el=>el.value)),[100,100]);
   await activate('[data-action="next"]');await audit('assembly');
   assert.equal(await page.locator('#siru-size').count(),0,'siru sizing is automatic');
   const poses=await page.evaluate(()=>{const w=window.togi.world,p=w.pottery.root.position;return{from:[p.x,p.y+.48,p.z],to:[0,w.assemblyHeight,0]};});
@@ -143,6 +152,10 @@ try{
   await activate('[data-action="ending-credits"]');
   await activate('.ending-actions [data-action="finish-home"]');await audit('welcome');
   assert.equal(await page.locator('dialog').evaluate(el=>el.open),false,'completion closes the credits');
+  assert.equal(await page.locator('.welcome-actions .primary').getAttribute('data-action'),'continue');
+  await activate('[data-action="new"]');
+  assert.ok(await page.locator('[data-action="export-artwork"]').isVisible(),'existing work can be backed up before replacement');
+  await activate('.confirm-copy [data-action="close"]');
   await activate('[data-action="continue"]');await audit('ending');
   assert.deepEqual(await page.evaluate(()=>Array.from(window.togi.save.document.outerXYZ)),artwork,'completion preserves the finished artwork for continuing');
   await activate('footer [data-action="finish-home"]');await audit('welcome');

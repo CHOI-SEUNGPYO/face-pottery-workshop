@@ -28,6 +28,7 @@ import {
   scenes,
   toolLabels,
   toolHelp,
+  stageTips,
   lineWidths,
   lineWidthLabels,
   type ToolId,
@@ -268,18 +269,25 @@ function mouthControls() {
   return `<section class="mouth-controls" aria-label="입구 조절"><label>입구 넓이<input type="range" data-form-range="mouth-width" aria-label="입구 넓이" min="${Math.min(min,m.innerRadius)}" max="${Math.max(max,m.innerRadius)}" step="0.001" value="${m.innerRadius}"></label><label>테두리 높이<input type="range" data-form-range="mouth-height" aria-label="테두리 높이" min="0.02" max="0.06" step="0.001" value="${m.neckHeight}"></label></section>`;
 }
 function updateUI() {
+  const sameStage = document.body.dataset.stage === stage;
+  const menuWasOpen = sameStage && !!hud.querySelector('.actionbar[open]');
+  const focused = sameStage && hud.contains(document.activeElement) ? document.activeElement as HTMLElement : null;
+  const focusKey = focused?.dataset.tool ? 'data-tool' : focused?.dataset.action ? 'data-action' : null;
+  const restoreFocus = () => {
+    if (focusKey) hud.querySelector<HTMLElement>('[' + focusKey + '="' + focused!.getAttribute(focusKey) + '"]')?.focus({preventScroll:true});
+  };
   const c = scenes[stage],
     n = order.indexOf(stage),
     isEdit = ["body", "mouth", "faces"].includes(stage),
     fired = save.firedRevision === save.document.revision;
   const drawingLabel=tool==='carve'?(carveMode!=='line'?'눈·입 · 구멍':'눈·입 · 선'):toolLabels[tool];
   const drawingInstruction=carveMode==='opening'?'모양을 그려 닫고, 다듬기로 테두리를 정리해요.':'선을 그어 눈썹이나 입을 새겨요.';
-  const instruction=stage==='faces'?(tool==='carve'?drawingInstruction:tool==='refine'?'구멍 안쪽이나 테두리를 문질러 매끈하게 다듬어요.':toolHelp[tool].instruction):stage==='compare'?'내 토기와 AI 재현 예시를 각각 잡고 돌려 보세요.':c.instruction;
+  const instruction=stage==='faces'?(tool==='carve'?drawingInstruction:tool==='refine'?'구멍 안쪽이나 테두리를 문질러 매끈하게 다듬어요.':toolHelp[tool].instruction):stage==='assembly' && save.assembledRevision===save.document.revision ? '두 유물을 함께 놓았어요. 이제 전시실에서 비교해 보세요.' : stage==='excavation' && digComplete ? '토기와 시루를 모두 찾았어요. 두 유물을 함께 놓아 볼까요?' : c.instruction;
   document.body.dataset.stage = stage;
   host.dataset.tool = tool;
   world.renderer.domElement.setAttribute(
     "aria-description",
-    stage === "body" || stage === "mouth" || stage === "faces" || world.inGallery ? instruction : toolHelp[tool].instruction,
+    instruction,
   );
   const header = `<header><a class="brand" href="#" data-action="home" aria-label="얼굴모양토기 작은 흙 공방 · ${AI_CONTENT_LABEL} · 처음 화면"><span class="brand-pot">${icon("mouth")}</span><span>얼굴모양토기<br><small class="ai-mark" title="${AI_CONTENT_LABEL}">AI 생성물 포함</small></span></a><nav aria-label="공통 메뉴">${
     stage !== "welcome"
@@ -295,8 +303,9 @@ function updateUI() {
   if (stage === "welcome") {
     hud.innerHTML =
       header +
-      `<div class="work-area" aria-hidden="true"></div><section class="welcome-copy">${partnerMarks(true)}<h1>세 얼굴을 가진 토기,<br><em>내 손으로 만들어 볼까?</em></h1><figure class="welcome-artifact"><img src="${museumAsset('face-three-sides.jpg')}" alt="하나의 실제 얼굴모양토기를 세 방향에서 본 사진. 서로 다른 표정이 새겨져 있어요."><figcaption>같은 유물의 서로 다른 세 얼굴 · 실제 유물 사진<small>문화재청 제공 · 경향신문 게재</small></figcaption></figure><p class="welcome-purpose">경산 소월리의 <strong>얼굴모양토기</strong>를 살펴보고,<br>내가 빚은 몸체에 눈과 입을 만들어 보세요.</p><ol class="welcome-path" aria-label="체험 순서"><li>몸체 빚기</li><li>얼굴 만들기</li><li>유물과 비교</li></ol><p class="ai-notice">AI(인공지능) 활용 제작 · 실제 제작 과정과는 달라요.</p><div class="welcome-start"><div class="welcome-actions">${button("new", "얼굴모양토기 만들기", "next", "primary large")}${saved ? button("continue", "이어 만들기", "play", "secondary") : ""}</div><button data-action="example-artwork" class="welcome-example">${icon("rotate")}예시 작품 감상</button></div></section><nav class="welcome-foot" aria-label="박물관과 제작 안내">${museumHomeLink()}<button data-action="credits" class="credits-link">게임 소개·제작</button></nav>`;
+      `<div class="work-area" aria-hidden="true"></div><section class="welcome-copy">${partnerMarks(true)}<h1>세 얼굴을 가진 토기,<br><em>내 손으로 만들어 볼까?</em></h1><figure class="welcome-artifact"><button class="artifact-zoom" data-action="welcome-photo" aria-label="실제 유물의 세 얼굴 크게 보기"></button><img src="${museumAsset('face-three-sides.jpg')}" alt="하나의 실제 얼굴모양토기를 세 방향에서 본 사진. 서로 다른 표정이 새겨져 있어요."><figcaption>실제 유물의 세 얼굴 ⊕<small>문화재청 제공 · 경향신문 게재</small></figcaption></figure><p class="welcome-purpose">경산 소월리의 <strong>얼굴모양토기</strong>를 살펴보고,<br> 내가 빚은 몸체에 눈과 입을 만들어 보세요.</p><ol class="welcome-path" aria-label="체험 순서"><li>몸체 빚기</li><li>얼굴 만들기</li><li>유물과 비교</li></ol><p class="ai-notice">AI(인공지능) 활용 제작 · 실제 제작 과정과는 달라요.</p><div class="welcome-start"><div class="welcome-actions">${saved ? button('continue', saved.stage==='ending'?'완성작 다시 보기':'이어 만들기', 'play', 'primary large') + button('new','새 작품 만들기','plus','secondary') : button('new','얼굴모양토기 만들기','next','primary large')}</div><button data-action="example-artwork" class="welcome-example">${icon("rotate")}예시 작품 감상</button></div></section><nav class="welcome-foot" aria-label="박물관과 제작 안내">${museumHomeLink()}<button data-action="credits" class="credits-link">게임 소개·제작</button></nav>`;
     layoutUI();
+    restoreFocus();
     return;
   }
   const primaryLabel =
@@ -304,7 +313,7 @@ function updateUI() {
       ? fireStart
         ? "연출 건너뛰기"
         : "가마에 넣고 굽기"
-      : returnToInspect&&isEdit ? '수정 마치고 확인하기' : stage==='excavation'&&digComplete ? '발견! 시루에 얹어 보기' : c.next;
+      : returnToInspect&&isEdit ? '수정 마치고 확인하기' : c.next;
   let extras = "";
   if (stage === "body") extras = formControls();
   if (stage === "mouth")
@@ -316,16 +325,16 @@ function updateUI() {
   if (stage === "firing")
     extras = `<div class="firing-status"><strong id="firing-phase">${fired?"완성":fireStart?"준비":"가마에 넣기"}</strong><p class="firing-note" aria-label="넣기, 굽기, 식히기, 꺼내기">${['넣기','굽기','식히기','꺼내기'].map(label=>`<span>${label}</span>`).join('')}</p><span id="firing-action">${fired ? "받침 위의 토기가 완성됐어요. 다음은 상상 발굴 체험이에요." : fireStart ? "내 토기를 가마 안으로 옮겨요." : "아래 ‘가마에 넣고 굽기’를 누르면 안쪽을 보며 과정을 살펴볼 수 있어요."}</span><div class="meter"><i id="fire-progress" style="width:${fired ? 100 : 0}%"></i></div></div>`;
   if (stage === "excavation") {
-    const progress = world.coverage();
-    extras = `<div class="dig-status"><span id="dig-progress">토기 ${Math.round(progress[0] * 100)}% · 시루 ${Math.round(progress[1] * 100)}%</span>${button("assist", "함께 찾아보기", "brush", "small-button")}</div>`;
+    const meters = ['토기','시루'].map(name => `<label><span>${name}<strong>0%</strong></span><progress max="100" value="0" aria-label="${name} 발견 진행률"></progress></label>`).join('');
+    extras = `<div class="dig-status"><div id="dig-progress">${meters}</div>${digComplete ? '' : button("assist", "함께 찾아보기", "brush", "small-button")}</div>`;
   }
   if (stage === "assembly")
-    extras = `<div class="find-event"><strong>${save.assembledRevision===save.document.revision?'함께 놓았어요!':'흙 속에서 만난 두 유물'}</strong><p>토기를 끌거나 아래 버튼을 눌러 시루 위에 얹어 보세요.</p>${button("place", "시루에 얹기", "place", "secondary",save.assembledRevision===save.document.revision)}</div>`;
+    extras = save.assembledRevision === save.document.revision ? '' : `<div class="find-event"><strong>흙 속에서 만난 두 유물</strong>${button("place", "시루에 얹기", "place", "secondary")}</div>`;
   if (stage === "ending")
     extras = `<div class="ending-links">${button("ending-credits", "유물 사진·마무리", "story", "secondary")}${button("photo", "사진 남기기 · 선택", "photo", "secondary optional-photo")}</div>`;
   hud.innerHTML =
     header +
-    `<div class="work-area" aria-hidden="true"></div><div class="scene-info"><section class="scene-heading"><p class="eyebrow">${c.eyebrow}</p><h1>${c.title}</h1><p class="scene-instruction">${instruction}</p></section>
+    `<div class="work-area" aria-hidden="true"></div><div class="scene-info"><section class="scene-heading"><p class="eyebrow"><span class="stage-count">${String(n).padStart(2, "0")} / ${order.length-1}</span>${c.eyebrow.replace(/^\d+ · /, "")}</p><h1>${c.title}</h1><p class="scene-instruction">${instruction}</p></section>
     ${['body','mouth','faces','inspect','compare','ending'].includes(stage) ? `<p class="background-hint">${world.inGallery?'각 토기를 끌면 따로 돌아가요':'빈 곳을 끌어 돌려요'}</p>` : ''}
     <div class="scene-extras">${extras}</div>
     <aside class="guide-bubble"><img class="guide-character" src="${characterImage(c.character)}" alt="${c.character}"><p>${c.speech.replaceAll("\n", "<br>")}</p></aside>
@@ -337,6 +346,8 @@ function updateUI() {
     ${stage==='faces'?actionbar(drawingLabel,`<div class="tools" role="toolbar" aria-label="작업 도구">${c.tools.map((t) => `<button data-tool="${t}" class="tool ${tool === t ? "selected" : ""}" aria-pressed="${tool === t}" aria-label="${toolLabels[t]}">${icon(t)}<span>${t==='refine'?'구멍 다듬기':toolLabels[t]}</span></button>`).join("")}</div>${toolGuide(tool,carveMode,lineWidth)}`,'drawing-actions'):''}
     ${stage==='ending'?button('finish-home','완료하고 처음으로','home','primary next-button'):button("next", primaryLabel, "next", "primary next-button")}</footer>`;
   arrangeHUD();
+  const menu = hud.querySelector<HTMLDetailsElement>('.actionbar');
+  if (menu && menuWasOpen) menu.open = true;
   if(world.inGallery)hud.querySelector('.scene-heading')?.insertAdjacentHTML('beforeend',`<p class="gallery-disclosure">오른쪽 · ${EXAMPLE_LABEL}<small>참고 유물: ${e(museum.artifact?.academicName??'얼굴모양토기')} · 형태와 색은 달라요.</small></p>`);
   if(stage==='faces'){
     hud.querySelector('.scene-heading')?.insertAdjacentHTML('afterbegin',`<div class="face-aspects" role="img" aria-label="세 면에 얼굴을 만들 수 있어요">${[1,2,3].map(n=>`<span data-face="${n}"><svg viewBox="0 0 24 24"><path d="M6 5 Q12 1 18 5 L20 19 Q12 23 4 19 Z M8 10h1 M15 10h1 M9 16q3 2 6 0"/></svg><small>${n}</small></span>`).join('')}</div>`);
@@ -345,9 +356,13 @@ function updateUI() {
   }
   if(stage==='firing')hud.querySelector('.scene-heading')?.insertAdjacentHTML('beforeend','<button data-action="kiln-guide" class="kiln-help" aria-label="가마와 이 장면 알아보기"><span class="kiln-help-full">가마와 이 장면 알아보기 ↗</span><span class="kiln-help-brief">가마란?</span></button>');
   if(stage==='firing')hud.querySelector('.firing-status')?.insertAdjacentHTML('beforeend',`<small class="kiln-note">${fireStart?'가마 안쪽을 펼쳐 보여주는 장면이에요.':'당시 가마 자료를 참고한 장면 · 내부는 설명용 단면'}</small>`);
-  if(stage==='excavation')hud.querySelector<HTMLButtonElement>('[data-action="next"]')!.disabled=!digComplete;
+  if(stage==='excavation') {
+    showDigProgress(world.coverage());
+    hud.querySelector<HTMLButtonElement>('[data-action="next"]')!.disabled = !digComplete;
+  }
   if(stage==='assembly')hud.querySelector<HTMLButtonElement>('[data-action="next"]')!.disabled=save.assembledRevision!==save.document.revision;
   layoutUI();
+  restoreFocus();
   syncFaceGuidance();
 }
 function arrangeHUD() {
@@ -367,6 +382,7 @@ function arrangeHUD() {
   }
   for(const duplicate of extras.querySelectorAll('#tool-instruction'))duplicate.removeAttribute('id');
 }
+let dialogOpener: HTMLElement | null = null;
 function modal(html: string) {
   stopBodyGuide();
   clearRefineTip();
@@ -375,8 +391,18 @@ function modal(html: string) {
   photoEditor?.dispose();photoEditor=null;world.paused = true;
   exampleRequest?.abort();exampleRequest=null;exampleViewer?.dispose();exampleViewer=null;
   fireLast = performance.now();
+  if (!dialog.open) dialogOpener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
   dialog.innerHTML = `${button("close", "닫기", "close", "round icon-only modal-close")}${html}`;
   dialog.scrollTop=0;
+  const heading = dialog.querySelector('h2');
+  if (heading) {
+    if (!heading.id) heading.id = 'dialog-title';
+    dialog.setAttribute('aria-labelledby', heading.id);
+    dialog.removeAttribute('aria-label');
+  } else {
+    dialog.removeAttribute('aria-labelledby');
+    dialog.setAttribute('aria-label', html.includes('example-viewer-root') ? '예시 작품 감상' : '내 작품 사진');
+  }
   if(!dialog.open) dialog.showModal();
   dialog.querySelector<HTMLElement>("button")?.focus();
 }
@@ -388,7 +414,9 @@ function closeModal() {
   syncPause();
   fireLast = performance.now();
   world.refresh();
-  world.renderer.domElement.focus({ preventScroll: true });
+  const previous = dialogOpener;
+  dialogOpener = null;
+  (previous?.isConnected && previous !== document.body && previous.getClientRects().length ? previous : world.renderer.domElement).focus({preventScroll:true});
 }
 dialog.addEventListener("cancel", (e) => {
   e.preventDefault();
@@ -448,7 +476,7 @@ async function go(next: SceneId) {
   tool = next==='body'?'shape':next==='excavation'?'brush':next==='assembly'&&save.assembledRevision!==save.document.revision?'place':scenes[next].tools[0] ?? "rotate";
   audio.excavation = next === "excavation";
   world.setStage(next);
-  digComplete=next==='excavation'&&world.coverage().length===2&&world.coverage().every(n=>n>=.7);
+  digComplete=next==='excavation' && bothDiscovered(world.coverage());
   updateUI();
   if(!world.reduced){
     for(const [i,el] of [...hud.querySelectorAll<HTMLElement>('.scene-info,.guide-stack>.character-dock,.drawing-actions,.settings-dock,footer')].entries())
@@ -469,8 +497,23 @@ async function travelTo(next:SceneId,label:string){
   await playTravel(world.reduced);
   await go(next);overlay.hidden=true;travelling=false;
 }
+const discoveryThreshold = .7;
+function bothDiscovered(progress: number[]) {
+  return progress.length === 2 && progress.every(value => value >= discoveryThreshold);
+}
+function showDigProgress(progress: number[]) {
+  hud.querySelectorAll<HTMLProgressElement>('#dig-progress progress').forEach((meter, index) => {
+    const percent = Math.min(100, Math.floor((progress[index] ?? 0) * 100 / discoveryThreshold));
+    if (meter.value === percent) return;
+    meter.value = percent;
+    meter.previousElementSibling!.querySelector('strong')!.textContent = percent === 100 ? '발견!' : percent + '%';
+  });
+}
 function checkDiscovery(){
-  if(stage!=='excavation'||digComplete||world.coverage().some(n=>n<.7))return;
+  if (stage !== 'excavation' || digComplete) return;
+  const progress = world.coverage();
+  showDigProgress(progress);
+  if (!bothDiscovered(progress)) return;
   digComplete=true;audio.effect('success');toast('찾았어요! 같은 현장에서 시루 위에 함께 놓아 볼까요?');
   updateUI();
 }
@@ -561,7 +604,7 @@ async function next() {
     startFire();
     return;
   }
-  if (stage === "excavation" && world.coverage().some((n) => n < 0.7)) {
+  if (stage === "excavation" && !digComplete) {
     toast("토기와 시루가 조금 더 보이도록 흙을 걷어 볼까요?");
     return;
   }
@@ -641,6 +684,11 @@ document.addEventListener("click", async (e) => {
   if(a==='finish-photo'){closeModal();go('ending');modal(endingMarkup());return;}
   if(a==='kiln-guide'){modal(kilnGuide());return;}
   if(a==='ending-credits'){modal(endingMarkup());return;}
+  if (a === 'welcome-photo') {
+    albumReturn = 'close';
+    showCollection('face', Math.max(0, photosIn('face').findIndex(photo => photo.id === 'face-three-sides')));
+    return;
+  }
   if(a==='collection'||a.startsWith('collection-')){
     albumReturn=dialog.querySelector('.museum-ending')?'ending-credits':dialog.querySelector('.museum-credits')?'credits':dialog.querySelector('.story-layout')?'story':'close';
     const group=a.startsWith('collection-')?a.slice(11) as PhotoCategory:dialog.querySelector('.story-layout')?museum.photos.find(p=>p.id===storyPhoto)?.category??'face':'face';
@@ -687,7 +735,7 @@ document.addEventListener("click", async (e) => {
   }
   if (a === "help") {
     modal(
-      `<div class="help-copy"><p class="eyebrow">천천히, 마음 가는 대로</p><h2>이렇게 해보세요</h2><p>${scenes[stage].instruction}</p><ul><li>손으로 빚기: 몸체를 좌우로 끌면 잡은 높이 주변이 둥글게 달라져요.</li><li>몸체 크기는 높이·넓이 손잡이로, 입구는 화면 아래나 오른쪽의 조절 막대로 바꿔요.</li><li>눈·입의 ‘그려 뚫기’로 원하는 윤곽을 그려 닫거나, 톡 눌러 작은 구멍을 만들어요. 손가락의 작은 떨림과 닫는 틈은 보정해요. ‘구멍 다듬기’로 안쪽이나 테두리를 문지르면 부드러워져요.</li><li>토기 밖을 끌면 좌우로 회전하고, 위아래로 보는 높이가 바뀌어요. 마우스 오른쪽 끌기도 사용할 수 있어요.</li><li>두 손가락을 벌리거나 오므리면 확대·축소해요. PC에서는 오른쪽 드래그와 마우스 휠을 사용해요.</li><li>되돌리기 또는 Ctrl / ⌘ + Z로 복구해요.</li></ul>${stage==="body"?button("shape-guide","몸체 빚는 동작 다시 보기","shape","secondary"):""}${["body","mouth","faces"].includes(stage)?button("turn-guide","돌리는 동작 다시 보기","rotate","secondary"):""}<label class="motion-setting"><input id="reduce-motion" type="checkbox" ${world.reduced ? "checked" : ""}> 움직임 줄이기</label><section class="help-credits"><p>${AI_CONTENT_LABEL}</p><div class="credits-actions"><button data-action="credits" class="secondary">AI 제작·출처 안내</button>${museumHomeLink()}</div></section></div>`,
+      `<div class="help-copy"><p class="eyebrow">${scenes[stage].eyebrow}</p><h2>이 장면에서 해 볼 일</h2><ul class="stage-tips">${stageTips[stage].map(tip => `<li>${tip}</li>`).join("")}</ul>${stage==="body"?button("shape-guide","몸체 빚는 동작 다시 보기","shape","secondary"):""}${["body","mouth","faces"].includes(stage)?button("turn-guide","돌리는 동작 다시 보기","rotate","secondary"):""}<details class="gesture-help"><summary>화면 조작 알아보기</summary><p>체험 중에 토기 주변의 빈 곳을 끌어 방향을 바꿔요. 두 손가락을 벌리거나 마우스 휠을 굴리면 확대할 수 있어요. 만들기 단계에서는 되돌리기 버튼이나 Ctrl / ⌘ + Z로 방금 한 작업을 되돌려요.</p></details><label class="motion-setting"><input id="reduce-motion" type="checkbox" ${world.reduced ? "checked" : ""}> 움직임 줄이기</label><section class="help-credits"><p>${AI_CONTENT_LABEL}</p><div class="credits-actions"><button data-action="credits" class="secondary">AI 제작·출처 안내</button>${museumHomeLink()}</div></section></div>`,
     );
     dialog.querySelector('.help-credits')!.insertAdjacentHTML('beforebegin',`<section class="help-artworks"><h3>작품 감상과 보관</h3><p>예시 작품을 돌려 보고, 내 작품도 파일로 간직해 보세요.</p><div class="help-artwork-actions">${button('example-artwork','예시 작품 감상','rotate','secondary')}${stage!=='welcome'||saved?button('export-artwork','내 작품 파일 저장','download','secondary'):''}</div></section>`);
     return;
@@ -695,7 +743,7 @@ document.addEventListener("click", async (e) => {
   if (a === "new") {
     if (saved || stage !== "welcome") {
       modal(
-        `<div class="confirm-copy"><h2>새로운 이야기를 시작할까요?</h2><p>이 기기의 현재 작품이 새 작품으로 바뀌어요.<br>사진을 남기려면 먼저 완성품 화면에서 저장해 주세요.</p>${button("confirm-new", "새 작품 만들기", "plus", "primary")}${button("close", "계속 만들기", "previous", "secondary")}</div>`,
+        `<div class="confirm-copy"><h2>새 작품을 만들까요?</h2><p>이 기기에 저장된 작품이 새 작품으로 바뀌어요.<br>지금 작품을 간직하려면 먼저 파일로 저장하세요.</p><div class="backup-action">${button("export-artwork", "내 작품 파일 저장", "download", "secondary")}</div>${button("close", "돌아가기", "previous", "secondary")}${button("confirm-new", "새 작품 만들기", "plus", "primary")}</div>`,
       );
       return;
     }
@@ -776,7 +824,6 @@ document.addEventListener("click", async (e) => {
   }
   if (a === "assist") {
     world.assistBrush();
-    updateUI();
     void persist();
     checkDiscovery();
     return;
@@ -1286,12 +1333,7 @@ function flushPointer() {
       else drawOutline(screen, "drawing", false);
     } else world.previewStroke(finishStroke(gesture.samples),lineWidths[lineWidth-1]);
   }
-  if (gesture?.kind === "brush") {
-    const cov = world.coverage(),
-      label = document.querySelector("#dig-progress");
-    if (label)
-      label.textContent = `토기 ${Math.round(cov[0] * 100)}% · 시루 ${Math.round(cov[1] * 100)}%`;
-  }
+  if (gesture?.kind === "brush") showDigProgress(world.coverage());
 }
 function bindPointer() {
   const canvas = world.renderer.domElement;
@@ -1322,8 +1364,7 @@ function bindPointer() {
         if(touchSoil){
           save.excavationMask.set(touchSoil);
           world.terrain.configure(save.excavationMask,world.terrain.findBounds);
-          const cov=world.coverage(),label=document.querySelector('#dig-progress');
-          if(label)label.textContent=`토기 ${Math.round(cov[0]*100)}% · 시루 ${Math.round(cov[1]*100)}%`;
+          showDigProgress(world.coverage());
           world.refresh(true);touchSoil=null;
         }
         viewing=true;previousView=touchView();return;

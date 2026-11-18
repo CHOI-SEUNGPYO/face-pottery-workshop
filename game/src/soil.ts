@@ -129,8 +129,16 @@ export class SoilTerrain {
         const grain =
           0.007 * Math.sin(x * 11 + z * 9) * Math.sin(z * 13 - x * 7) +
           0.004 * Math.sin(x * 21 - z * 17);
-        this.bases[j * (GRID + 1) + i] =
-          this.surfaceLevel + grain*.18;
+        // Loose soil sits slightly higher around the finds, giving the first
+        // brush stroke a visual starting point without uncovering either pot.
+        let mound = 0;
+        for (const t of targets) {
+          const dx = (x - (t.minX + t.maxX) / 2) / ((t.maxX - t.minX) / 2 + .15);
+          const dz = (z - (t.minZ + t.maxZ) / 2) / ((t.maxZ - t.minZ) / 2 + .15);
+          const falloff = Math.max(0, 1 - dx * dx - dz * dz);
+          mound += falloff * falloff;
+        }
+        this.bases[j * (GRID + 1) + i] = this.surfaceLevel + grain * .18 + mound * (.065 + grain);
       }
     for (let y = 0; y < MASK; y++)
       for (let x = 0; x < MASK; x++) {
@@ -185,7 +193,7 @@ export class SoilTerrain {
       color
         .copy(top)
         .lerp(bottom, dug * 0.7)
-        .multiplyScalar(noise);
+        .multiplyScalar(noise + (this.bases[k] - this.surfaceLevel) * (1 - dug) * 2.8);
       c.setXYZ(k, color.r, color.g, color.b);
     }
     p.needsUpdate = true;

@@ -77,6 +77,7 @@ try{
    await page.locator('[data-action="credits"]').click();
    assert.ok(await page.locator('.credits-copy .museum-home-link').isVisible());
    await page.locator('[data-action="close"]').click();
+   assert.equal(await page.locator('[data-action="help"]').evaluate(el=>el===document.activeElement),true,'closing credits returns focus to the stage help opener');
    assert.deepEqual(await page.evaluate(()=>Array.from(window.togi.save.document.outerXYZ)),original,'opening and closing AI credits preserves the artwork');
    const rotation=await page.evaluate(()=>Array.from(window.togi.world.camera.position));
    const faceBefore=await project(page,[0,.70,.33]);
