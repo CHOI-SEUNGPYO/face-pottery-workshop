@@ -1,5 +1,5 @@
 import * as T from 'three';
-import {mesh,outdoorSite} from './environments';
+import {mesh} from './environments';
 const ease=(t:number)=>{t=T.MathUtils.clamp(t,0,1);return t*t*(3-2*t);};
 export function firingFrame(progress:number){
   const phase=progress<.15?'준비':progress<.62?'가열':progress<.85?'냉각':'완성 공개';
@@ -22,7 +22,6 @@ export class FiringView {
   private smoke:T.Points<T.BufferGeometry,T.PointsMaterial>;
   private contact:T.Mesh<T.PlaneGeometry,T.MeshBasicMaterial>;
   constructor(){
-    this.group.add(outdoorSite(0,false));
     this.group.add(this.light);this.light.position.set(0,.44,.69);
     const coalGeometry=new T.DodecahedronGeometry(.095,0);
     for(let i=0;i<9;i++){

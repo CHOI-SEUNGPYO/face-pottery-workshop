@@ -7,7 +7,7 @@ import { asset, characterImage } from "./assets";
 import {getReducedMotion} from './motion';
 import { PotteryView } from "./pottery-view";
 import {ArtAssets,artGroups,type ArtGroup} from './art-assets';
-import {createArtifactExample} from './artifact-example';
+import {createArtifactExample,createWelcomeStudy} from './artifact-example';
 import { StrokePreview } from "./stroke-preview";
 import {FaceGuide} from './face-guide';
 import { SoilTerrain, migrateSoilMask } from "./soil";
@@ -43,37 +43,33 @@ const stageYaw: Record<SceneId, number> = {
   compare: -12,
   ending: -16,
 };
-const artGroupFor=(stage:SceneId):ArtGroup=>['firing','excavation','assembly'].includes(stage)?'outdoor':['compare','ending'].includes(stage)?'gallery':'studio';
+const artGroupFor=(stage:SceneId):ArtGroup=>stage==='firing'?'kiln':['excavation','assembly'].includes(stage)?'outdoor':['compare','ending'].includes(stage)?'gallery':'studio';
 
 // The furniture never animates. One mesh per material avoids submitting every
 // leaf, plank and vase separately, without changing their shapes or materials.
 function batchStatic(root: T.Object3D) {
   root.updateMatrixWorld(true);
   const inverse = root.matrixWorld.clone().invert();
-  const batches = new Map<
-    string,
-    { material: T.Material; geometries: T.BufferGeometry[] }
-  >();
+  const batches = new Map<string,T.Mesh<T.BufferGeometry,T.Material>[]>();
   const originals = new Set<T.BufferGeometry>();
   root.traverse((o) => {
     if (!(o instanceof T.Mesh) || Array.isArray(o.material)) return;
-    const g = o.geometry
-      .clone()
-      .applyMatrix4(inverse.clone().multiply(o.matrixWorld));
-    const flat = g.index ? g.toNonIndexed() : g;
-    if (flat !== g) g.dispose();
-    const key = o.material.uuid + Object.keys(flat.attributes).sort().join(",");
-    if (!batches.has(key))
-      batches.set(key, { material: o.material, geometries: [] });
-    batches.get(key)!.geometries.push(flat);
+    const key = o.material.uuid + Object.keys(o.geometry.attributes).sort().join(",");
+    if (!batches.has(key)) batches.set(key,[]);
+    batches.get(key)!.push(o);
     originals.add(o.geometry);
   });
   root.clear();
-  for (const { material, geometries } of batches.values()) {
-    const merged = mergeGeometries(geometries)!;
+  for (const sources of batches.values()) {
+    const material=sources[0].material,keepIndices=sources.every(s=>s.geometry.index);
+    const geometries=sources.map(source=>{
+      const g=!keepIndices&&source.geometry.index?source.geometry.toNonIndexed():source.geometry.clone();
+      return g.applyMatrix4(inverse.clone().multiply(source.matrixWorld));
+    });
+    const merged=geometries.length===1?geometries[0]:mergeGeometries(geometries)!;
     merged.computeBoundingSphere();
     const mesh=new T.Mesh(merged,material);mesh.castShadow=!(material instanceof T.MeshBasicMaterial)&&!material.transparent;mesh.receiveShadow=mesh.castShadow;root.add(mesh);
-    geometries.forEach((g) => g.dispose());
+    if(geometries.length>1)geometries.forEach(g=>g.dispose());
   }
   originals.forEach((g) => g.dispose());
 }
@@ -98,9 +94,11 @@ export class World {
   private groupJobs=new Map<ArtGroup,Promise<void>>();
   private studioArchitecture = new T.Group();
   private galleryArchitecture = new T.Group();
-  private walls:T.Object3D[]=[];
-  private wallFixtures:T.Object3D[]=[];
-  private forestSectors:T.Object3D[]=[];
+  private walls:{studio:T.Object3D[];gallery:T.Object3D[]}={studio:[],gallery:[]};
+  private wallFixtures:{studio:T.Object3D[];gallery:T.Object3D[]}={studio:[],gallery:[]};
+  private fixtureBounds=new WeakMap<T.Object3D,T.Box3>();
+  private forestSectors:{kiln:T.Object3D[];outdoor:T.Object3D[]}={kiln:[],outdoor:[]};
+  private welcomeStudy?:ReturnType<typeof createWelcomeStudy>;
   private galleryPots=new T.Group();
   private courtyard=new T.Group();
   private assemblyBench=new T.Group();
@@ -236,7 +234,7 @@ export class World {
   }
   async load() {
     await this.prepareScene('welcome');
-    this.update();this.setStage('welcome',true);this.resize();
+    this.setStage('welcome',true);this.resize();
   }
   readyFor(stage:SceneId){return this.readyGroups.has(artGroupFor(stage));}
   prepareScene(stage:SceneId):Promise<void>{
@@ -255,16 +253,19 @@ export class World {
       // Let the loading indicator and existing stage paint between large batches.
       await new Promise(resolve=>setTimeout(resolve,0));
       const root=this.art.model(name);
-      if(name==='studio-shell'||name==='gallery-shell')this.walls.push(...batchWithParts(root,'wall'));
-      else if(name==='studio-furniture'||name==='gallery-fixtures')this.wallFixtures.push(...batchWithParts(root,'wallFixture'));
-      else if(name==='courtyard')this.forestSectors.push(...batchWithParts(root,'forestSector'));
+      if(name==='studio-shell'||name==='gallery-shell')this.walls[name==='studio-shell'?'studio':'gallery'].push(...batchWithParts(root,'wall'));
+      else if(name==='studio-furniture'||name==='gallery-fixtures')this.wallFixtures[name==='studio-furniture'?'studio':'gallery'].push(...batchWithParts(root,'wallFixture'));
+      else if(name==='courtyard'||name==='kiln-dressing')this.forestSectors[name==='courtyard'?'outdoor':'kiln'].push(...batchWithParts(root,'forestSector'));
       else if(name!=='kiln-vault')batchStatic(root);
     }
-    if(group==='outdoor'){
+    if(group==='kiln'){
       for(const name of ['Cutaway_shell','Permanent_half']){
         const part=this.art.model('kiln-vault').getObjectByName(name);
         if(part)batchStatic(part);
       }
+      this.firingView.applyArt(this.art.model('kiln-vault'),this.art.model('kiln-dressing'));
+    }
+    if(group==='outdoor'){
       const siru=this.art.model('siru'),siruBounds=new T.Box3().setFromObject(siru);
       // The detailed siru is static. Index it once instead of testing every
       // triangle for every brush sample, including the still-buried surface.
@@ -285,10 +286,6 @@ export class World {
       this.fieldProps.add(this.art.model('field-tools'));this.site.add(this.fieldProps);
       this.courtyard.add(this.art.model('courtyard'));
       this.assemblyBench.add(this.art.model('conservation-bench'));
-      this.firingView.applyArt(this.art.model('kiln-vault'),this.art.model('kiln-dressing'));
-      const firingGarden=this.art.model('courtyard').clone();
-      firingGarden.traverse(o=>{if(o.userData.forestSector)this.forestSectors.push(o);});
-      this.firingView.group.add(firingGarden);
       this.terrain.setSurface(this.art.texture('earth'));
       this.earth.material.map=this.art.texture('earth');this.earth.material.color.set(0xb7a58d);
       const groundUV=this.earth.geometry.getAttribute('uv');for(let i=0;i<groundUV.count;i++)groundUV.setXY(i,groundUV.getX(i)*2,groundUV.getY(i)*2);
@@ -297,7 +294,7 @@ export class World {
       this.galleryArchitecture.add(this.art.model('gallery-shell'));
       this.galleryPots.add(this.art.model('gallery-collection'));
       const galleryDetails=museumRoom();
-      galleryDetails.traverse(o=>{if(o.userData.wallFixture)this.wallFixtures.push(o);});
+      galleryDetails.traverse(o=>{if(o.userData.wallFixture)this.wallFixtures.gallery.push(o);});
       this.museumRoom.add(this.galleryArchitecture,this.art.model('gallery-fixtures'),this.galleryPots,galleryDetails);
       this.referenceArtifact.name='AI example made with game tools';
       this.referenceArtifact.position.set(.9,0,0);
@@ -357,11 +354,10 @@ export class World {
   }
   onRender?: () => void;
   update(features = true) {
-    this.pottery.update(this.getSave().document, features);
-    this.pottery.appearance(
-      this.getSave().firedRevision === this.getSave().document.revision ? 1 : 0,
-    );
-    this.pottery.root.rotation.y = this.getSave().rotation;
+    const save=this.getSave(),welcome=this.stage==='welcome';
+    this.pottery.update(welcome?(this.welcomeStudy??=createWelcomeStudy()):save.document,features);
+    this.pottery.appearance(welcome||save.firedRevision===save.document.revision?1:0);
+    this.pottery.root.rotation.y=welcome?-.17:save.rotation;
     this.refresh(true);
   }
   get transitioning() {
@@ -698,18 +694,21 @@ export class World {
         (distance * 1.025) / this.zoom,
       );
     // Only the wall between the camera and the room opens. Floors and plinths remain.
-    for(const wall of this.walls){
+    const room=this.workshop.visible?'studio':this.inGallery?'gallery':null;
+    for(const wall of room?this.walls[room]:[]){
       const position=wall.getWorldPosition(new T.Vector3());
       const normal=new T.Vector3(...wall.userData.inward as [number,number,number]);
       wall.visible=this.goalPos.clone().sub(position).dot(normal)>0;
     }
     const studioBack=this.goalPos.z>-3.7,galleryBack=this.goalPos.z>-4.4;
-    for(const sector of this.forestSectors)sector.visible=away.dot(new T.Vector3(...sector.userData.outward as [number,number,number]))<.15;
+    const sectors=this.stage==='firing'?this.forestSectors.kiln:this.courtyard.visible?this.forestSectors.outdoor:[];
+    for(const sector of sectors)sector.visible=away.dot(new T.Vector3(...sector.userData.outward as [number,number,number]))<(sector.userData.hideAtDot??.15);
     let studioClear=studioBack,galleryClear=galleryBack;
-    for(const fixture of this.wallFixtures){
-      const gallery=fixture.getWorldPosition(new T.Vector3()).z<-3.6;
-      const box=new T.Box3().setFromObject(fixture).expandByScalar(.12);
-      const targets=[this.goalTarget,...[bounds.min.y,bounds.max.y].flatMap(y=>[bounds.min.x,bounds.max.x].map(x=>new T.Vector3(x,y,this.goalTarget.z)))];
+    const targets=room?[this.goalTarget,...[bounds.min.y,bounds.max.y].flatMap(y=>[bounds.min.x,bounds.max.x].map(x=>new T.Vector3(x,y,this.goalTarget.z)))]:[];
+    for(const fixture of room?this.wallFixtures[room]:[]){
+      const gallery=room==='gallery';
+      let box=this.fixtureBounds.get(fixture);
+      if(!box){box=new T.Box3().setFromObject(fixture).expandByScalar(.12);this.fixtureBounds.set(fixture,box);}
       const blocks=targets.some(point=>{
         const ray=new T.Ray(this.goalPos,point.clone().sub(this.goalPos).normalize()),hit=ray.intersectBox(box,new T.Vector3());
         return hit&&hit.distanceTo(this.goalPos)<point.distanceTo(this.goalPos);

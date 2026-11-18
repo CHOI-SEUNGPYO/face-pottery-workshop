@@ -3,10 +3,10 @@ body[data-stage="welcome"] #hud .welcome-copy{position:fixed;left:4vw;top:106px;
 body[data-stage="welcome"] #hud .welcome-copy h1{font-size:clamp(24px,2.3vw,33px);line-height:1.3;letter-spacing:-1px;margin:12px 0 16px;word-break:keep-all}
 .welcome-copy h1 em{color:#80472e}
 body[data-stage="welcome"] #hud .welcome-copy h1{text-shadow:none}
-.welcome-artifact{position:relative;margin:0 0 12px;padding:6px 8px;background:#ece9e1;border-radius:8px}
+.welcome-artifact{position:relative;margin:0 0 12px;padding:10px 10px 8px;background:#e8e5dd;border:1px solid #65574925;border-radius:8px}
 .welcome-artifact .artifact-zoom{position:absolute;inset:0;width:100%;height:100%;padding:0;border:0;background:transparent;box-shadow:none;border-radius:inherit;cursor:zoom-in}
 .welcome-artifact .artifact-zoom:focus-visible{outline-offset:-3px}
-.welcome-artifact img{display:block;width:100%;height:112px;object-fit:contain}
+.welcome-artifact img{display:block;width:100%;height:112px;object-fit:contain;mix-blend-mode:multiply}
 .welcome-artifact figcaption{font-size:10px;line-height:1.5;text-align:center;color:#665e50;margin-top:4px}
 .welcome-artifact figcaption small{display:block;font-size:8px;color:#62594e;word-break:keep-all;text-wrap:balance}
 .welcome-purpose{font:13px/1.65 Pretendard,sans-serif;margin:0 0 12px;word-break:keep-all}
@@ -45,6 +45,8 @@ body[data-stage="welcome"] #hud .welcome-actions button{font-size:13px;min-heigh
  .welcome-start .welcome-example{display:flex;width:100%;margin:0;min-height:44px;padding:8px;font-size:11px;text-decoration:none}
  body #hud .welcome-foot{left:12px;right:12px;bottom:max(8px,env(safe-area-inset-bottom));height:48px;border-radius:10px}
  .welcome-foot .museum-home-link,.welcome-foot .credits-link{font-size:11px;padding:6px 8px}
+ .welcome-start:has(.welcome-actions>button:only-child){display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;align-items:center;padding:5px}
+ .welcome-start:has(.welcome-actions>button:only-child) .welcome-example{width:auto;flex-direction:row;gap:5px;padding:6px 10px;color:#654d3b}
 }
 @media(max-width:600px) and (max-height:650px) and (orientation:portrait){
  body[data-stage="welcome"] #hud .welcome-copy{padding:9px 12px}

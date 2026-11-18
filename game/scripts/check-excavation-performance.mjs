@@ -27,12 +27,29 @@ try{
   return metrics;
  };
  const result=await page.evaluate(measure);
+ const coverageAgrees=await page.evaluate(()=>{
+   const t=window.togi.world.terrain;
+   const agrees=()=>{
+     const sum=t.findBounds.map(()=>0),count=t.findBounds.map(()=>0);
+     t.mask.forEach((value,k)=>{const i=t.targetMap[k]-1;if(i>=0){sum[i]+=value;count[i]++;}});
+     return t.coverage().every((v,i)=>Math.abs(v-sum[i]/(Math.max(1,count[i])*255))<1e-9);
+   };
+   t.mask.fill(0);t.configure(t.mask,t.findBounds);t.begin();
+   const target=t.findBounds[0],point=t.mesh.position.clone().set((target.minX+target.maxX)/2,0,(target.minZ+target.maxZ)/2);
+   t.dig(point);t.end();
+   const brushed=agrees();t.assist();const assisted=agrees();
+   const actual=t.mesh.geometry,full=actual.clone();full.computeVertexNormals();
+   const normals=actual.attributes.normal.array,expected=full.attributes.normal.array;
+   const lightingMatches=normals.every((v,i)=>Math.abs(v-expected[i])<.0001);full.dispose();
+   t.configure(t.mask,t.findBounds);return brushed&&assisted&&agrees()&&lightingMatches;
+ });
+ assert.ok(coverageAgrees,'local brush updates match full surface lighting and per-artifact progress');
  console.log(JSON.stringify(result));
  await mkdir('asset/review',{recursive:true});
  const label=process.env.TOGI_PERF_BASELINE==='1'?'before':'after';
  await writeFile(`asset/review/excavation-performance-${label}.json`,JSON.stringify(result,null,2));
  if(label==='after')assert.ok(result.exposed.p95<16&&result.buried.p95<16,'brush CPU work stays within a 60 Hz frame budget on this test PC');
- await page.evaluate(()=>{window.togi.go('firing');});await page.waitForFunction(()=>!window.togi.world.transitioning);
+ await page.evaluate(()=>window.togi.go('firing'));await page.waitForFunction(()=>!window.togi.world.transitioning);
  await page.evaluate(()=>{window.togi.world.setFiringProgress(.42);});
  await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
  if(process.env.TOGI_PERF_REVIEW==='1')await page.screenshot({path:`asset/review/firing-stability-${label}.png`});

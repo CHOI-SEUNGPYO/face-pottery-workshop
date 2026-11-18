@@ -28,7 +28,7 @@
     {
       "id": "gallery-fixtures",
       "file": "gallery-fixtures-v3.glb",
-      "bytes": 423656
+      "bytes": 423836
     },
     {
       "id": "gallery-collection",
@@ -43,7 +43,7 @@
     {
       "id": "field-tools",
       "file": "field-tools-v3.glb",
-      "bytes": 356080
+      "bytes": 410184
     },
     {
       "id": "conservation-bench",
@@ -53,7 +53,7 @@
     {
       "id": "kiln-dressing",
       "file": "kiln-dressing-v3.glb",
-      "bytes": 641016
+      "bytes": 1183472
     },
     {
       "id": "kiln-vault",

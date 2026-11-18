@@ -80,7 +80,7 @@ export const scenes: Record<
     speech: "안쪽을 볼 수 있게 벽을 열어 보여줄게!\n실제로는 벽을 닫고 구워.",
     next: "발굴하러 가기",
     tools: [],
-    elevation: 18,
+    elevation: 12,
   },
   excavation: {
     title: "흙 속에 누가 있을까요?",

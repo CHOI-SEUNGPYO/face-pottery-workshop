@@ -2,13 +2,14 @@
 // individual exhibit clearances are authored separately from removable walls.
 import {buildSiruArtifact} from './siru-artifact.mjs';
 import {buildKiln} from './kiln-art.mjs';
+import {buildKilnLandscape} from './kiln-landscape.mjs';
 export function buildScenes(c){
   const {T,group,mesh,box,lathe,ring,place,material,pottery,tools,wood,darkWood,plaster,linen,bronze,lamp,clay,darkClay,brush}=c;
   const stone=material('Honed warm limestone',0xe7e4dd,'limestone',.9);
   const dark=material('Museum bronze charcoal',0x414742,null,.7,.1);
   const wallMat=material('Warm museum plaster',0xddd5c6,'plaster',.92);
   const panel=material('Muted clay interpretation panel',0xb18e69,null,.95);
-  const navy=material('Museum sage gray case backing',0x62716e,null,.95);
+  const navy=material('Museum deep teal case backing',0x334e50,null,.95);
   const museumWall=material('Warm gray museum wall',0xa49d8f,null,.98);
   const shelfWood=material('Pale exhibit shelving',0xc9c2ae,'limestone',.9);
   const glass=material('Clear exhibit glazing',0xc0dedf,null,.16);
@@ -91,8 +92,9 @@ export function buildScenes(c){
     }
   }
   const fixtures=group('Permanent gallery fixtures'),galleryPots=group('Gallery ceramics');
+  const plinth=material('Patinated exhibit pedestal',0x48534e,null,.89);
   for(const x of [-.78,.9]){
-    box(fixtures,'Warm limestone showcase plinth',1.36,.78,1.30,stone,x,-.45,0,.015);
+    box(fixtures,'Patinated showcase plinth',1.36,.78,1.30,plinth,x,-.45,0,.015);
     box(fixtures,'Fine bronze plinth reveal',1.34,.015,1.28,bronze,x,-.067,0,.003);
     box(fixtures,'Pale exhibit platform',1.32,.06,1.26,stone,x,-.03,0,.008);
     box(fixtures,'Recessed plinth foot',1.20,.08,1.16,dark,x,-.82,0,.006);
@@ -206,6 +208,22 @@ export function buildScenes(c){
     p.rotation.y=i*.9+k*Math.PI/3;
   }
   const equipment=group('Organised excavation tools');
+  // A photographic scale and open field book mark the recording edge of
+  // the trench. Keep all equipment outside the playable soil ellipse.
+  const scaleInk=material('Field scale charcoal',0x313b36,null,.96);
+  const scaleBone=material('Field scale ivory',0xf2e4c7,null,.96);
+  const measure=group('Field recording scale');equipment.add(measure);
+  measure.position.set(-1.34,0,-1.33);measure.rotation.y=-.30;
+  box(measure,'Measuring bar backing',.78,.027,.081,scaleInk,0,.014,0,0);
+  for(let i=0;i<8;i+=2)box(measure,'Alternating scale divisions',.094,.004,.073,scaleBone,-.34+i*.097,.029,0,0);
+  const fieldBook=group('Open field notebook');equipment.add(fieldBook);
+  fieldBook.position.set(-1.96,0,.58);fieldBook.rotation.y=.34;
+  const cover=material('Canvas field notebook cover',0x545f50,'linen',1);
+  box(fieldBook,'Linen cover',.42,.017,.30,cover,0,.011,0,.006);
+  for(const sign of [-1,1]){
+    const leaf=box(fieldBook,'Notebook pages',.193,.020,.276,scaleBone,sign*.099,.030,0,.003);leaf.rotation.z=-sign*.031;
+  }
+  for(let i=0;i<5;i++)box(fieldBook,'Pencilled notebook lines',.085+.01*(i%3),.001,.003,scaleInk,.085,.043,-.078+i*.032,0);
   for(let i=0;i<12;i++){
     const a=i/12*Math.PI*2,b=(i+1)/12*Math.PI*2,x=Math.cos(a)*2.05,z=Math.sin(a)*1.86;
     box(equipment,'Survey peg',.035,.22,.035,wood,x,.1,z);
@@ -228,16 +246,7 @@ export function buildScenes(c){
   const bowl=place(kilnyard,tools.find(t=>t[0]==='water-bowl')[1],-2.4,0,-1.05,1);
   bowl.position.y+=.625-new T.Box3().setFromObject(bowl).min.y;
   const newVault=buildKiln(c);
-  // Small tool shelter gives the working yard an architectural destination.
-  const shed=group('Kiln preparation shelter');shed.position.set(-3.7,0,-3.6);kilnyard.add(shed);
-  for(const x of [-1.3,1.3])for(const z of [-.65,.65])box(shed,'Shelter timber upright',.11,2.25,.11,darkWood,x,1.125,z);
-  for(const z of [-.67,.67])box(shed,'Shelter lintel',2.95,.13,.12,darkWood,0,2.20,z);
-  for(const side of [-1,1]){const roof=box(shed,'Shelter pitched roof',1.68,.10,1.9,dark,side*.72,2.39,0,.015);roof.rotation.z=-side*.22;}
-  for(let i=0;i<8;i++)box(shed,'Shelter partial back slats',.25,1.1,.055,wood,-1.12+i*.32,.75,-.65);
-  for(const y of [.29,1.21])box(shed,'Backing rail fastened to shelter posts',2.60,.09,.08,darkWood,0,y,-.69);
-  place(shed,tools.find(t=>t[0]==='tool-tray')[1],0,.6,0,1.3);
-  box(shed,'Shelter worktop',2.3,.07,.7,wood,0,.56,0);
-  for(const x of [-.98,.98])for(const z of [-.24,.24])box(shed,'Trestle foot',.08,.54,.09,darkWood,x,.264,z);
+  buildKilnLandscape(c,kilnyard);
   const siru=buildSiruArtifact();
   // Validate authored exhibit spacing before exporting; this is geometry, not a screenshot guess.
   for(let i=0;i<records.length;i++)for(let j=i+1;j<records.length;j++)if(records[i].collection===records[j].collection){

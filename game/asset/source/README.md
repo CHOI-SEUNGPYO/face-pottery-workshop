@@ -36,6 +36,9 @@ OpenAI 이미지 생성 도구로 제작했다. 아래는 재제작에 사용할
 | woodland-v2 | 야외 장면의 원경. 가을 들판과 여러 겹의 낮은 산이 이어지는 AI 생성 파노라마다. |
 | meadow-v1 | 들판 앞 언덕에 이어지는 낮은 풀밭. 원경의 색을 참고해 만든 AI 생성 바닥 재질이다. |
 | kiln-clay-v1 | 가마 표면에 쓰는 흙의 색과 질감. 모래 알갱이와 짧은 짚 섬유, 손으로 흙을 문질러 바른 자국을 표현한 AI 생성 재질이다. |
+| kiln-valley-v1 | 가마 너머로 보이는 들과 개울, 겹겹이 이어지는 산등성이를 그린 AI 생성 배경화. |
+| kiln-yard-v1 | 흙길과 잿빛 작업 마당이 풀밭으로 이어지는 지면용 AI 생성 원화. |
+| thatch-v1 | 건조막 지붕의 볏짚 이엉을 표현한 AI 생성 재질. 건조막과 축대, 풀은 `kiln-landscape.mjs`에서 입체로 제작한다. |
 | foliage-v1 | Realistic green leafy branch cluster with many individually defined leaves and fine twigs, transparent background, suitable for crossed foliage cards. |
 | stamped-clay-v1 | Use the supplied pottery surface detail as reference: dense diagonal small oval impressions on dark charcoal gray fired clay, tileable material swatch, no eyes, openings or pot silhouette. |
 | limestone-v1 | Seamless warm gray limestone, fine matte grain, subtle mineral variation, diffuse lighting, no scene or shadows. |

@@ -43,10 +43,14 @@ export class SoilTerrain {
   );
   mask: Uint8Array = new Uint8Array(MASK * MASK);
   private bases = new Float32Array((GRID + 1) ** 2);
+  private grainShade = new Float32Array((GRID + 1) ** 2);
   private heights = new Float32Array((GRID + 1) ** 2);
   private targets: FindBounds[] = [];
   private targetMap = new Uint8Array(MASK * MASK);
-  private coverageCache: number[] | null = null;
+  private targetPixels:number[]=[];
+  private removedAmount:number[]=[];
+  private activeCells=new Uint8Array(GRID*GRID);
+  private minX=0;private minZ=0;private maxX=MASK-1;private maxZ=MASK-1;
   private last: T.Vector3 | null = null;
   private carried = 0;
   dirty = true;
@@ -61,6 +65,8 @@ export class SoilTerrain {
           SOIL_FLOOR,
           (j / GRID - 0.5) * SOIL_DEPTH,
         );
+        const x=(i/GRID-.5)*SOIL_WIDTH,z=(j/GRID-.5)*SOIL_DEPTH;
+        this.grainShade[j*(GRID+1)+i]=.98+.025*Math.sin(x*17+z*13)*Math.sin(z*19-x*11);
         uv.push((i / GRID) * 9, (j / GRID) * 8);
         if (
           i < GRID &&
@@ -69,6 +75,7 @@ export class SoilTerrain {
             (((j + 0.5) / GRID) * 2 - 1) ** 2 <
             0.995
         ) {
+          this.activeCells[j*GRID+i]=1;
           const a = j * (GRID + 1) + i,
             b = a + 1,
             c = a + GRID + 1;
@@ -120,7 +127,8 @@ export class SoilTerrain {
   configure(mask: Uint8Array, targets: FindBounds[]) {
     this.mask = mask;
     this.targets = targets;
-    this.coverageCache = null;
+    this.targetPixels=targets.map(()=>0);
+    this.removedAmount=targets.map(()=>0);
     this.surfaceLevel=Math.max(.6,...targets.map(t=>t.top+.13));
     for (let j = 0; j <= GRID; j++)
       for (let i = 0; i <= GRID; i++) {
@@ -154,7 +162,10 @@ export class SoilTerrain {
                   4 <
               1,
           ) + 1;
+        const k=y*MASK+x,target=this.targetMap[k]-1;
+        if(target>=0){this.targetPixels[target]++;this.removedAmount[target]+=mask[k];}
       }
+    this.minX=this.minZ=0;this.maxX=this.maxZ=MASK-1;
     this.dirty = true;
     this.update();
   }
@@ -178,30 +189,67 @@ export class SoilTerrain {
     if (!this.dirty) return;
     const p = this.mesh.geometry.getAttribute("position") as T.BufferAttribute,
       c = this.mesh.geometry.getAttribute("color") as T.BufferAttribute;
-    const top = new T.Color("#d7d0bf"),
-      bottom = new T.Color("#a69b88"),
+    const top = new T.Color("#b6a38c"),
+      bottom = new T.Color("#8c7969"),
       color = new T.Color();
-    for (let k = 0; k < p.count; k++) {
+    // Only vertices whose two-pixel mask interpolation touches a changed
+    // sample can move. Neighbouring faces also contribute to their normals.
+    const lower=(v:number)=>Math.max(0,Math.floor((v-1)*GRID/(MASK-1)));
+    const upper=(v:number)=>Math.min(GRID,Math.ceil((v+1)*GRID/(MASK-1)));
+    const x0=lower(this.minX),x1=upper(this.maxX),z0=lower(this.minZ),z1=upper(this.maxZ);
+    const stride=GRID+1,g=this.mesh.geometry;
+    for(let j=z0;j<=z1;j++)for(let i=x0;i<=x1;i++){
+      const k=j*stride+i;
       const x = p.getX(k),
         z = p.getZ(k),
         dug = this.removed(x, z);
       const height = SOIL_FLOOR + (this.bases[k] - SOIL_FLOOR) * (1 - dug);
       this.heights[k] = height;
       p.setY(k, height);
-      const noise =
-        0.98 + 0.025 * Math.sin(x * 17 + z * 13) * Math.sin(z * 19 - x * 11);
       color
         .copy(top)
         .lerp(bottom, dug * 0.7)
-        .multiplyScalar(noise + (this.bases[k] - this.surfaceLevel) * (1 - dug) * 2.8);
+        .multiplyScalar(this.grainShade[k] + (this.bases[k] - this.surfaceLevel) * (1 - dug) * 2.8);
       c.setXYZ(k, color.r, color.g, color.b);
     }
-    p.needsUpdate = true;
-    c.needsUpdate = true;
-    this.mesh.geometry.computeVertexNormals();
-    this.mesh.geometry.computeBoundingBox();
-    this.mesh.geometry.computeBoundingSphere();
+    const full=x0===0&&x1===GRID&&z0===0&&z1===GRID;
+    if(full){
+      g.computeVertexNormals();
+      g.computeBoundingBox();
+      // Brushing can only lower the terrain to its floor.
+      const envelope=g.boundingBox!.clone();envelope.min.y=SOIL_FLOOR;
+      g.boundingSphere=envelope.getBoundingSphere(new T.Sphere());
+    }else{
+      this.updateNormals(x0,x1,z0,z1);
+      // Keep hit testing and framing exact after a hollow becomes deeper or
+      // after brushing away the old high point, including restored masks.
+      let low=Infinity,high=-Infinity;
+      for(let k=0;k<this.heights.length;k++){
+        const h=this.heights[k];if(h<low)low=h;if(h>high)high=h;
+      }
+      g.boundingBox!.min.y=low;g.boundingBox!.max.y=high;
+    }
+    for(const attribute of [p,c,g.getAttribute('normal') as T.BufferAttribute]){
+      const start=Math.max(0,z0-1)*stride,end=(Math.min(GRID,z1+1)+1)*stride;
+      if(full)attribute.clearUpdateRanges();
+      attribute.addUpdateRange(start*3,(end-start)*3);attribute.needsUpdate=true;
+    }
+    this.minX=this.minZ=MASK;this.maxX=this.maxZ=-1;
     this.dirty = false;
+  }
+  private updateNormals(x0:number,x1:number,z0:number,z1:number){
+    const n=this.mesh.geometry.getAttribute('normal') as T.BufferAttribute;
+    const h=this.heights,stride=GRID+1,dx=SOIL_WIDTH/GRID,dz=SOIL_DEPTH/GRID;
+    for(let j=Math.max(0,z0-1);j<=Math.min(GRID,z1+1);j++)for(let i=Math.max(0,x0-1);i<=Math.min(GRID,x1+1);i++){
+      let nx=0,ny=0,nz=0;
+      for(let z=Math.max(0,j-1);z<=Math.min(j,GRID-1);z++)for(let x=Math.max(0,i-1);x<=Math.min(i,GRID-1);x++){
+        if(!this.activeCells[z*GRID+x])continue;
+        const a=z*stride+x,b=a+1,c=a+stride,d=c+1,corner=i-x+j-z;
+        if(corner<=1){nx+=(h[a]-h[b])*dz;ny+=dx*dz;nz+=(h[a]-h[c])*dx;}
+        if(corner>=1){nx+=(h[c]-h[d])*dz;ny+=dx*dz;nz+=(h[b]-h[d])*dx;}
+      }
+      const length=Math.hypot(nx,ny,nz)||1;n.setXYZ(j*stride+i,nx/length,ny/length,nz/length);
+    }
   }
   heightAt(x: number, z: number) {
     const px = clamp((x / SOIL_WIDTH + 0.5) * GRID, 0, GRID),
@@ -305,39 +353,31 @@ export class SoilTerrain {
         const r = Math.hypot((i - cx) / rx, (j - cy) / ry);
         if (r < 1) {
           const k = j * MASK + i;
-          this.mask[k] = Math.min(
-            255,
-            this.mask[k] + Math.round(strength * 255 * (1 - smooth(r))),
-          );
+          this.removeSoil(k,Math.min(255,this.mask[k]+Math.round(strength*255*(1-smooth(r)))));
         }
       }
-    this.dirty = true;
-    this.coverageCache = null;
+  }
+  private removeSoil(k:number,value:number){
+    const delta=value-this.mask[k];
+    if(!delta)return;
+    this.mask[k]=value;
+    const target=this.targetMap[k]-1;
+    if(target>=0)this.removedAmount[target]+=delta;
+    const x=k%MASK,z=Math.floor(k/MASK);
+    this.minX=Math.min(this.minX,x);this.maxX=Math.max(this.maxX,x);
+    this.minZ=Math.min(this.minZ,z);this.maxZ=Math.max(this.maxZ,z);
+    this.dirty=true;
   }
   coverage() {
-    if (this.coverageCache) return this.coverageCache;
-    const total = this.targets.map(() => 0),
-      revealed = this.targets.map(() => 0);
-    for (let k = 0; k < this.mask.length; k++) {
-      const n = this.targetMap[k] - 1;
-      if (n >= 0) {
-        total[n]++;
-        revealed[n] += this.mask[k] / 255;
-      }
-    }
-    return (this.coverageCache = total.map(
-      (n, i) => revealed[i] / Math.max(n, 1),
-    ));
+    return this.targetPixels.map((count,i)=>this.removedAmount[i]/(255*Math.max(1,count)));
   }
   assist() {
     let budget = 3500;
     for (let k = 0; k < this.mask.length && budget > 0; k++)
       if (this.targetMap[k] && this.mask[k] < 255) {
-        this.mask[k] = 255;
+        this.removeSoil(k,255);
         budget--;
       }
-    this.dirty = true;
-    this.coverageCache = null;
     this.update();
   }
 }

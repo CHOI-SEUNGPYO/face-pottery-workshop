@@ -3,6 +3,26 @@ import {addSurfaceFeature,refineFeature} from './features';
 import type {UV} from './model';
 
 export const EXAMPLE_LABEL='AI가 게임 도구로 만든 재현 예시';
+/** A small workshop study shown on the welcome table, never used as a player's document. */
+export function createWelcomeStudy(){
+  const study=createSoftDocument();
+  applyForm(study,{height:1.40,width:1.09,radii:[.30,.34,.42,.49,.46,.34,.12]});
+  for(let face=0;face<3;face++){
+    const centre=face/3;
+    for(const [name,offset,height,rx,ry,tilt] of [
+      ['left',-.058,.68,.027,.035,-.012],['right',.057,.69,.030,.030,.011],
+      ['mouth',0,.49,.054,.030+face*.007,0]
+    ] as const){
+      const points:UV[]=Array.from({length:22},(_,i)=>{
+        const a=2*Math.PI*i/22,x=Math.cos(a);
+        const smile=name==='mouth'?.027*x*x:0;
+        return [centre+offset+rx*x,height+ry*Math.sin(a)+tilt*x+smile];
+      });
+      study.features.push({id:`study-${face}-${name}`,kind:'hole',width:.005,points});
+    }
+  }
+  return study;
+}
 /** The same form, opening and refinement operations available to the player.
  * Authored from the supplied three-face photos; not a scan or measured replica.
  * Deliberately keeps the game's clay and its editable seven-point profile.

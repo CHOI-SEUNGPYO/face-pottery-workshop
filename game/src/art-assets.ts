@@ -2,13 +2,14 @@ import * as T from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {asset} from './assets';
 
-export type Surface = 'grayware'|'aged-oak'|'earth'|'plaster'|'linen'|'garden'|'foliage'|'limestone'|'woodland'|'kiln-clay'|'meadow';
+export type Surface = 'grayware'|'aged-oak'|'earth'|'plaster'|'linen'|'garden'|'foliage'|'limestone'|'woodland'|'kiln-clay'|'meadow'|'kiln-valley'|'kiln-yard'|'thatch';
 export const artModels = ['craft-bench','craft-tools','studio-shell','studio-furniture','studio-collection','gallery-shell','gallery-fixtures','gallery-collection','field-tools','conservation-bench','kiln-dressing','kiln-vault','courtyard','siru'] as const;
 export type ArtModel = typeof artModels[number];
-export type ArtGroup = 'studio'|'outdoor'|'gallery';
+export type ArtGroup = 'studio'|'kiln'|'outdoor'|'gallery';
 export const artGroups:Record<ArtGroup,{models:ArtModel[];surfaces:Surface[]}>= {
   studio:{models:['craft-bench','craft-tools','studio-shell','studio-furniture','studio-collection'],surfaces:['grayware','aged-oak','plaster','linen','garden','limestone','earth']},
-  outdoor:{models:['field-tools','conservation-bench','kiln-dressing','kiln-vault','courtyard','siru'],surfaces:['grayware','aged-oak','earth','plaster','linen','limestone','foliage','woodland','kiln-clay','meadow']},
+  kiln:{models:['kiln-dressing','kiln-vault'],surfaces:['grayware','aged-oak','earth','limestone','kiln-clay','kiln-valley','kiln-yard','thatch']},
+  outdoor:{models:['field-tools','conservation-bench','courtyard','siru'],surfaces:['grayware','aged-oak','earth','plaster','linen','limestone','foliage','woodland','meadow']},
   gallery:{models:['gallery-shell','gallery-fixtures','gallery-collection'],surfaces:['grayware','aged-oak','limestone','earth']},
 };
 export class ArtAssets {
@@ -26,7 +27,7 @@ export class ArtAssets {
         const texture=await textures.loadAsync(asset(`materials/${name}-${version}.${name==='foliage'?'webp':'jpg'}`));
         texture.colorSpace=T.SRGBColorSpace;
         texture.wrapS=texture.wrapT=T.RepeatWrapping;
-        if(name==='woodland'){texture.wrapS=T.MirroredRepeatWrapping;texture.wrapT=T.ClampToEdgeWrapping;}
+        if(name==='woodland'||name==='kiln-valley'){texture.wrapS=T.MirroredRepeatWrapping;texture.wrapT=T.ClampToEdgeWrapping;}
         texture.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());
         this.textures.set(name,texture);
       })().catch(error=>{this.textureJobs.delete(name);throw error;});
@@ -45,8 +46,8 @@ export class ArtAssets {
             if(!(material instanceof T.MeshStandardMaterial))continue;
             const surface=material.userData.surface as Surface|undefined;
             if(surface){material.map=this.textures.get(surface)!;if(!['foliage','garden'].includes(surface)){material.bumpMap=material.map;material.bumpScale=['limestone','linen'].includes(surface)?.001:.002;}material.needsUpdate=true;}
-            if(surface==='woodland'||surface==='garden'){
-              o.material=new T.MeshBasicMaterial({map:material.map,color:material.color,side:surface==='woodland'?T.BackSide:T.FrontSide,toneMapped:false,fog:true});
+            if(surface==='woodland'||surface==='garden'||surface==='kiln-valley'){
+              o.material=new T.MeshBasicMaterial({map:material.map,color:material.color,side:surface==='garden'?T.FrontSide:T.BackSide,toneMapped:false,fog:true});
               o.castShadow=o.receiveShadow=false;
             }
           }

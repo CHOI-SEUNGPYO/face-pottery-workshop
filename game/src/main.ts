@@ -545,6 +545,7 @@ function fireDone() {
   audio.effect("success");
   updateUI();
   void persist();
+  void world.prepareScene('excavation').catch(()=>{});
 }
 function startFire() {
   if (fireStart) {

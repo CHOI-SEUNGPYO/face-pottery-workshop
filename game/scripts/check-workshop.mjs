@@ -229,7 +229,9 @@ try{
     await shot(page,'firing-cooling');
     await page.waitForFunction(()=>document.querySelector('#firing-phase')?.textContent==='완성',null,{timeout:90000});
   }else await page.locator('[data-action="next"]').click();
-  await page.locator('[data-action="next"]').click();await layout(page,'excavation',width);
+  await page.locator('[data-action="next"]').click();
+  await page.waitForFunction(()=>document.body.dataset.stage==='excavation'&&document.querySelector('#travel').hidden);
+  await layout(page,'excavation',width);
   console.log(`PASS: ${width} firing phases and pause/resume.`);
   assert.equal(await page.locator('.story-dock').getAttribute('aria-label'),'발굴 이야기');
   await page.locator('.story-teaser').click();

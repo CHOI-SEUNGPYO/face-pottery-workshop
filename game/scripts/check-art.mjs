@@ -58,6 +58,23 @@ for(const dx of [-.36,.03,.36]){
   const floor=new T.Raycaster(new T.Vector3(seat.x+dx,.6,seat.z),new T.Vector3(0,-1,0)).intersectObject(kiln);
   assert.ok(Math.abs(floor[0]?.point.y-seat.y)<.001,'the actual firing floor supports the base of the pot');
 }
+const yardBytes=await readFile(new URL('../asset/runtime/models/kiln-dressing-v3.glb',import.meta.url));
+const {scene:yard}=await new GLTFLoader().parseAsync(Uint8Array.from(yardBytes).buffer,'');
+yard.updateMatrixWorld(true);
+const ground=yard.getObjectByName('Beaten_clay_yard_and_meadow_banks');
+const down=new T.Vector3(0,-1,0);
+for(let angle=0;angle<Math.PI*2;angle+=Math.PI/8){
+  const probe=new T.Raycaster(new T.Vector3(11*Math.cos(angle),3,11*Math.sin(angle)),down);
+  assert.ok(probe.intersectObject(ground).length,'the terrace continues around the full camera orbit');
+}
+const posts=[];
+yard.traverse(o=>{if(o.isMesh&&o.name.startsWith('Round_timber_post'))posts.push(o);});
+assert.equal(posts.length,4);
+for(const post of posts){
+  const b=new T.Box3().setFromObject(post,true),p=b.getCenter(new T.Vector3());
+  const hit=new T.Raycaster(new T.Vector3(p.x,3,p.z),down).intersectObject(ground)[0];
+  assert.ok(hit&&b.min.y<=hit.point.y+.01&&b.min.y>hit.point.y-.15,'a drying shelter post meets the bank');
+}
 const server=await createServer({server:{host:'127.0.0.1',port:0,strictPort:false}});
 const review=process.env.TOGI_REVIEW==='1'||process.env.TOGI_ART_REVIEW==='1';
 const artifactReview=process.env.TOGI_ARTIFACT_REVIEW==='1';
@@ -80,8 +97,9 @@ try{
   await page.setViewportSize({width:1366,height:768});
   if(review||artifactReview||siruReview)await mkdir('asset/review',{recursive:true});
   await page.locator('[data-action="new"]').click();
+  assert.equal(await page.evaluate(()=>window.togi.save.document.features.length),0,'the welcome study stays out of new artwork');
   const before=await page.evaluate(()=>JSON.stringify(window.togi.save.document));
-  for(const stage of ['body','compare','excavation','assembly','firing']){
+  for(const stage of ['body','firing','compare','excavation','assembly']){
     await page.evaluate(stage=>window.togi.go(stage),stage);
     await page.waitForFunction(()=>!window.togi.world.transitioning);
     await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
@@ -238,6 +256,11 @@ try{
       }
     }
     if(stage==='firing'){
+      const surfaces=await page.evaluate(()=>({
+        valley:window.togi.world.art.textures.has('kiln-valley'),
+        dig:window.togi.world.art.models.has('courtyard')
+      }));
+      assert.deepEqual(surfaces,{valley:true,dig:false},'entering the kiln loads its own landscape independently of excavation');
       const samples=await page.evaluate(()=>{
         const w=window.togi.world,root=w.pottery.root,bed=w.firingView.hearth;
         return [0,.08,.38,.68,.95,1].map(progress=>{
@@ -275,7 +298,7 @@ try{
   await page.evaluate(()=>window.togi.world.orbit(540,0));
   const behind=await page.evaluate(()=>{
     const w=window.togi.world;
-    return {shell:w.studioArchitecture.visible,back:w.walls.find(o=>o.name==='Studio_window_wall')?.visible,
+    return {shell:w.studioArchitecture.visible,back:w.walls.studio.find(o=>o.name==='Studio_window_wall')?.visible,
       floor:w.art.model('studio-shell').children.some(o=>o.isMesh&&o.visible),bench:w.art.model('craft-bench').visible};
   });
   assert.equal(behind.back,false,'back wall opens when viewing the pot from behind');
