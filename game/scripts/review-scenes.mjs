@@ -2,7 +2,7 @@
 import {mkdir} from 'node:fs/promises';
 import {createServer} from 'vite';
 import {chromium} from 'playwright';
-const server=await createServer({server:{host:'127.0.0.1',port:0}});
+const server=await createServer({server:{host:'127.0.0.1',port:0,strictPort:false}});
 await server.listen();
 const browser=await chromium.launch({channel:'msedge',headless:true});
 const label=process.env.TOGI_SCENE_LABEL||'scene';

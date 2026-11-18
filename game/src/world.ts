@@ -10,14 +10,15 @@ import {ArtAssets,artGroups,type ArtGroup} from './art-assets';
 import {createArtifactExample,createWelcomeStudy} from './artifact-example';
 import { StrokePreview } from "./stroke-preview";
 import {FaceGuide} from './face-guide';
-import { SoilTerrain, migrateSoilMask } from "./soil";
+import { SoilTerrain, SOIL_FLOOR, migrateSoilMask } from "./soil";
 import { scenes } from "./content";
 import { surfaceFrame } from "./surface-path";
 import { FiringView } from './firing';
 import {museum,museumAsset} from './museum';
 import {photoScene,type PhotoView} from './photo-scene';
 import {exampleScene,type ExampleView} from './example-scene';
-import {outdoorSite,museumRoom,setEnvironmentMaterials} from './environments';
+import {museumRoom} from './environments';
+import {excavationField} from './excavation-field';
 import {galleryCases,seatInCase} from './display-case';
 import {
   clamp,
@@ -105,7 +106,7 @@ export class World {
   private assemblyBench=new T.Group();
   private siruHeight=.70;
   private siruRimRadius=.25;
-  private fieldProps = new T.Group();
+  private pitWall?: T.Mesh;
   private firingView=new FiringView();
   private firingProgress:number|null=null;
   private displayPots=new T.Group();
@@ -249,7 +250,6 @@ export class World {
     const loader = new GLTFLoader();
     const [,stand]=await Promise.all([this.art.load(this.renderer,group),group==='studio'?loader.loadAsync(asset('models/display-stand.glb')):null]);
     if(group==='studio')this.pottery.setSurface(this.art.texture('grayware'));
-    setEnvironmentMaterials(this.art.texture('earth'),this.art.texture('aged-oak'));
     for(const name of artGroups[group].models){
       // Let the loading indicator and existing stage paint between large batches.
       await new Promise(resolve=>setTimeout(resolve,0));
@@ -284,11 +284,14 @@ export class World {
       });
       if(radius>0)this.siruRimRadius=radius;
       this.siru.add(siru);
-      this.fieldProps.add(this.art.model('field-tools'));this.site.add(this.fieldProps);
+      const loam=this.art.texture('sowol-loam');
+      const survey=excavationField(loam);
+      this.pitWall=survey.pitWall;
+      this.site.add(survey.group,this.art.model('field-tools'));
       this.courtyard.add(this.art.model('courtyard'));
       this.assemblyBench.add(this.art.model('conservation-bench'));
-      this.terrain.setSurface(this.art.texture('earth'));
-      this.earth.material.map=this.art.texture('earth');this.earth.material.color.set(0xb7a58d);
+      this.terrain.setSurface(loam);
+      this.earth.material.map=loam;this.earth.material.color.set(0x928576);
       const groundUV=this.earth.geometry.getAttribute('uv');for(let i=0;i<groundUV.count;i++)groundUV.setXY(i,groundUV.getX(i)*2,groundUV.getY(i)*2);
     }
     if(group==='gallery'){
@@ -411,7 +414,7 @@ export class World {
     this.pottery.outline.visible=stage==='body'||stage==='mouth';
     this.firingView.group.visible=stage==='firing';
     this.courtyard.visible=outdoors;this.assemblyBench.visible=stage==='assembly';
-    this.soil.position.x=this.site.position.x=this.earth.position.x=0;
+    this.courtyard.position.x=this.soil.position.x=this.site.position.x=this.earth.position.x=0;
     this.siru.visible = ["excavation", "assembly"].includes(stage);
     this.stand.visible = ["welcome", "inspect"].includes(
       stage,
@@ -467,7 +470,7 @@ export class World {
       sprite.scale.set(size*im.width/im.height,size,1);
       sprite.position.set(stage==='welcome'?1.12:1.8,0,stage==='welcome'?.55:1.3);
     }
-    this.key.intensity = museumStage?2.05:stage === "firing" ? 2.15 : 2.35;
+    this.key.intensity = museumStage||outdoors?2.05:stage === "firing" ? 2.15 : 2.35;
     this.ambient.intensity=museumStage?.85:1.10;
     this.fill.intensity=museumStage?.5:.6;
     this.update();
@@ -507,18 +510,16 @@ export class World {
         };
       });
       this.terrain.configure(this.mask, targets);
-      this.digLevel=this.terrain.surfaceLevel;
-      if(!this.site.userData.ground){
-        this.site.add(outdoorSite(this.digLevel));this.fieldProps.position.y=this.digLevel;
-        this.site.userData.ground=true;this.site.userData.level=this.digLevel;
-      }
-      this.site.position.y=this.digLevel-this.site.userData.level;
+      // Leave a shallow section visible above the fill even before the first brush stroke.
+      this.digLevel=this.terrain.surfaceLevel+.095;
+      this.site.position.y=this.digLevel;
+      if(this.pitWall)this.pitWall.scale.y=this.digLevel-SOIL_FLOOR;
       this.courtyard.position.y=this.assemblyBench.position.y=this.digLevel;
     }
     if(stage==='assembly'){
       const placed=s.assembledRevision===s.document.revision;
       this.pottery.root.rotation.x=this.siru.rotation.x=0;
-      this.site.position.x=this.soil.position.x=this.earth.position.x=-3.8;
+      this.courtyard.position.x=this.site.position.x=this.soil.position.x=this.earth.position.x=-3.8;
       this.siru.position.set(0,this.digLevel+.72,0);
       this.pottery.root.position.set(placed?0:-.83*Math.max(1,this.siru.scale.x),placed?this.assemblyHeight:this.digLevel+.72,placed?0:.15);
     }
@@ -602,9 +603,10 @@ export class World {
     // The trench is viewed from above its rim. A low orbit reveals the underside
     // of the landscape and hides the very surface the player needs to brush.
     const digging=this.stage==='excavation';
-    this.elevation=clamp(this.elevation,digging?45:this.stage==='assembly'?22:3,digging?82:86);
+    if(digging)this.zoom=clamp(this.zoom,.65,1);
+    const digPitch=30+15*T.MathUtils.smoothstep(this.zoom,.65,.91);
+    this.elevation=clamp(this.elevation,digging?digPitch:this.stage==='assembly'?22:3,digging?82:86);
     if(this.inGallery){this.azimuth=clamp(this.azimuth,-32,32);this.elevation=clamp(this.elevation,8,48);}
-    if(digging)this.zoom=clamp(this.zoom,.85,1);
     const width = this.host.clientWidth, height = this.host.clientHeight;
     this.camera.aspect = width / height;
     const area = document
@@ -641,8 +643,13 @@ export class World {
       lifted.translate(offset);
       bounds.union(lifted);
     }
-    // Once found, frame the two artifacts rather than the full excavation pit.
-    if (this.stage === "excavation") bounds.expandByObject(this.soil);
+    if (digging) {
+      bounds.expandByObject(this.soil);
+      // Wide displays can also show the recording edge. Keep the thumb-sized
+      // working area on narrow screens.
+      const margin=T.MathUtils.smoothstep(rect.width,540,850);
+      bounds.min.z-=.95*margin;
+    }
     if(this.stage==='compare'||this.stage==='ending'){
       for(const exhibit of this.referenceArtifact.children)if(exhibit.visible)bounds.expandByObject(exhibit);
       bounds.expandByPoint(new T.Vector3(-1.46,-.50,-.65));

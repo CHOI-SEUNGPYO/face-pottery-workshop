@@ -172,6 +172,22 @@ try{
       }
     }
     if(stage==='excavation'){
+      const field=await page.evaluate(()=>{
+        const w=window.togi.world, postCuts=w.site.getObjectByName('Recorded post settings and drainage cut');
+        const profile=w.site.getObjectByName('Section around the artifact pit');
+        const sky=w.art.texture('sowol-plain'), ground=w.art.texture('sowol-loam');
+        let panorama=false;w.courtyard.traverse(o=>{if(o.isMesh&&o.material.map===sky)panorama=true;});
+        return {panorama,profile:profile.scale.y>w.digLevel,loam:ground===w.terrain.mesh.material.map&&ground===postCuts.material.map};
+      });
+      assert.deepEqual(field,{panorama:true,profile:true,loam:true},'survey traces, layered cut and diggable soil share the reconstructed field');
+      const overview=await page.evaluate(()=>{
+        const w=window.togi.world;
+        w.zoomBy(.65);w.tilt(-90);
+        const result={pitch:w.elevation,above:w.camera.position.y>w.digLevel};
+        w.setView('stage');
+        return result;
+      });
+      assert.deepEqual(overview,{pitch:30,above:true},'zooming out opens an above-ground view across the survey area');
       const documentBefore=await page.evaluate(()=>JSON.stringify(window.togi.save.document));
       for(const viewport of [{width:1366,height:768},{width:740,height:360},{width:390,height:844},{width:768,height:1024}]){
         await page.setViewportSize(viewport);
@@ -257,7 +273,7 @@ try{
     }
     if(stage==='firing'){
       const surfaces=await page.evaluate(()=>({
-        valley:window.togi.world.art.textures.has('kiln-valley'),
+        valley:window.togi.world.art.textures.has('sowol-plain'),
         dig:window.togi.world.art.models.has('courtyard')
       }));
       assert.deepEqual(surfaces,{valley:true,dig:false},'entering the kiln loads its own landscape independently of excavation');

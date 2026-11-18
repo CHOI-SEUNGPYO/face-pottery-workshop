@@ -1,3 +1,14 @@
+// Use the same low hills and floodplain for both Sowol-ri scenes, at a
+// distance that keeps the meadow continuous as the visitor orbits.
+export function addSowolHorizon({T,mesh,material},scene,radius){
+  const height=radius*.86;
+  const backdrop=new T.CylinderGeometry(radius,radius,height,96,1,true);
+  const uv=backdrop.attributes.uv;
+  for(let i=0;i<uv.count;i++)uv.setX(i,uv.getX(i)*2);
+  const paint=material('Cheongtongcheon plain and low hills',0xffffff,'sowol-plain',1);
+  paint.side=T.BackSide;
+  mesh(scene,'View from the Sowol-ri knoll',backdrop,paint,0,.11*radius,0).rotation.y=2.78;
+}
 // Static scenery for the firing stage. The working floor and everything that
 // grows out of it share one height function, including the banks behind it.
 export function buildKilnLandscape({T,group,material,mesh,box,lathe,darkWood,wood},yard){
@@ -7,7 +18,7 @@ export function buildKilnLandscape({T,group,material,mesh,box,lathe,darkWood,woo
   function grade(x,z){
     const r=Math.hypot(x,z),a=Math.atan2(z,x);
     const bank=T.MathUtils.smoothstep(r,4.4,9.2);
-    return -.003+bank*(.63+.25*Math.sin(2*a+.6)+.17*Math.cos(3*a-.5)+.08*Math.sin(.9*x+.6*z));
+    return -.003+bank*(-.35+.64*Math.sin(a+.3)+.24*Math.cos(2*a-.5)+.09*Math.sin(.9*x+.6*z));
   }
   function geometry(vertices,indices,uv,colors){
     const geo=new T.BufferGeometry();
@@ -25,10 +36,7 @@ export function buildKilnLandscape({T,group,material,mesh,box,lathe,darkWood,woo
     else indices.push(here-steps,next,here,here-steps,next-steps,next);
   }
   mesh(yard,'Beaten clay yard and meadow banks',geometry(positions,indices,uv),material('Painted working earth',0xffffff,'kiln-yard',1));
-  // The two ends of each half-circle meet at the same painted woodland edge.
-  const horizon=new T.CylinderGeometry(13.8,13.8,11.3,96,1,true),horizonUV=horizon.attributes.uv;
-  for(let i=0;i<horizonUV.count;i++)horizonUV.setX(i,horizonUV.getX(i)*2);
-  mesh(yard,'Valley panorama',horizon,material('Distant valley',0xffffff,'kiln-valley',1),0,2.3,0).rotation.y=-.68;
+  addSowolHorizon({T,mesh,material},yard,13.8);
 
   function beam(parent,name,start,end,r,mat,top=r){
     const from=new T.Vector3(...start),to=new T.Vector3(...end),delta=to.clone().sub(from);
@@ -97,7 +105,7 @@ export function buildKilnLandscape({T,group,material,mesh,box,lathe,darkWood,woo
     }
     for(let i=1;i<7;i++)rockIndices.push(start+24,start+25+i,start+24+i);
   }
-  for(const [ax,az,bx,bz,bend] of [[-6.4,1.3,-5.35,-4.3,-.55],[-5.35,-4.3,-2.35,-5.65,-.24],[.35,-5.9,5.45,-3.45,-.8],[5.45,-3.45,6.2,.65,-.35]]){
+  for(const [ax,az,bx,bz,bend] of [[-6.4,1.3,-5.35,-4.3,-.55],[4.2,-4.9,5.45,-3.45,-.32],[5.45,-3.45,6.2,.65,-.35]]){
     const dx=bx-ax,dz=bz-az,length=Math.hypot(dx,dz);
     for(let row=0;row<3;row++){
       for(let pos=0;pos<length-.07;){

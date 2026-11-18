@@ -85,12 +85,12 @@ export const scenes: Record<
   excavation: {
     title: "흙 속에 누가 있을까요?",
     eyebrow: "06 · 상상 발굴",
-    instruction: "원 안의 흙을 여러 번 쓸어 보세요. 토기와 시루를 모두 찾으면 다음으로 갈 수 있어요.",
+    instruction: "구덩이 안의 흙을 쓸어 보세요. 토기와 시루를 모두 찾으면 다음으로 갈 수 있어요.",
     character: "압이",
     speech: "조금씩 모습을 드러내네!\n두 곳을 골고루 살펴보자.",
     next: "시루에 얹어 보기",
     tools: [],
-    elevation: 58,
+    elevation: 53,
   },
   assembly: {
     title: "함께 놓으면 어떤 모습일까?",

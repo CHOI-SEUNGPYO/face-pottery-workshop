@@ -189,8 +189,8 @@ export class SoilTerrain {
     if (!this.dirty) return;
     const p = this.mesh.geometry.getAttribute("position") as T.BufferAttribute,
       c = this.mesh.geometry.getAttribute("color") as T.BufferAttribute;
-    const top = new T.Color("#b6a38c"),
-      bottom = new T.Color("#8c7969"),
+    const top = new T.Color("#c3b097"),
+      bottom = new T.Color("#837d74"),
       color = new T.Color();
     // Only vertices whose two-pixel mask interpolation touches a changed
     // sample can move. Neighbouring faces also contribute to their normals.

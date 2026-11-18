@@ -2,7 +2,7 @@
 // individual exhibit clearances are authored separately from removable walls.
 import {buildSiruArtifact} from './siru-artifact.mjs';
 import {buildKiln} from './kiln-art.mjs';
-import {buildKilnLandscape} from './kiln-landscape.mjs';
+import {addSowolHorizon,buildKilnLandscape} from './kiln-landscape.mjs';
 export function buildScenes(c){
   const {T,group,mesh,box,lathe,ring,place,material,pottery,tools,wood,darkWood,plaster,linen,bronze,lamp,clay,darkClay,brush}=c;
   const stone=material('Honed warm limestone',0xe7e4dd,'limestone',.9);
@@ -14,9 +14,6 @@ export function buildScenes(c){
   const shelfWood=material('Pale exhibit shelving',0xc9c2ae,'limestone',.9);
   const glass=material('Clear exhibit glazing',0xc0dedf,null,.16);
   glass.transparent=true;glass.opacity=.045;glass.depthWrite=false;glass.side=T.DoubleSide;
-  const soil=material('Courtyard compacted earth',0xaaa99a,'earth',1);
-  const leaves=material('Natural leaf clusters',0x9ba68c,'foliage',1);leaves.side=T.DoubleSide;leaves.alphaTest=.5;
-  const shrubMat=material('Planting bed',0x52664b,'earth',1);
   const records=[];
   function exhibit(g,index,x,y,z,scale=.7,angle=0){
     const p=place(g,pottery[index][1],x,y,z,scale,angle);p.updateMatrixWorld(true);
@@ -126,87 +123,19 @@ export function buildScenes(c){
   // A low angled reading lectern echoes the labels beside the real gallery cases.
   const lectern=box(fixtures,'Sloped gallery reading desk',.72,.055,.42,dark,-3.7,-.24,-2.65,.008);lectern.rotation.x=.32;
   box(fixtures,'Reading desk pedestal',.20,.54,.25,dark,-3.7,-.59,-2.65);
-  // Closed, planted courtyard rather than trees scattered across an empty plane.
-  const yard=group('Museum archaeology courtyard');
-  const gravel=material('Weathered gray sandstone',0x797e72,'limestone',1);
-  // A high resolution scenic surround uses the full image per quarter turn.
-  // A low resolution spherical skybox enlarged individual leaves across the view.
-  const woodland=material('Painted foothills beyond the meadow',0xffffff,'woodland',1);
-  woodland.side=T.BackSide;
-  const surroundGeometry=new T.CylinderGeometry(24,24,12,128,1,true),surroundUV=surroundGeometry.getAttribute('uv');
-  for(let i=0;i<surroundUV.count;i++)surroundUV.setXY(i,surroundUV.getX(i)*4,.17+surroundUV.getY(i)*.83);
-  mesh(yard,'Continuous woodland beyond the garden',surroundGeometry,woodland,0,5.8,0);
-  const meadow=material('Meadow grasses',0xd4c8a5,'meadow',1);
-  const outerGround=new T.RingGeometry(7.9,24.1,96,10),outerUV=outerGround.attributes.uv,outerPosition=outerGround.attributes.position;
-  for(let i=0;i<outerPosition.count;i++){
-    const x=outerPosition.getX(i),y=outerPosition.getY(i),a=Math.atan2(y,x),distance=(Math.hypot(x,y)-7.9)/16.2;
-    outerPosition.setZ(i,Math.sin(distance*Math.PI)*(.96+.42*Math.sin(4*a)+.28*Math.cos(7*a))+.15*distance);
-    outerUV.setXY(i,x*.46,y*.46);
+  const yard=group('Sowol-ri surveyed knoll');
+  addSowolHorizon(c,yard,22);
+  const meadow=material('Grass beyond the excavation limit',0x9e9b8d,'meadow',1);
+  const apron=new T.RingGeometry(7.6,22.3,96,12);
+  const field=apron.attributes.position,fieldUV=apron.attributes.uv;
+  for(let i=0;i<field.count;i++){
+    const x=field.getX(i),z=-field.getY(i),r=Math.hypot(x,z);
+    const beyond=T.MathUtils.smoothstep(r,7.6,17);
+    field.setZ(i,-.05+beyond*(-.96+.51*z/r+.19*Math.sin(x*.48)*Math.cos(z*.31)));
+    fieldUV.setXY(i,x*.32,z*.32);
   }
-  outerGround.computeVertexNormals();
-  mesh(yard,'Meadow banks beyond the planting borders',outerGround,meadow,0,-.035,0).rotation.x=-Math.PI/2;
-  for(const x of [-4.7,4.7])for(let z=-6;z<=5;z+=.92)box(yard,'Path paving slab',1.55,.055,.88,gravel,x,.018,z,.018);
-  for(let x=-3.9;x<=3.9;x+=.91)box(yard,'Rear cross path',.87,.055,1.2,gravel,x,.018,-3.55,.018);
-  for(const side of [-1,1]){
-    const fence=group('Stone courtyard boundary');yard.add(fence);
-    const mortar=material('Recessed stone wall joints',0x4e5147,'earth',1);
-    // Keep mortar below the top stones: coplanar top faces caused moving
-    // dark patches (depth fighting) when the firing camera moved slightly.
-    box(fence,'Continuous rear stone wall core',14,.54,.28,mortar,0,.27,side>0?-5:7,.02);
-    box(fence,'Continuous side stone wall core',.28,.54,12,mortar,side*7,.27,1,.02);
-    for(let row=0;row<3;row++)for(let j=0;j<25;j++){
-      const p=-6.7+j*.55+(row%2)*.26;
-      const rock=box(fence,'Bonded fieldstone',.53,.21,.40,gravel,p,.105+row*.215,side>0?-5:7,.055);
-      rock.rotation.z=Math.sin(j*2.3+row)*.025;
-    }
-    for(let j=0;j<21;j++)for(let row=0;row<3;row++){
-      const rock=box(fence,'Side fieldstone',.40,.21,.53,gravel,side*7,.105+row*.215,-4.7+j*.55+(row%2)*.26,.055);
-      rock.rotation.x=Math.sin(j*2.3+row)*.025;
-    }
-    box(yard,'Long planted border',2.0,.18,11,shrubMat,side*6,.02,.4,.08);
-  }
-  box(yard,'Rear planting border',12,.18,1.8,shrubMat,0,.02,-6,.08);
-  const clusters=[[-5.8,-4.8,1.1],[5.9,-5.6,1.35],[-6.2,4.3,1.3],[6.2,4.7,1],[-2.6,-6.3,.9],[2.3,-6.5,1.05]];
-  for(const [x,z,s]of clusters){
-    const tree=group('Tree in planting border');tree.position.set(x,.1,z);tree.scale.setScalar(s);tree.userData.forestSector=true;tree.userData.outward=[x/Math.hypot(x,z),0,z/Math.hypot(x,z)];yard.add(tree);
-    const trunk=new T.CatmullRomCurve3([new T.Vector3(0,0,0),new T.Vector3(.08,1.1,.03),new T.Vector3(-.02,2,.05)]);
-    mesh(tree,'Curved trunk',new T.TubeGeometry(trunk,10,.075,8,false),darkWood);
-    for(let j=0;j<7;j++){
-      const a=j*2.4,xx=Math.sin(a)*.6,zz=Math.cos(a)*.6,yy=1.65+(j%3)*.24;
-      const branch=new T.LineCurve3(new T.Vector3(0,1,0),new T.Vector3(xx,yy,zz));mesh(tree,'Branch',new T.TubeGeometry(branch,1,.023,5,false),darkWood);
-      for(let k=0;k<3;k++){const leaf=mesh(tree,'Leaf canopy',new T.PlaneGeometry(1.6,1.5),leaves,xx,yy+.2,zz);leaf.rotation.set(k*.5,a+k,0);}
-    }
-  }
-  // Overlapping woodland layers close the garden boundary in every orbit view.
-  // These are outside the working area, so the kiln and excavation stay legible.
-  const treeTemplates=yard.children.filter(o=>o.name==='Tree in planting border');
-  const forestSectors=Array.from({length:8},(_,i)=>{
-    const sector=group('Woodland sector '+i),a=(i+.5)*Math.PI/4;
-    sector.userData.forestSector=true;sector.userData.outward=[Math.cos(a),0,Math.sin(a)];yard.add(sector);return sector;
-  });
-  for(let band=0;band<1;band++)for(let i=0;i<16;i++){
-    const angle=i/16*Math.PI*2,radius=11+Math.sin(i*2.4)*.65;
-    const tree=treeTemplates[i%treeTemplates.length].clone();tree.name='Woodland beyond the boundary';
-    delete tree.userData.forestSector;
-    const sector=forestSectors[Math.floor(angle/(Math.PI/4))%8];
-    tree.position.set(Math.cos(angle)*radius,0,Math.sin(angle)*radius);
-    tree.scale.setScalar(1.1+(i%4)*.12);tree.rotation.y=i*1.7;sector.add(tree);
-    for(let k=0;k<2;k++){
-      const shrub=mesh(sector,'Woodland undergrowth',new T.PlaneGeometry(2.8,1.5),leaves,tree.position.x,.65,tree.position.z);
-      shrub.rotation.y=angle+k*Math.PI/3;
-    }
-  }
-  // Low planting fills the boundary continuously; the playable centre stays clear.
-  for(let i=0;i<48;i++){
-    const x=i<24?-6:6,z=-4.4+(i%24)*.43;
-    for(let k=0;k<2;k++){const p=mesh(yard,'Border shrub',new T.PlaneGeometry(.85,.75),leaves,x+Math.sin(i*2.4)*.25,.38,z);p.rotation.y=i*1.3+k*1.57;}
-  }
-  // A low continuous understory closes the rear border without another wall
-  // of tall trees. Its silhouette stays beneath the kiln and shelter roofs.
-  for(let i=0;i<26;i++)for(let k=0;k<3;k++){
-    const p=mesh(yard,'Rear understory',new T.PlaneGeometry(1.15,.95),leaves,-6+i*.48,.48,-6+Math.sin(i*2.4)*.25);
-    p.rotation.y=i*.9+k*Math.PI/3;
-  }
+  apron.computeVertexNormals();
+  mesh(yard,'Field margin below the survey terrace',apron,meadow).rotation.x=-Math.PI/2;
   const equipment=group('Organised excavation tools');
   // A photographic scale and open field book mark the recording edge of
   // the trench. Keep all equipment outside the playable soil ellipse.
@@ -224,10 +153,13 @@ export function buildScenes(c){
     const leaf=box(fieldBook,'Notebook pages',.193,.020,.276,scaleBone,sign*.099,.030,0,.003);leaf.rotation.z=-sign*.031;
   }
   for(let i=0;i<5;i++)box(fieldBook,'Pencilled notebook lines',.085+.01*(i%3),.001,.003,scaleInk,.085,.043,-.078+i*.032,0);
-  for(let i=0;i<12;i++){
-    const a=i/12*Math.PI*2,b=(i+1)/12*Math.PI*2,x=Math.cos(a)*2.05,z=Math.sin(a)*1.86;
-    box(equipment,'Survey peg',.035,.22,.035,wood,x,.1,z);
-    const line=new T.LineCurve3(new T.Vector3(x,.18,z),new T.Vector3(Math.cos(b)*2.05,.18,Math.sin(b)*1.86));mesh(equipment,'Survey cord',new T.TubeGeometry(line,1,.003,4,false),linen);
+  // Two recording baselines mark a survey square without fencing in the find.
+  const pins=[[-2.70,1.72],[-2.70,-1.82],[1.55,-1.82],[3.50,-1.82]];
+  for(const [x,z] of pins)box(equipment,'Survey grid stake',.026,.16,.03,wood,x,.068,z,0);
+  for(let i=1;i<pins.length;i++){
+    const [ax,az]=pins[i-1],[bx,bz]=pins[i];
+    const cord=new T.LineCurve3(new T.Vector3(ax,.084,az),new T.Vector3(bx,.084,bz));
+    mesh(equipment,'Recording baseline',new T.TubeGeometry(cord,1,.004,5,false),linen);
   }
   place(equipment,tools.find(t=>t[0]==='sherd-tray')[1],2.35,.045,-.8,1.1,.2);
   const br=place(equipment,brush(),2.10,.07,-.55,1.4,.2);br.rotation.x=Math.PI/2;

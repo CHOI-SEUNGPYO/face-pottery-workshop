@@ -37,6 +37,8 @@ OpenAI 이미지 생성 도구로 제작했다. 아래는 재제작에 사용할
 | meadow-v1 | 들판 앞 언덕에 이어지는 낮은 풀밭. 원경의 색을 참고해 만든 AI 생성 바닥 재질이다. |
 | kiln-clay-v1 | 가마 표면에 쓰는 흙의 색과 질감. 모래 알갱이와 짧은 짚 섬유, 손으로 흙을 문질러 바른 자국을 표현한 AI 생성 재질이다. |
 | kiln-valley-v1 | 가마 너머로 보이는 들과 개울, 겹겹이 이어지는 산등성이를 그린 AI 생성 배경화. |
+| sowol-plain-v1 | 청통천 일대의 넓은 들을 내려다보는 낮은 구릉이라는 2019년 조사 발표를 바탕으로 그린 AI 생성 원경. 물길의 경로와 식생은 체험용 해석이다. [문화재청 조사 발표](https://www.kculture.or.kr/brd/board/399/L/menu/498?bbIdx=11513&brdType=R&recordCnt=10&searchField=&searchText=&thisPage=25) |
+| sowol-loam-v1 | 소월리 조사 전경과 구덩이 사진의 황갈색 흙, 회갈색 침전물, 얕은 긁힘을 참고한 AI 생성 지표 재질. 현장 실측 토층도는 아니다. |
 | kiln-yard-v1 | 흙길과 잿빛 작업 마당이 풀밭으로 이어지는 지면용 AI 생성 원화. |
 | thatch-v1 | 건조막 지붕의 볏짚 이엉을 표현한 AI 생성 재질. 건조막과 축대, 풀은 `kiln-landscape.mjs`에서 입체로 제작한다. |
 | foliage-v1 | Realistic green leafy branch cluster with many individually defined leaves and fine twigs, transparent background, suitable for crossed foliage cards. |

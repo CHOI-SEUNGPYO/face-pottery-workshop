@@ -38,12 +38,12 @@
     {
       "id": "courtyard",
       "file": "courtyard-v3.glb",
-      "bytes": 4221372
+      "bytes": 64456
     },
     {
       "id": "field-tools",
       "file": "field-tools-v3.glb",
-      "bytes": 410184
+      "bytes": 270216
     },
     {
       "id": "conservation-bench",
@@ -53,7 +53,7 @@
     {
       "id": "kiln-dressing",
       "file": "kiln-dressing-v3.glb",
-      "bytes": 1183472
+      "bytes": 1126356
     },
     {
       "id": "kiln-vault",

@@ -16,14 +16,17 @@ SOURCES['stamped-clay'] = '0decb0d8-e493-47ba-b73e-2bbacdbcf1b6'
 SOURCES['limestone'] = 'e55db679-8276-4da3-8e35-a2611e82f505'
 SOURCES['siru-clay'] = '7d2c7ebd-5032-4e35-95d8-53e681102585'
 SOURCES['woodland'] = '462e14b8-b6a4-499c-a3c1-b9a0c214c46b'
+SOURCES['sowol-plain'] = '027316b1-ee6f-4e4f-a394-5f8b538213c3'
+SOURCES['sowol-loam'] = '48522a3b-bf5f-4d87-81c6-e737326e9a99'
 for name, identifier in SOURCES.items():
     original = source / f'{name}-v1.png'
     if not original.exists():
         copy2(GENERATED / f'exec-{identifier}.png', original)
     im = Image.open(original).convert('RGBA' if name == 'foliage' else 'RGB')
-    im.thumbnail((2048,1024) if name=='woodland' else (1536, 1024) if name == 'garden' else (1024, 1024), Image.Resampling.LANCZOS)
+    sizes = {'woodland': (2048,1024), 'garden': (1536,1024), 'sowol-plain': (2048,768), 'sowol-loam': (768,768)}
+    im.thumbnail(sizes.get(name,(1024,1024)), Image.Resampling.LANCZOS)
     destination = runtime / f'{name}-v1.{"webp" if name == "foliage" else "jpg"}'
-    im.save(destination, quality=88, optimize=True)
+    im.save(destination, quality=85 if name.startswith('sowol-') else 88, optimize=True)
     print(name, im.size, destination.stat().st_size)
 
 characters = {'gyeongsani':'87bd0f03-7a35-4de0-886b-b050a466108c','api':'5b286eaf-716b-4dff-902b-95ed5d4bfc3b','doki':'b50a9941-2e77-49e5-a2cb-89de7daeadce'}
