@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {turningEnvelope} from './display-case';
 
 /** A separate portrait scene keeps gallery exhibits out of the saved photo. */
 export interface PhotoView {
@@ -14,14 +15,10 @@ export function photoScene(artwork:T.Object3D,environment:T.Texture|null,directi
   const own=artwork.clone(false);own.name='Player artwork';
   for(const child of artwork.children)if(child.visible)own.add(child.clone(true));
   scene.add(own);
-  let bounds=new T.Box3().setFromObject(own),center=bounds.getCenter(new T.Vector3());
-  own.position.sub(new T.Vector3(center.x,bounds.min.y,center.z));
-  bounds=new T.Box3().setFromObject(own);center=bounds.getCenter(new T.Vector3());
-  const size=bounds.getSize(new T.Vector3());
-  // Fit the enclosure to the whole turning radius, including a broad rim.
-  let radius=0;const point=new T.Vector3();
-  own.traverse(o=>{if(o instanceof T.Mesh){const positions=o.geometry.getAttribute('position');for(let i=0;i<positions.count;i++){point.fromBufferAttribute(positions,i).applyMatrix4(o.matrixWorld);radius=Math.max(radius,Math.hypot(point.x,point.z));}}});
-  const width=Math.max(.72,radius*2+.12),height=size.y+.10,baseHeight=Math.max(.10,Math.min(.16,size.y*.14));
+  const envelope=turningEnvelope(own);
+  own.scale.setScalar(1);
+  own.position.set(0,-envelope.bottom,0);
+  const width=Math.max(.72,envelope.radius*2+.12),height=envelope.height+.10,baseHeight=Math.max(.10,Math.min(.16,envelope.height*.14));
   const fixtures=new T.Group();fixtures.name='Photo room';scene.add(fixtures);
   const enclosure=new T.Group();enclosure.name='Own display case and plinth';fixtures.add(enclosure);
   const add=(geometry:T.BufferGeometry,material:T.Material,x=0,y=0,z=0)=>{
@@ -44,7 +41,7 @@ export function photoScene(artwork:T.Object3D,environment:T.Texture|null,directi
     add(new T.BoxGeometry(.004,.004,width),edge,sign*width/2,height);
   }
   const lid=add(new T.PlaneGeometry(width,width),glass,0,height);lid.rotation.x=-Math.PI/2;lid.renderOrder=3;
-  const framing=new T.Box3().setFromObject(enclosure);center=framing.getCenter(new T.Vector3());
+  const framing=new T.Box3().setFromObject(enclosure),center=framing.getCenter(new T.Vector3());
   // A curved, finely grained gallery wall joins the floor without a hard horizon.
   // It is actual lit geometry, so the case stays grounded as the pot turns.
   const floorY=-baseHeight-.04,back=width*.83,curve=width*.65,span=width*5;

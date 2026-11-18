@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {galleryCases} from './display-case';
 
 const clay = new T.MeshStandardMaterial({color:0x8c8171,roughness:.98});
 const wood = new T.MeshStandardMaterial({color:0x805735,roughness:.9});
@@ -80,16 +81,16 @@ export function museumRoom(){
   const g=new T.Group();
   const glass=new T.MeshStandardMaterial({color:0xd8f2ed,transparent:true,opacity:.035,roughness:.12,metalness:0,side:T.DoubleSide,depthWrite:false});
   const edge=new T.MeshStandardMaterial({color:0xa7beb8,roughness:.3,transparent:true,opacity:.42});
-  for(const [x,label] of [[-.78,'내가 만든 얼굴모양토기'],[.9,'AI 제작 · 유물 재현 예시']] as const){
+  for(const [key,label] of [['own','내가 만든 얼굴모양토기'],['reference','AI 제작 · 유물 재현 예시']] as const){
+    const {x,width,depth,height}=galleryCases[key];
     {
-      const displayCase=new T.Group();displayCase.name=x<0?'own-exhibit-glass':'reference-exhibit-glass';g.add(displayCase);
-      const width=x<0?1.24:1.40,depth=x<0?1.20:1.40;
-      for(const z of [-depth/2,depth/2]){const pane=mesh(displayCase,new T.PlaneGeometry(width,1.85),glass,x,.925,z);pane.castShadow=false;pane.renderOrder=3;}
+      const displayCase=new T.Group();displayCase.name=key+'-exhibit-glass';g.add(displayCase);
+      for(const z of [-depth/2,depth/2]){const pane=mesh(displayCase,new T.PlaneGeometry(width,height),glass,x,height/2,z);pane.castShadow=false;pane.renderOrder=3;}
       for(const side of [-1,1]){
-        const pane=mesh(displayCase,new T.PlaneGeometry(depth,1.85),glass,x+side*width/2,.925,0);pane.rotation.y=Math.PI/2;pane.castShadow=false;pane.renderOrder=3;
-        for(const z of [-depth/2,depth/2]){const corner=mesh(displayCase,new T.BoxGeometry(.006,1.85,.006),edge,x+side*width/2,.925,z);corner.castShadow=false;}
+        const pane=mesh(displayCase,new T.PlaneGeometry(depth,height),glass,x+side*width/2,height/2,0);pane.rotation.y=Math.PI/2;pane.castShadow=false;pane.renderOrder=3;
+        for(const z of [-depth/2,depth/2]){const corner=mesh(displayCase,new T.BoxGeometry(.006,height,.006),edge,x+side*width/2,height/2,z);corner.castShadow=false;}
       }
-      const lid=mesh(displayCase,new T.PlaneGeometry(width,depth),glass,x,1.85,0);lid.rotation.x=-Math.PI/2;lid.castShadow=false;
+      const lid=mesh(displayCase,new T.PlaneGeometry(width,depth),glass,x,height,0);lid.rotation.x=-Math.PI/2;lid.castShadow=false;
     }
     const labelMesh=mesh(g,new T.PlaneGeometry(.68,.2),plaque(label),x,-.15,.68);labelMesh.rotation.x=-.22;labelMesh.castShadow=false;
   }

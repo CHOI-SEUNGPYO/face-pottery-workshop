@@ -3,6 +3,7 @@ import {mkdir,writeFile} from 'node:fs/promises';
 import {createServer} from 'vite';
 import {chromium} from 'playwright';
 import {checkMuseumEnding} from './museum-checks.mjs';
+import {checkExhibitFit} from './check-exhibit-fit.mjs';
 
 // Isolated origins and fresh contexts never read the player's actual artwork.
 // Dev-only access supplies fixture state and projects targets; gestures use real pointer events.
@@ -293,6 +294,7 @@ try{
    const ownBefore=await page.evaluate(()=>window.togi.world.pottery.root.rotation.y),ownTarget=await project(page,[-.78,.7,.3]);
    await drag(page,ownTarget,{x:ownTarget.x-45,y:ownTarget.y});
    assert.ok(await page.evaluate(()=>window.togi.world.pottery.root.rotation.y)<ownBefore-.1,'own artwork remains rotatable on the ending screen');
+   await checkExhibitFit(page);
    assert.deepEqual(errors,[]);
    console.log(`PASS: ${viewport.width} complete journey and preserved artwork.`);
   }catch(error){await mkdir('asset/review',{recursive:true});await page.screenshot({path:`asset/review/journey-${viewport.width}-failure.png`});throw error;}

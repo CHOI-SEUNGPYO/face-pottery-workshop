@@ -7,11 +7,13 @@ import {join} from 'node:path';
 import {chromium} from 'playwright';
 import {stages} from '../content/schema.mjs';
 import {checkMuseumWelcome} from './museum-checks.mjs';
+import {checkTextBounds} from './check-text-bounds.mjs';
 const review=process.env.TOGI_REVIEW==='1',processes=[];
 let browser,testRoot,activePage;
 async function serve(file,env){const process=spawn(globalThis.process.execPath,[file],{env:{...globalThis.process.env,...env},windowsHide:true,stdio:['ignore','pipe','pipe']});processes.push(process);const output=await Promise.race([once(process.stdout,'data').then(([chunk])=>String(chunk)),once(process,'exit').then(()=>{throw Error('Test server exited');})]);const url=output.match(/http:\/\/127\.0\.0\.1:\d+/)?.[0];assert.ok(url);return url;}
 async function shot(page,name){if(review||(process.env.TOGI_FIRING_REVIEW==='1'&&name.startsWith('firing-'))){await mkdir('asset/review',{recursive:true});await page.screenshot({path:`asset/review/${name}.png`});}}
 async function photoLayout(page){
+ await checkTextBounds(page,'#dialog');
  const problems=await page.evaluate(()=>{
    const errors=[],dialog=document.querySelector('#dialog');
    if(dialog.scrollWidth>dialog.clientWidth+1)errors.push('photo editor overflows horizontally');
@@ -70,9 +72,11 @@ async function layout(page,stage,width){
  });
  if(problems.length){await mkdir('asset/review',{recursive:true});await page.screenshot({path:`asset/review/layout-${width}-${stage}-failure.png`});}
  assert.deepEqual(problems,[],`${width} ${stage} layout`);
+ await checkTextBounds(page,'#hud');
  assert.ok(await page.locator('.ai-mark').isVisible(),`${stage} keeps the AI notice visible`);
 }
 async function storyLayout(page){
+ await checkTextBounds(page,'#dialog');
  const footer=page.locator('.story-controls'),album=page.locator('.story-controls [data-action="collection"]');
  const initial=await album.boundingBox();
  assert.ok(initial&&initial.y>=0&&initial.y+initial.height<=page.viewportSize().height,'photo album remains on screen');
@@ -125,6 +129,7 @@ async function welcomeDisclosure(page,viewport){
   await page.screenshot({path:`asset/review/ai-welcome-${viewport.width}.png`});
  }
  assert.deepEqual(problems,[],`${viewport.width} × ${viewport.height} welcome disclosure layout`);
+ await checkTextBounds(page,'#hud');
  assert.match(await page.locator('.ai-notice').textContent(),/AI\(인공지능\)/);
  const link=page.locator('.welcome-foot .museum-home-link');
  assert.equal(await link.getAttribute('href'),'https://www.gbgs.go.kr/museum/main.do');
@@ -181,6 +186,15 @@ try{
      await page.locator('[data-action="close"]').click();
    }
    if(width===1366){
+     if(stage==='faces'){
+       for(const tool of ['refine','pierce','erase','carve']){
+         await page.locator(`button[data-tool="${tool}"]`).click();
+         await checkTextBounds(page,'#hud');
+       }
+       await page.locator('[data-action="draw-line"]').click();
+       await checkTextBounds(page,'#hud');
+       await page.locator('[data-action="draw-opening"]').click();
+     }
      for(const viewport of [{width:1920,height:1080},{width:844,height:390},{width:390,height:844},{width:390,height:696},{width:320,height:568},{width:740,height:360},{width:1024,height:768},{width:768,height:1024},{width:1180,height:820}]){
        await page.setViewportSize(viewport);await layout(page,stage,viewport.width);
        if(stage==='faces'&&await page.locator('.drawing-actions summary').isVisible()){

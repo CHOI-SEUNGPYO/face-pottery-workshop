@@ -8,7 +8,7 @@
 .partner-marks.compact .huss-mark{width:64px;height:46px}
 .partner-marks.compact .museum-mark{width:85px;height:55px}
 
-.ending-links{display:grid;gap:10px}.ending-links button{width:100%;font-size:13px}
+.ending-links{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}.ending-links button{width:100%;min-width:0;font-size:13px}
 .kiln-help{pointer-events:auto;min-height:44px;margin-top:12px;width:100%;padding:8px 10px;background:#e8dbc0;border-radius:10px;font-size:11px;line-height:1.5}
 .kiln-guide>p,.kiln-guide section p{font-size:14px;line-height:1.8}
 .kiln-flow{display:flex;align-items:center;gap:12px;margin:26px 0}
@@ -70,6 +70,8 @@ body dialog:has(.museum-album,.museum-credits,.museum-ending) .modal-close{right
 .museum-ending>.museum-visit{max-width:640px;margin:0 auto 22px}
 
 @media(max-width:1099px),(max-height:599px){
+ .ending-links button{padding:7px 5px;gap:5px;line-height:1.4}
+ .ending-links button svg{width:18px;height:18px}
  .partner-marks.compact{margin-bottom:10px;gap:12px}.partner-marks.compact .huss-mark{width:45px;height:32px}.partner-marks.compact .museum-mark{width:65px;height:42px}.partner-marks.compact>span{height:26px}
 
  .museum-credits,.museum-ending{padding:28px}.museum-credits h2,.museum-ending h2{font-size:28px}

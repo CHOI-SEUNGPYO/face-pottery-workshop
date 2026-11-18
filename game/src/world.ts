@@ -18,6 +18,7 @@ import {museum,museumAsset} from './museum';
 import {photoScene,type PhotoView} from './photo-scene';
 import {exampleScene,type ExampleView} from './example-scene';
 import {outdoorSite,museumRoom,setEnvironmentMaterials} from './environments';
+import {galleryCases,seatInCase} from './display-case';
 import {
   clamp,
   COLS,
@@ -297,7 +298,6 @@ export class World {
       galleryDetails.traverse(o=>{if(o.userData.wallFixture)this.wallFixtures.gallery.push(o);});
       this.museumRoom.add(this.galleryArchitecture,this.art.model('gallery-fixtures'),this.galleryPots,galleryDetails);
       this.referenceArtifact.name='AI example made with game tools';
-      this.referenceArtifact.position.set(.9,0,0);
     }
     if(group==='studio'){
       batchStatic(stand!.scene);this.stand.add(stand!.scene);
@@ -358,6 +358,7 @@ export class World {
     this.pottery.update(welcome?(this.welcomeStudy??=createWelcomeStudy()):save.document,features);
     this.pottery.appearance(welcome||save.firedRevision===save.document.revision?1:0);
     this.pottery.root.rotation.y=welcome?-.17:save.rotation;
+    if(this.inGallery)seatInCase(this.pottery.root,galleryCases.own);
     this.refresh(true);
   }
   get transitioning() {
@@ -399,7 +400,6 @@ export class World {
     this.terrain.cursor.visible = false;
     const s = this.getSave();
     const outdoors=stage==='excavation'||stage==='assembly',museumStage=stage==='compare'||stage==='ending';
-    if(museumStage)this.showReferenceExample();
     this.workshop.visible = !outdoors&&!museumStage&&stage!=='firing';
     this.exhibits.visible=this.workshop.visible;
     this.displayPots.visible=this.workshop.visible&&this.exhibits.children.length===0;
@@ -407,6 +407,7 @@ export class World {
     this.earth.visible = outdoors;
     this.soil.visible = outdoors;
     this.site.visible=outdoors;this.museumRoom.visible=museumStage;this.referenceArtifact.visible=museumStage;
+    if(museumStage)this.showReferenceExample();
     this.pottery.outline.visible=stage==='body'||stage==='mouth';
     this.firingView.group.visible=stage==='firing';
     this.courtyard.visible=outdoors;this.assemblyBench.visible=stage==='assembly';
@@ -458,7 +459,6 @@ export class World {
       this.pottery.root.position.set(-.58,.13,.47);
       this.siru.position.set(.62,.1,.3);
     }
-    if(museumStage)this.pottery.root.position.set(-.78,0,0);
     // Guides take turns in the physical scene; the three-carrier travel animation is separate.
     for (const [name, sprite] of this.sprites) {
       sprite.material.depthTest=true;
@@ -567,6 +567,7 @@ export class World {
       this.gameExample=new PotteryView();this.gameExample.update(createArtifactExample());
       this.gameExample.appearance(1);this.gameExample.root.name='AI example made with game tools';
       this.referenceArtifact.add(this.gameExample.root);
+      seatInCase(this.referenceArtifact,galleryCases.reference);
     }
     this.refresh(true);
   }

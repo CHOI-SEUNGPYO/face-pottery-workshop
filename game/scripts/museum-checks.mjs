@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {mkdir} from 'node:fs/promises';
+import {checkTextBounds} from './check-text-bounds.mjs';
 
 async function imagesLoaded(page,selector){
  await page.locator(selector).evaluateAll(images=>Promise.all(images.map(image=>image.decode())));
@@ -10,6 +11,7 @@ async function review(page,name){
  await mkdir('asset/review',{recursive:true});await page.screenshot({path:`asset/review/museum-${name}.png`});
 }
 async function dialogBounds(page,controls=[]){
+ await checkTextBounds(page,'#dialog');
  const problems=await page.evaluate(selectors=>{
   const errors=[];
   for(const selector of ['#dialog','.modal-close',...selectors]){

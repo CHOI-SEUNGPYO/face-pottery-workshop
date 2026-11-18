@@ -86,7 +86,8 @@ body .photo-editor canvas{width:min(100%,calc((100dvh - 230px) * 16 / 9));aspect
  .photo-editor .sticker-picker img{height:26px;width:18px}
  .photo-editor .sticker-controls{margin-top:5px;padding-top:4px}
  .photo-editor .sticker-controls label{font-size:10px}
- .photo-editor .photo-actions{padding-top:6px;gap:4px}
- .photo-editor .photo-actions button{min-width:0;padding:8px 7px;flex:1;font-size:11px;white-space:nowrap}
+ .photo-editor .photo-actions{display:grid;grid-template-columns:1fr .8fr 1.35fr;padding-top:6px;gap:4px}
+ .photo-editor .photo-actions button{min-width:0;width:100%;padding:8px 4px;gap:4px;margin:0;font-size:11px}
+ .photo-editor .photo-actions svg{width:16px;height:16px}
  .photo-editor .photo-status{font-size:9px;line-height:1.4}
 }

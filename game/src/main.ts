@@ -280,9 +280,11 @@ function updateUI() {
     n = order.indexOf(stage),
     isEdit = ["body", "mouth", "faces"].includes(stage),
     fired = save.firedRevision === save.document.revision;
-  const drawingLabel=tool==='carve'?(carveMode!=='line'?'눈·입 · 구멍':'눈·입 · 선'):toolLabels[tool];
-  const drawingInstruction=carveMode==='opening'?'모양을 그려 닫고, 다듬기로 테두리를 정리해요.':'선을 그어 눈썹이나 입을 새겨요.';
-  const instruction=stage==='faces'?(tool==='carve'?drawingInstruction:tool==='refine'?'구멍 안쪽이나 테두리를 문질러 매끈하게 다듬어요.':toolHelp[tool].instruction):stage==='assembly' && save.assembledRevision===save.document.revision ? '두 유물을 함께 놓았어요. 이제 전시실에서 비교해 보세요.' : stage==='excavation' && digComplete ? '토기와 시루를 모두 찾았어요. 두 유물을 함께 놓아 볼까요?' : c.instruction;
+  const drawingLabel=tool==='carve'?(carveMode==='opening'?'눈·입 뚫기':'선 새기기'):toolLabels[tool];
+  const drawingInstruction = carveMode === 'opening'
+    ? '톡 누르거나 모양을 그려 구멍을 뚫어 보세요.'
+    : '선을 그어 눈썹이나 입을 새겨 보세요.';
+  const instruction=stage==='faces'?(tool==='carve'?drawingInstruction:toolHelp[tool].instruction):stage==='assembly' && save.assembledRevision===save.document.revision ? '두 유물을 함께 놓았어요. 이제 전시실에서 비교해 보세요.' : stage==='excavation' && digComplete ? '토기와 시루를 모두 찾았어요. 두 유물을 함께 놓아 볼까요?' : c.instruction;
   document.body.dataset.stage = stage;
   host.dataset.tool = tool;
   world.renderer.domElement.setAttribute(
@@ -331,7 +333,7 @@ function updateUI() {
   if (stage === "assembly")
     extras = save.assembledRevision === save.document.revision ? '' : `<div class="find-event"><strong>흙 속에서 만난 두 유물</strong>${button("place", "시루에 얹기", "place", "secondary")}</div>`;
   if (stage === "ending")
-    extras = `<div class="ending-links">${button("ending-credits", "유물 사진·마무리", "story", "secondary")}${button("photo", "사진 남기기 · 선택", "photo", "secondary optional-photo")}</div>`;
+    extras = `<div class="ending-links">${button("ending-credits", "유물 사진·마무리", "story", "secondary")}${button("photo", "사진 남기기", "photo", "secondary optional-photo")}</div>`;
   hud.innerHTML =
     header +
     `<div class="work-area" aria-hidden="true"></div><div class="scene-info"><section class="scene-heading"><p class="eyebrow"><span class="stage-count">${String(n).padStart(2, "0")} / ${order.length-1}</span>${c.eyebrow.replace(/^\d+ · /, "")}</p><h1>${c.title}</h1><p class="scene-instruction">${instruction}</p></section>
@@ -343,7 +345,7 @@ function updateUI() {
     ${['body','mouth','faces'].includes(stage)?`<div class="turn-demonstration" aria-hidden="true" hidden><i></i><svg viewBox="0 0 140 36"><path d="M12 22 Q70 -5 128 22 M115 9 L128 22 L110 25"/></svg><span>빈 곳을 끌어 돌려요</span></div>`:''}
     ${storyCard(stage)}
     <footer><div class="left-actions">${button("previous", "이전", "previous", "round icon-only")}${isEdit ? button("undo", "되돌리기", "undo", "round icon-only", !history.undoStack.length) + button("redo", "다시 실행", "redo", "round icon-only", !history.redoStack.length) : button("home", "처음 화면", "home", "round icon-only")}</div>
-    ${stage==='faces'?actionbar(drawingLabel,`<div class="tools" role="toolbar" aria-label="작업 도구">${c.tools.map((t) => `<button data-tool="${t}" class="tool ${tool === t ? "selected" : ""}" aria-pressed="${tool === t}" aria-label="${toolLabels[t]}">${icon(t)}<span>${t==='refine'?'구멍 다듬기':toolLabels[t]}</span></button>`).join("")}</div>${toolGuide(tool,carveMode,lineWidth)}`,'drawing-actions'):''}
+    ${stage==='faces'?actionbar(drawingLabel,`<div class="tools" role="toolbar" aria-label="작업 도구">${c.tools.map((t) => `<button data-tool="${t}" class="tool ${tool === t ? "selected" : ""}" aria-pressed="${tool === t}" aria-label="${toolLabels[t]}">${icon(t)}<span>${toolLabels[t]}</span></button>`).join("")}</div>${toolGuide(tool,carveMode,lineWidth)}`,'drawing-actions'):''}
     ${stage==='ending'?button('finish-home','완료하고 처음으로','home','primary next-button'):button("next", primaryLabel, "next", "primary next-button")}</footer>`;
   arrangeHUD();
   const menu = hud.querySelector<HTMLDetailsElement>('.actionbar');
