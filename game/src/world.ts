@@ -13,7 +13,7 @@ import {FaceGuide} from './face-guide';
 import { SoilTerrain, migrateSoilMask } from "./soil";
 import { scenes } from "./content";
 import { surfaceFrame } from "./surface-path";
-import { FiringView, firingFrame } from './firing';
+import { FiringView } from './firing';
 import {museum,museumAsset} from './museum';
 import {photoScene,type PhotoView} from './photo-scene';
 import {exampleScene,type ExampleView} from './example-scene';
@@ -37,7 +37,7 @@ const stageYaw: Record<SceneId, number> = {
   mouth: 18,
   faces: 0,
   inspect: -26,
-  firing: 32,
+  firing: 43,
   excavation: 0,
   assembly: 22,
   compare: -12,
@@ -441,6 +441,7 @@ export class World {
       0,
     );
     this.pottery.root.rotation.x = stage === "excavation" ? -Math.PI / 2 : 0;
+    this.pottery.root.scale.setScalar(1);
     if (stage === "excavation")
       this.pottery.root.position.set(-0.58, 0.13, 0.47);
     this.siru.position.set(
@@ -462,7 +463,6 @@ export class World {
       this.siru.position.set(.62,.1,.3);
     }
     if(museumStage)this.pottery.root.position.set(-.78,0,0);
-    if(stage==='firing')this.pottery.root.position.set(-1.95,.12,1.65);
     // Guides take turns in the physical scene; the three-carrier travel animation is separate.
     for (const [name, sprite] of this.sprites) {
       sprite.material.depthTest=true;
@@ -475,7 +475,18 @@ export class World {
     this.ambient.intensity=museumStage?.85:1.10;
     this.fill.intensity=museumStage?.5:.6;
     this.update();
-    if(stage==='firing')this.setFiringProgress(null);
+    if(stage==='firing'){
+      const bounds=this.pottery.body.geometry.boundingBox!;
+      // Fit even a very broad or tall saved piece underneath the arch. Only
+      // its display scale changes, and its actual lowest point sits on clay.
+      const diameter=2*Math.max(Math.abs(bounds.min.x),Math.abs(bounds.max.x),Math.abs(bounds.min.z),Math.abs(bounds.max.z));
+      const scale=Math.min(1,1.46/(bounds.max.y-bounds.min.y),1.32/diameter);
+      this.pottery.root.scale.setScalar(scale);
+      this.pottery.root.position.copy(this.firingView.hearth);
+      this.pottery.root.position.y-=scale*bounds.min.y;
+      this.firingView.seatFoot(scale*this.potFootRadius);
+      this.setFiringProgress(null);
+    }
     if (outdoors) {
       if (!s.excavationLayout) {
         s.excavationMask = migrateSoilMask(s.excavationMask);
@@ -520,7 +531,6 @@ export class World {
     this.scene.backgroundIntensity=.8;
     this.scene.fog=outdoors||stage==='firing'?new T.Fog(color,18,65):new T.Fog(color,30,60);
     this.scene.environmentIntensity=museumStage?.55:.65;
-    if(stage==='firing')this.firingView.update(0,this.reduced);
     this.compose(instant);
   }
   reframe() {
@@ -641,7 +651,7 @@ export class World {
       bounds.expandByPoint(new T.Vector3(-1.46,-.50,-.65));
       bounds.expandByPoint(new T.Vector3(1.58,1.88,.65));
     }
-    if(this.stage==='firing')bounds.set(new T.Vector3(-2.65,-.12,-1.9),new T.Vector3(1.4,2.7,2.3));
+    if(this.stage==='firing')bounds.set(new T.Vector3(-1.28,0,-1.78),new T.Vector3(1.42,2.35,1.54));
     if(this.stage==='welcome'){bounds.expandByPoint(new T.Vector3(-1.15,-.55,-.3));bounds.expandByPoint(new T.Vector3(1.65,.4,.85));}
     if (this.stage==='welcome')
       for (const sprite of this.sprites.values()) {
@@ -882,29 +892,24 @@ export class World {
   coverage() {
     return this.terrain.coverage();
   }
+  firemouthAt(x:number,y:number){return this.firingView.hitsFiremouth(this.pointer(x,y).ray);}
   setFiringProgress(progress:number|null){
-    const previous=this.firingProgress===null?0:firingFrame(this.firingProgress).placement;
     this.firingProgress=progress;
-    const frame=firingFrame(progress??0),p=frame.placement;
-    if(this.stage==='firing'){
-      this.firingView.group.visible=true;
-      this.scene.environmentIntensity=.8-.4*frame.heat;this.key.intensity=2.4-1.3*frame.heat;
-      this.pottery.root.position.set(-1.95*(1-p),.12-.05*p+Math.sin(p*Math.PI)*.13,1.65-1.85*p+Math.sin(p*Math.PI)*.55);
-      // Anchor even older, off-origin saved shapes to the same physical support.
-      const bottom=this.pottery.body.geometry.boundingBox?.min.y??0;
-      this.pottery.root.position.y-=Math.min(0,bottom);
-      this.firingView.update(progress??0,this.reduced,progress!==null);
-      if(progress!==null)this.pottery.appearance(progress);
-    }
-    this.refresh(previous!==p||progress===null);
+    if(this.stage!=='firing')return;
+    const save=this.getSave(),fired=save.firedRevision===save.document.revision;
+    const wasClosed=this.firingView.shellVisible;
+    this.firingView.update(progress??(fired?1:0),this.reduced);
+    if(progress!==null)this.pottery.appearance(progress);
+    this.refresh(wasClosed!==this.firingView.shellVisible||progress===null);
   }
-  private get fittedSiruScale(){
+  private get potFootRadius(){
     const points=this.getSave().document.outerXYZ;
     let radius=0;
     // Match the support to the authored bottom ring, not the wide shoulders.
     for(let i=0;i<COLS;i++)radius=Math.max(radius,Math.hypot(points[i*3],points[i*3+2]));
-    return clamp(radius/this.siruRimRadius*1.04,.25,3);
+    return radius;
   }
+  private get fittedSiruScale(){return clamp(this.potFootRadius/this.siruRimRadius*1.04,.25,3);}
   get assemblyHeight(){return this.digLevel+.72+this.siruHeight*this.fittedSiruScale;}
   async placeOnSiru(){
     const from=this.pottery.root.position.clone(),to=new T.Vector3(0,this.assemblyHeight,0);

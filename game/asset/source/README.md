@@ -4,7 +4,7 @@
 
 ## 원본과 실행 파일
 
-- `materials/`: 생성한 PNG 원본 11개. 회색 토기, 참나무, 흙, 회벽, 천, 정원, 나뭇잎, 찍은 무늬 토기, 석재, 시루 표면, 숲 배경.
+- `materials/`: 토기·참나무·흙·회벽·천·석재 등의 재질과 정원·들판 배경의 PNG 원본. 이전 버전도 함께 보관한다.
 - `characters/`: 원래 경산이·독이·압이의 색, 선, 얼굴과 비율을 참고해 입체감과 명암을 더한 PNG 3개. 원본 캐릭터 파일은 그대로 보관한다. 새 파일은 한 자세의 이미지이며, 새 3D 리깅이나 동작 애니메이션이 아니다.
 - `characters/party-back-volume-v2.png`: 이전 가마 장면용 세 캐릭터 뒷모습 원본. 현재는 안내 캐릭터를 장면별로 분리했으며, 세 명이 함께 운반하는 이동용 아틀라스는 유지한다.
 - `model-manifest.json`: GLB 28개의 파일 크기와 면 수. 토기 8개·도구 10개·이를 배치한 공간 및 주변 요소 10개다. 공간 파일에는 같은 소품이 재사용되므로 서로 다른 28종의 유물을 만들었다는 의미는 아니다.
@@ -32,6 +32,10 @@ OpenAI 이미지 생성 도구로 제작했다. 아래는 재제작에 사용할
 | plaster-v1 | Seamless warm ivory lime plaster, subtle trowel texture, neutral flat light, no architecture. |
 | linen-v1 | Seamless unbleached flax linen weave, small natural fiber irregularity, flat material sample, no folds or cast shadows. |
 | garden-v1 | Photographic Korean museum courtyard beyond a workshop window, stone boundary wall, lush layered trees and grasses, natural daylight, no people, text or signage. |
+| garden-v2 | 공방 창밖을 위해 새로 그린 가을 마당. 감나무 아래 낮은 돌담, 연한 산등성이와 밝은 하늘을 과슈 질감으로 표현한 AI 생성 배경이다. |
+| woodland-v2 | 야외 장면의 원경. 가을 들판과 여러 겹의 낮은 산이 이어지는 AI 생성 파노라마다. |
+| meadow-v1 | 들판 앞 언덕에 이어지는 낮은 풀밭. 원경의 색을 참고해 만든 AI 생성 바닥 재질이다. |
+| kiln-clay-v1 | 가마 표면에 쓰는 흙의 색과 질감. 모래 알갱이와 짧은 짚 섬유, 손으로 흙을 문질러 바른 자국을 표현한 AI 생성 재질이다. |
 | foliage-v1 | Realistic green leafy branch cluster with many individually defined leaves and fine twigs, transparent background, suitable for crossed foliage cards. |
 | stamped-clay-v1 | Use the supplied pottery surface detail as reference: dense diagonal small oval impressions on dark charcoal gray fired clay, tileable material swatch, no eyes, openings or pot silhouette. |
 | limestone-v1 | Seamless warm gray limestone, fine matte grain, subtle mineral variation, diffuse lighting, no scene or shadows. |

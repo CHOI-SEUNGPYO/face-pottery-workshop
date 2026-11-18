@@ -3,7 +3,7 @@
     {
       "id": "studio-shell",
       "file": "studio-shell-v3.glb",
-      "bytes": 241600
+      "bytes": 298000
     },
     {
       "id": "studio-furniture",
@@ -38,7 +38,7 @@
     {
       "id": "courtyard",
       "file": "courtyard-v3.glb",
-      "bytes": 4182632
+      "bytes": 4221372
     },
     {
       "id": "field-tools",
@@ -53,12 +53,12 @@
     {
       "id": "kiln-dressing",
       "file": "kiln-dressing-v3.glb",
-      "bytes": 613716
+      "bytes": 641016
     },
     {
       "id": "kiln-vault",
       "file": "kiln-vault-v3.glb",
-      "bytes": 650564
+      "bytes": 769004
     },
     {
       "id": "siru",

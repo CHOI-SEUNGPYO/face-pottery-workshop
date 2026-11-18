@@ -3,6 +3,7 @@ import {mkdir,readFile,writeFile} from 'node:fs/promises';
 import {createServer} from 'vite';
 import {chromium} from 'playwright';
 import * as T from 'three';
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {buildFaceArtifact} from './face-artifact.mjs';
 import {buildSiruArtifact} from './siru-artifact.mjs';
 // Probe the actual geometry, not material colour: every face has open eyes,
@@ -39,6 +40,24 @@ const chipStart=new T.Vector3(Math.sin(chipU)*.7,chipV*.88,Math.cos(chipU)*.7);
 const chipHits=new T.Raycaster(chipStart,new T.Vector3(-Math.sin(chipU),0,-Math.cos(chipU))).intersectObject(steamer,true);
 assert.ok(!chipHits.length||chipHits[0].distance>.75,'the documented missing sherd pierces both walls');
 steamer.traverse(o=>{if(o.isMesh){o.geometry.dispose();o.material.dispose();}});
+const kilnBytes=await readFile(new URL('../asset/runtime/models/kiln-vault-v3.glb',import.meta.url));
+const {scene:kiln}=await new GLTFLoader().parseAsync(Uint8Array.from(kilnBytes).buffer,'');
+kiln.updateMatrixWorld(true);
+for(const side of [-1,1])for(const z of [-1.65,-1.3,-.55,.45,1.14]){
+  const hits=new T.Raycaster(new T.Vector3(side*2,.012,z),new T.Vector3(-side,0,0)).intersectObject(kiln);
+  assert.ok(hits[0]&&hits[0].distance<1,`kiln wall meets grade at side ${side}, z=${z}`);
+}
+for(const x of [-.4,0,.4]){
+  const rearHits=new T.Raycaster(new T.Vector3(x,.014,-2.45),new T.Vector3(0,0,1)).intersectObject(kiln);
+  assert.ok(rearHits[0]?.distance<.5,'rear wall meets the ground across its width');
+}
+const mouthHits=new T.Raycaster(new T.Vector3(0,.32,2),new T.Vector3(0,0,-1)).intersectObject(kiln);
+assert.ok(mouthHits[0]?.distance>2,'the open firemouth leads into the chamber');
+const seat=kiln.getObjectByName('Earthen_kiln').userData.hearth;
+for(const dx of [-.36,.03,.36]){
+  const floor=new T.Raycaster(new T.Vector3(seat.x+dx,.6,seat.z),new T.Vector3(0,-1,0)).intersectObject(kiln);
+  assert.ok(Math.abs(floor[0]?.point.y-seat.y)<.001,'the actual firing floor supports the base of the pot');
+}
 const server=await createServer({server:{host:'127.0.0.1',port:0,strictPort:false}});
 const review=process.env.TOGI_REVIEW==='1'||process.env.TOGI_ART_REVIEW==='1';
 const artifactReview=process.env.TOGI_ARTIFACT_REVIEW==='1';
@@ -219,22 +238,22 @@ try{
       }
     }
     if(stage==='firing'){
-      const motion=await page.evaluate(()=>{
-        const w=window.togi.world,samples=[];
-        for(let i=0;i<=1000;i++){w.setFiringProgress(i/1000);samples.push([...w.pottery.root.position]);}
-        return samples;
+      const samples=await page.evaluate(()=>{
+        const w=window.togi.world,root=w.pottery.root,bed=w.firingView.hearth;
+        return [0,.08,.38,.68,.95,1].map(progress=>{
+          w.setFiringProgress(progress);
+          const gap=root.position.y+root.scale.y*w.pottery.body.geometry.boundingBox.min.y-bed.y;
+          return {gap,center:[root.position.x-bed.x,root.position.z-bed.z],closed:w.firingView.shellVisible,fire:w.firingView.flames.visible};
+        });
       });
-      assert.ok(motion.every((p,i)=>!i||Math.hypot(...p.map((n,k)=>n-motion[i-1][k]))<.05),'kiln loading and unloading have no position jumps');
-      assert.ok(Math.abs(motion[0][1]-.12)<.001&&Math.abs(motion.at(-1)[1]-.12)<.001,'pot starts and finishes on the cooling slab');
-      assert.ok(Math.abs(motion[500][1]-.07)<.001,'pot rests on the kiln bed while firing');
+      assert.ok(samples.every(s=>Math.abs(s.gap)<.001&&Math.hypot(...s.center)<.001),'pot stays seated through firing and cooling');
+      assert.ok(samples[0].closed&&!samples[0].fire&&!samples[2].closed&&samples[2].fire,'automatic cutaway exposes the lit hearth');
+      assert.ok(await page.evaluate(()=>window.togi.world.firingView.flames.geometry.attributes.color?.getX(0)>.7),'lit flames have a warm visible vertex colour');
+      assert.ok(!samples.at(-1).closed&&!samples.at(-1).fire,'cooled piece stays on view, with the fire out');
       if(review){await page.evaluate(()=>window.togi.world.setFiringProgress(.42));await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));await page.screenshot({path:'asset/review/art-firing-interior.png'});}
       await page.evaluate(()=>window.togi.world.setFiringProgress(null));
       assert.equal(await page.locator('[data-action="kiln-inside"]').count(),0,'firing has no manual interior-view control');
-      assert.equal(await page.evaluate(()=>window.togi.world.firingView.group.getObjectByName('Cutaway_shell').visible),true,'idle kiln is closed');
-      await page.evaluate(()=>window.togi.world.setFiringProgress(.42));
-      assert.equal(await page.evaluate(()=>window.togi.world.firingView.group.getObjectByName('Cutaway_shell').visible),false,'firing still shows its automatic explanatory cutaway');
-      await page.evaluate(()=>window.togi.world.setFiringProgress(null));
-      assert.equal(await page.evaluate(()=>window.togi.world.firingView.group.getObjectByName('Cutaway_shell').visible),true,'finished kiln closes automatically');
+      assert.ok(await page.evaluate(()=>window.togi.world.firingView.shellVisible===(window.togi.save.firedRevision!==window.togi.save.document.revision)),'idle and completed visits restore the matching cutaway');
     }
   }
   await page.evaluate(()=>window.togi.go('body'));

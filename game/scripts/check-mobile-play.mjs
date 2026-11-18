@@ -100,7 +100,12 @@ try{
   await activate('[data-action="next"]');await audit('inspect');
   assert.ok(await page.locator('[data-action="edit-faces"]').isVisible(),'editing choices are immediately available');
   await activate('[data-action="edit-faces"]');await settled('faces');await activate('[data-action="next"]');await settled('inspect');
-  await activate('[data-action="next"]');await audit('firing');await activate('[data-action="next"]');
+  await activate('[data-action="next"]');await audit('firing');
+  const firemouth=await page.evaluate(()=>{
+    const w=window.togi.world,p=w.camera.position.clone().set(0,.30,1.35).project(w.camera);
+    return [(p.x+1)*innerWidth/2,(1-p.y)*innerHeight/2];
+  });
+  await page.touchscreen.tap(...firemouth);
   await page.waitForFunction(()=>document.querySelector('#firing-phase')?.textContent==='완성',null,{timeout:90000});
   assert.ok(await page.locator('.story-mobile-label').isVisible(),'phone explicitly labels the story entry');
   await activate('.story-teaser');await page.locator('.story-photo img').evaluate(img=>img.decode());

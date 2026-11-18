@@ -1,8 +1,9 @@
 // V3 scene composition: architectural boundaries, permanent supports and
 // individual exhibit clearances are authored separately from removable walls.
 import {buildSiruArtifact} from './siru-artifact.mjs';
+import {buildKiln} from './kiln-art.mjs';
 export function buildScenes(c){
-  const {T,group,mesh,box,lathe,ring,place,material,pottery,tools,wood,darkWood,plaster,linen,bronze,lamp,clay,darkClay,vault,kiln,brush}=c;
+  const {T,group,mesh,box,lathe,ring,place,material,pottery,tools,wood,darkWood,plaster,linen,bronze,lamp,clay,darkClay,brush}=c;
   const stone=material('Honed warm limestone',0xe7e4dd,'limestone',.9);
   const dark=material('Museum bronze charcoal',0x414742,null,.7,.1);
   const wallMat=material('Warm museum plaster',0xddd5c6,'plaster',.92);
@@ -42,9 +43,15 @@ export function buildScenes(c){
   for(const x of [-3.4,3.4])box(back,'Wall beside window',3.2,1.8,.12,wallMat,x,1.4,0,.008);
   for(const x of [-1.82,1.82])box(back,'Recessed window jamb',.10,1.92,.20,wood,x,1.4,.06);
   for(const y of [.46,2.34])box(back,'Window sill and lintel',3.74,.10,.25,wood,0,y,.08);
-  box(back,'Window mullion',.055,1.8,.12,wood,0,1.4,.06);
-  box(back,'Window crossbar',3.6,.045,.12,wood,0,1.38,.06);
-  const garden=material('Window courtyard',0xffffff,'garden',1);mesh(back,'Courtyard inside window opening',new T.PlaneGeometry(3.6,1.8),garden,0,1.4,-.07);
+  // Slim outer lights leave a clear view behind the pot. The garden sits
+  // beyond the sill, so its hills move differently from the frame on orbit.
+  for(const x of [-1.36,1.36]){
+    box(back,'Side light stile',.036,1.8,.07,darkWood,x,1.4,.015);
+    for(const y of [.98,1.82])box(back,'Side light rail',.42,.028,.065,darkWood,Math.sign(x)*1.57,y,.015);
+  }
+  box(back,'Window ledge',3.84,.065,.38,wood,0,.425,.13,.014);
+  const garden=material('Painted persimmon courtyard',0xffffff,'garden',1);
+  mesh(back,'Garden beyond the window',new T.PlaneGeometry(5.85,2.44),garden,0,1.37,-.82);
   box(back,'Continuous skirting',10,.12,.05,stone,0,-1.06,.08);
   wall(studio,'Studio left wall',-5,.8,Math.PI/2,9,-1.12,4.02);
   wall(studio,'Studio right wall',5,.8,-Math.PI/2,9,-1.12,4.02);
@@ -122,14 +129,20 @@ export function buildScenes(c){
   const gravel=material('Weathered gray sandstone',0x797e72,'limestone',1);
   // A high resolution scenic surround uses the full image per quarter turn.
   // A low resolution spherical skybox enlarged individual leaves across the view.
-  const woodland=material('Distant woodland surround',0xc9cec2,'woodland',1);
+  const woodland=material('Painted foothills beyond the meadow',0xffffff,'woodland',1);
   woodland.side=T.BackSide;
   const surroundGeometry=new T.CylinderGeometry(24,24,12,128,1,true),surroundUV=surroundGeometry.getAttribute('uv');
-  for(let i=0;i<surroundUV.count;i++)surroundUV.setXY(i,surroundUV.getX(i)*4,.34+surroundUV.getY(i)*.66);
+  for(let i=0;i<surroundUV.count;i++)surroundUV.setXY(i,surroundUV.getX(i)*4,.17+surroundUV.getY(i)*.83);
   mesh(yard,'Continuous woodland beyond the garden',surroundGeometry,woodland,0,5.8,0);
-  const outerGround=new T.RingGeometry(7.9,24,96),outerUV=outerGround.getAttribute('uv'),outerPosition=outerGround.getAttribute('position');
-  for(let i=0;i<outerUV.count;i++)outerUV.setXY(i,outerPosition.getX(i)*.5,outerPosition.getY(i)*.5);
-  mesh(yard,'Ground beyond the planting borders',outerGround,shrubMat,0,-.035,0).rotation.x=-Math.PI/2;
+  const meadow=material('Meadow grasses',0xd4c8a5,'meadow',1);
+  const outerGround=new T.RingGeometry(7.9,24.1,96,10),outerUV=outerGround.attributes.uv,outerPosition=outerGround.attributes.position;
+  for(let i=0;i<outerPosition.count;i++){
+    const x=outerPosition.getX(i),y=outerPosition.getY(i),a=Math.atan2(y,x),distance=(Math.hypot(x,y)-7.9)/16.2;
+    outerPosition.setZ(i,Math.sin(distance*Math.PI)*(.96+.42*Math.sin(4*a)+.28*Math.cos(7*a))+.15*distance);
+    outerUV.setXY(i,x*.46,y*.46);
+  }
+  outerGround.computeVertexNormals();
+  mesh(yard,'Meadow banks beyond the planting borders',outerGround,meadow,0,-.035,0).rotation.x=-Math.PI/2;
   for(const x of [-4.7,4.7])for(let z=-6;z<=5;z+=.92)box(yard,'Path paving slab',1.55,.055,.88,gravel,x,.018,z,.018);
   for(let x=-3.9;x<=3.9;x+=.91)box(yard,'Rear cross path',.87,.055,1.2,gravel,x,.018,-3.55,.018);
   for(const side of [-1,1]){
@@ -202,32 +215,29 @@ export function buildScenes(c){
   const br=place(equipment,brush(),2.10,.07,-.55,1.4,.2);br.rotation.x=Math.PI/2;
   place(equipment,tools.find(t=>t[0]==='folded-cloth')[1],2.35,.025,-.30,1.2,.12);
   const kilnyard=group('Kiln working yard');
-  box(kilnyard,'Recessed firing bed',3.1,.07,3.8,soil,0,-.03,-.15,.12);
-  box(kilnyard,'Pottery loading and cooling slab',1.18,.12,1.12,stone,-1.95,.06,1.65,.035);
-  box(kilnyard,'Level ceramic firing support',1.02,.07,1.05,stone,0,.035,-.2,.02);
-  const logs=kiln.clone();const loose=[];logs.traverse(o=>{if(/stone/i.test(o.name))loose.push(o);});loose.forEach(o=>o.removeFromParent());logs.position.set(0,.08,-1.5);kilnyard.add(logs);
   // A purposeful fuel rack and preparation bench replace isolated loose stones.
   for(const x of [1.5,2.2])for(const z of [-1.6,-.2])box(kilnyard,'Fuel rack post',.075,.62,.075,darkWood,x,.31,z);
   for(const z of [-1.6,-.2])box(kilnyard,'Fuel rack rail',.8,.08,.06,wood,1.85,.48,z);
   box(kilnyard,'Raised fuel rack base',.8,.06,1.45,darkWood,1.85,.06,-.9);
+  for(let row=0;row<3;row++)for(let i=0;i<4-row;i++){
+    const log=mesh(kilnyard,'Seasoned split timber',new T.CylinderGeometry(.083,.076,1.23-i*.045,7),darkWood,1.85+(i-(3-row)/2)*.156,.165+row*.132,-.92+.036*Math.sin(i+row));
+    log.rotation.x=Math.PI/2;log.rotation.y=(i+row)*.61;
+  }
   box(kilnyard,'Preparation bench',1.4,.09,.7,wood,-2.1,.58,-1.0);
   for(const x of [-2.65,-1.55])for(const z of [-1.22,-.78])box(kilnyard,'Preparation bench leg',.08,.55,.08,darkWood,x,.275,z);
-  place(kilnyard,tools.find(t=>t[0]==='water-bowl')[1],-2.4,.63,-1.05,1);
-  const kilnClay=material('Ash weathered kiln plaster',0xb3a08a,'plaster',1);
-  const newVault=vault.clone();newVault.traverse(o=>{
-    if(o.name==='Earthen foundation'){o.material=soil;o.scale.y=.8;}
-    if(['Uneven earthen vault','Thick earth facade with open firemouth','Exposed arch edging'].includes(o.name))o.material=kilnClay;
-  });
-  const rear=new T.Shape();rear.moveTo(-1.2,0);rear.absellipse(0,0,1.2,1.85,Math.PI,0,true,0);rear.lineTo(-1.2,0);
-  mesh(newVault.children[1],'Closed kiln rear wall',new T.ExtrudeGeometry(rear,{depth:.13,bevelEnabled:false,curveSegments:32}),kilnClay,0,.24,-1.83);
+  const bowl=place(kilnyard,tools.find(t=>t[0]==='water-bowl')[1],-2.4,0,-1.05,1);
+  bowl.position.y+=.625-new T.Box3().setFromObject(bowl).min.y;
+  const newVault=buildKiln(c);
   // Small tool shelter gives the working yard an architectural destination.
   const shed=group('Kiln preparation shelter');shed.position.set(-3.7,0,-3.6);kilnyard.add(shed);
   for(const x of [-1.3,1.3])for(const z of [-.65,.65])box(shed,'Shelter timber upright',.11,2.25,.11,darkWood,x,1.125,z);
   for(const z of [-.67,.67])box(shed,'Shelter lintel',2.95,.13,.12,darkWood,0,2.20,z);
   for(const side of [-1,1]){const roof=box(shed,'Shelter pitched roof',1.68,.10,1.9,dark,side*.72,2.39,0,.015);roof.rotation.z=-side*.22;}
   for(let i=0;i<8;i++)box(shed,'Shelter partial back slats',.25,1.1,.055,wood,-1.12+i*.32,.75,-.65);
+  for(const y of [.29,1.21])box(shed,'Backing rail fastened to shelter posts',2.60,.09,.08,darkWood,0,y,-.69);
   place(shed,tools.find(t=>t[0]==='tool-tray')[1],0,.6,0,1.3);
   box(shed,'Shelter worktop',2.3,.07,.7,wood,0,.56,0);
+  for(const x of [-.98,.98])for(const z of [-.24,.24])box(shed,'Trestle foot',.08,.54,.09,darkWood,x,.264,z);
   const siru=buildSiruArtifact();
   // Validate authored exhibit spacing before exporting; this is geometry, not a screenshot guess.
   for(let i=0;i<records.length;i++)for(let j=i+1;j<records.length;j++)if(records[i].collection===records[j].collection){

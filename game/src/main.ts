@@ -312,7 +312,7 @@ function updateUI() {
     stage === "firing" && !fired
       ? fireStart
         ? "연출 건너뛰기"
-        : "가마에 넣고 굽기"
+        : "아궁이에 불 지피기"
       : returnToInspect&&isEdit ? '수정 마치고 확인하기' : c.next;
   let extras = "";
   if (stage === "body") extras = formControls();
@@ -323,7 +323,7 @@ function updateUI() {
   if (stage === "inspect")
     extras = actionbar('수정하기',`<div class="edit-links">${button("edit-body", "몸체 수정", "shape", "secondary")}${button("edit-mouth", "입구 수정", "mouth", "secondary")}${button("edit-faces", "얼굴 수정", "carve", "secondary")}</div>`,'edit-actions');
   if (stage === "firing")
-    extras = `<div class="firing-status"><strong id="firing-phase">${fired?"완성":fireStart?"준비":"가마에 넣기"}</strong><p class="firing-note" aria-label="넣기, 굽기, 식히기, 꺼내기">${['넣기','굽기','식히기','꺼내기'].map(label=>`<span>${label}</span>`).join('')}</p><span id="firing-action">${fired ? "받침 위의 토기가 완성됐어요. 다음은 상상 발굴 체험이에요." : fireStart ? "내 토기를 가마 안으로 옮겨요." : "아래 ‘가마에 넣고 굽기’를 누르면 안쪽을 보며 과정을 살펴볼 수 있어요."}</span><div class="meter"><i id="fire-progress" style="width:${fired ? 100 : 0}%"></i></div></div>`;
+    extras = `<div class="firing-status"><strong id="firing-phase">${fired?"완성":fireStart?"준비":"불 지필 준비"}</strong><p class="firing-note" aria-label="준비, 굽기, 식히기, 완성">${['준비','굽기','식히기','완성'].map(label=>`<span>${label}</span>`).join('')}</p><span id="firing-action">${fired ? "가마 안에 놓인 내 토기를 살펴보세요." : fireStart ? "옆벽 너머에 내가 빚은 토기가 있어요." : "마른 토기가 가마 안에 놓였어요. 앞쪽 아궁이에 불을 지펴 보세요."}</span><div class="meter"><i id="fire-progress" style="width:${fired ? 100 : 0}%"></i></div></div>`;
   if (stage === "excavation") {
     const meters = ['토기','시루'].map(name => `<label><span>${name}<strong>0%</strong></span><progress max="100" value="0" aria-label="${name} 발견 진행률"></progress></label>`).join('');
     extras = `<div class="dig-status"><div id="dig-progress">${meters}</div>${digComplete ? '' : button("assist", "함께 찾아보기", "brush", "small-button")}</div>`;
@@ -534,12 +534,12 @@ function openMouth() {
   toast("열린 입구 형태를 적용했어요. 넓이와 테두리를 다듬어 보세요.");
 }
 function fireDone() {
-  world.setFiringProgress(null);
   cancelAnimationFrame(fireTimer);
   fireTimer=0;
   audio.firing(0);
   fireStart = 0;
   save.firedRevision = save.document.revision;
+  world.setFiringProgress(null);
   world.pottery.appearance(1);
   world.refresh();
   audio.effect("success");
@@ -1467,6 +1467,9 @@ function bindPointer() {
     world.highlightPot(false);
     if (canvas.hasPointerCapture(e.pointerId))
       canvas.releasePointerCapture(e.pointerId);
+    if(stage==='firing'&&!fireStart&&save.firedRevision!==save.document.revision&&e.button===0&&g.travel<(g.touch?9:5)&&world.firemouthAt(e.clientX,e.clientY)){
+      startFire();return;
+    }
     if(g.kind==='refine'){
       let refined:UV[]|undefined;
       for(const id of g.refineIds){const f=save.document.features.find(f=>f.id===id);if(f&&!refineFeature(save.document,f))refined=save.document.features.find(f=>f.id===id)?.points;}

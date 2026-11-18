@@ -8,7 +8,8 @@ const files = import.meta.glob(
     "../asset/runtime/models/display-stand.glb",
     "../asset/runtime/audio/*.wav",
     "../asset/runtime/animations/{party-travel,face-pot}.png",
-    "../asset/runtime/materials/{grayware,aged-oak,earth,plaster,linen,garden,limestone,woodland}-v1.jpg",
+    "../asset/runtime/materials/{grayware,aged-oak,earth,plaster,linen,limestone,kiln-clay,meadow}-v1.jpg",
+    "../asset/runtime/materials/{garden,woodland}-v2.jpg",
     "../asset/runtime/materials/foliage-v1.webp",
   ],
   {
