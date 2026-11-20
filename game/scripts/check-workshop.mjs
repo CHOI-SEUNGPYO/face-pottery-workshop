@@ -167,7 +167,7 @@ try{
      assert.equal(await page.locator('[data-action="kiln-inside"]').count(),0,'loading the kiln has no interior-view button');
      if(width===1366)await page.screenshot({path:'asset/review/firing-no-manual-view.png'});
      await page.locator('[data-action="kiln-guide"]').click();
-     assert.match(await page.locator('.kiln-guide').textContent(),/실제로 가마 벽을 열어 둔 채 굽는다는 뜻은 아니에요/);
+     assert.match(await page.locator('.kiln-guide').textContent(),/벽과 천장은 가마 안의 열을 유지하는 데 도움이 돼요/);
      assert.ok(await page.locator('.kiln-flow').isVisible());
      if(process.env.TOGI_MUSEUM_REVIEW==='1'&&width===1366)await page.screenshot({path:'asset/review/museum-kiln-guide.png'});
      await page.locator('.modal-close').click();

@@ -10,7 +10,7 @@ import {ArtAssets,artGroups,type ArtGroup} from './art-assets';
 import {createArtifactExample,createWelcomeStudy} from './artifact-example';
 import { StrokePreview } from "./stroke-preview";
 import {FaceGuide} from './face-guide';
-import { SoilTerrain, SOIL_FLOOR, migrateSoilMask } from "./soil";
+import { SoilTerrain, SOIL_FLOOR, migrateSoilMask, remapFindSoil } from "./soil";
 import { scenes } from "./content";
 import { surfaceFrame } from "./surface-path";
 import { FiringView } from './firing';
@@ -18,7 +18,7 @@ import {museum,museumAsset} from './museum';
 import {photoScene,type PhotoView} from './photo-scene';
 import {exampleScene,type ExampleView} from './example-scene';
 import {museumRoom} from './environments';
-import {excavationField} from './excavation-field';
+import {arrangeBuriedFinds, excavationField, findMeshBounds} from './excavation-field';
 import {galleryCases,seatInCase} from './display-case';
 import {
   clamp,
@@ -104,6 +104,7 @@ export class World {
   private galleryPots=new T.Group();
   private courtyard=new T.Group();
   private assemblyBench=new T.Group();
+  private assemblyRest=new T.Vector3();
   private siruHeight=.70;
   private siruRimRadius=.25;
   private pitWall?: T.Mesh;
@@ -419,49 +420,14 @@ export class World {
     this.stand.visible = ["welcome", "inspect"].includes(
       stage,
     );
-    this.pottery.root.position.set(
-      stage === "compare"
-        ? -0.34
-        : stage === "assembly"
-          ? s.assembledRevision === s.document.revision
-            ? 0
-            : -0.6
-          : stage === "excavation"
-            ? -0.58
-            : stage === "welcome"
-              ? 0.35
-              : 0,
-      stage === "excavation"
-        ? -0.43
-        : stage === "assembly"
-          ? s.assembledRevision === s.document.revision
-            ? 0.61
-            : 0
-          : 0,
-      0,
-    );
-    this.pottery.root.rotation.x = stage === "excavation" ? -Math.PI / 2 : 0;
+    this.pottery.root.position.set(stage === "welcome" ? .35 : 0, 0, 0);
+    this.pottery.root.rotation.x = 0;
     this.pottery.root.scale.setScalar(1);
-    if (stage === "excavation")
-      this.pottery.root.position.set(-0.58, 0.13, 0.47);
-    this.siru.position.set(
-      stage === "excavation" ? 0.62 : 0,
-      stage === "excavation" ? -0.18 : 0,
-      0,
-    );
-    // Fit before burial bounds and soil coverage are built so excavation and
-    // assembly show the same steamer, including when either stage is resumed.
+    this.siru.position.set(0,0,0);
+    this.siru.rotation.x=0;
     this.siru.scale.setScalar(outdoors?this.fittedSiruScale:1);
     this.stand.position.copy(this.pottery.root.position);
     this.mask = s.excavationMask;
-    this.siru.rotation.x = stage === "excavation" ? -Math.PI / 2 : 0;
-    if (stage === "excavation") this.siru.position.set(0.62, 0.1, 0.3);
-    // Use the buried poses to rebuild the same site even on a direct assembly resume.
-    if(outdoors){
-      this.pottery.root.rotation.x=this.siru.rotation.x=-Math.PI/2;
-      this.pottery.root.position.set(-.58,.13,.47);
-      this.siru.position.set(.62,.1,.3);
-    }
     // Guides take turns in the physical scene; the three-carrier travel animation is separate.
     for (const [name, sprite] of this.sprites) {
       sprite.material.depthTest=true;
@@ -487,28 +453,12 @@ export class World {
       this.setFiringProgress(null);
     }
     if (outdoors) {
-      if (!s.excavationLayout) {
-        s.excavationMask = migrateSoilMask(s.excavationMask);
-        s.excavationLayout = "terrain-v1";
-      }
+      if (!s.excavationLayout) s.excavationMask = migrateSoilMask(s.excavationMask);
       this.mask = s.excavationMask;
-      // Rest the exposed objects on the excavation floor before calculating soil cover.
-      for(const object of [this.pottery.root,this.siru]){
-        object.updateMatrixWorld(true);
-        const b=new T.Box3().setFromObject(object);
-        object.position.y+=-.23-b.min.y;
-      }
-      this.scene.updateMatrixWorld(true);
-      const targets = [this.pottery.root, this.siru].map((object) => {
-        const b = new T.Box3().setFromObject(object);
-        return {
-          minX: b.min.x,
-          maxX: b.max.x,
-          minZ: b.min.z,
-          maxZ: b.max.z,
-          top: b.max.y,
-        };
-      });
+      const migrating = s.excavationLayout !== "terrain-v2" && this.mask.some(value => value > 0);
+      const {targets, previous} = arrangeBuriedFinds(this.pottery.root, this.siru, migrating);
+      if (previous) remapFindSoil(this.mask, previous, targets);
+      s.excavationLayout = "terrain-v2";
       this.terrain.configure(this.mask, targets);
       // Leave a shallow section visible above the fill even before the first brush stroke.
       this.digLevel=this.terrain.surfaceLevel+.095;
@@ -517,11 +467,8 @@ export class World {
       this.courtyard.position.y=this.assemblyBench.position.y=this.digLevel;
     }
     if(stage==='assembly'){
-      const placed=s.assembledRevision===s.document.revision;
-      this.pottery.root.rotation.x=this.siru.rotation.x=0;
       this.courtyard.position.x=this.site.position.x=this.soil.position.x=this.earth.position.x=-3.8;
-      this.siru.position.set(0,this.digLevel+.72,0);
-      this.pottery.root.position.set(placed?0:-.83*Math.max(1,this.siru.scale.x),placed?this.assemblyHeight:this.digLevel+.72,placed?0:.15);
+      this.arrangeAssembly(s.assembledRevision===s.document.revision);
     }
     const color=museumStage?0xbeb6a6:outdoors||stage==='firing'?0xc8cfc4:0xdcd5c8;
     this.scene.background=new T.Color(color);
@@ -639,9 +586,11 @@ export class World {
       // under their finger would move the target; fitting only after the drop
       // lets the vessel rise behind the heading during the placement animation.
       const lifted=new T.Box3().setFromObject(this.pottery.root);
-      const offset=new T.Vector3(0,this.assemblyHeight+.20,0).sub(this.pottery.root.position);
+      const offset=this.assemblyRest.clone().sub(this.pottery.root.position);
+      offset.y+=this.siruHeight*this.siru.scale.y+this.carryClearance;
       lifted.translate(offset);
       bounds.union(lifted);
+      bounds.union(lifted.translate(new T.Vector3(this.siru.position.x-this.assemblyRest.x,0,0)));
     }
     if (digging) {
       bounds.expandByObject(this.soil);
@@ -917,19 +866,80 @@ export class World {
     return radius;
   }
   private get fittedSiruScale(){return clamp(this.potFootRadius/this.siruRimRadius*1.04,.25,3);}
-  get assemblyHeight(){return this.digLevel+.72+this.siruHeight*this.fittedSiruScale;}
+  get assemblyHeight(){return this.siru.position.y + this.siruHeight * this.siru.scale.y;}
+  private readonly carryClearance = .08;
+  private arrangeAssembly(placed: boolean) {
+    const pot = this.pottery.root, siru = this.siru;
+    pot.rotation.x = siru.rotation.x = 0;
+    pot.position.set(0, 0, 0);
+    siru.position.set(0, 0, 0);
+    const body = findMeshBounds(pot);
+    const support = findMeshBounds(siru);
+    const tableTop = this.digLevel + .72;
+    this.assemblyRest.set(support.min.x - body.max.x - .20, tableTop - body.min.y, 0);
+    siru.position.y = tableTop;
+    const left = this.assemblyRest.x + body.min.x, right = Math.max(body.max.x, support.max.x);
+    const depth = 2 * Math.max(-body.min.z, body.max.z, -support.min.z, support.max.z);
+    this.assemblyBench.position.x = (left + right) / 2;
+    this.assemblyBench.scale.set(Math.max(1, (right - left + .20) / 2.6), 1, Math.max(1, (depth + .20) / 1.6));
+    pot.position.copy(placed ? this.assemblySeat() : this.assemblyRest);
+  }
+  private assemblySeat() {
+    return new T.Vector3(this.siru.position.x, this.assemblyRest.y + this.siruHeight * this.siru.scale.y, this.siru.position.z);
+  }
+  resetSiruDrag() {
+    this.pottery.root.position.copy(this.assemblyRest);
+    this.refresh(true);
+  }
+  startSiruDrag(grip: T.Vector3) {
+    const rest = this.assemblyRest, seat = this.assemblySeat(), position = this.pottery.root.position;
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    const screen = (p: T.Vector3) => {
+      p.project(this.camera);
+      return new T.Vector2(rect.left + (1+p.x)*rect.width/2, rect.top + (1-p.y)*rect.height/2);
+    };
+    // Measure the sideways trip at the point actually held, in the current view.
+    const travel = new T.Vector3(seat.x - rest.x, 0, seat.z - rest.z);
+    const start = screen(grip.clone()), axis = screen(grip.clone().add(travel)).sub(start);
+    const lengthSquared = Math.max(1, axis.lengthSq());
+    const rimX = screen(this.siru.position.clone().setY(this.assemblyHeight)).x - start.x;
+    // When the finds appear side by side, reaching the rim's screen column
+    // also completes the carry, even when the player holds the near shoulder.
+    const sideways = Math.abs(axis.x) >= Math.max(12, Math.abs(axis.y)) && rimX*axis.x > 0 && Math.abs(rimX) > 8;
+    const sidewaysTrip = sideways ? Math.sign(axis.x)*Math.min(Math.abs(axis.x), Math.abs(rimX)) : 0;
+    const radius = this.siruRimRadius * this.siru.scale.x;
+    return (x: number, y: number) => {
+      const dx = x-start.x, dy = y-start.y;
+      let progress = clamp(sidewaysTrip ? dx/sidewaysTrip : (dx*axis.x+dy*axis.y)/lengthSquared, 0, 1);
+      const aim = this.groundHit(x, y, this.assemblyHeight);
+      if (aim && Math.hypot(aim.x-seat.x, aim.z-seat.z) <= radius) progress = 1;
+      const lift = Math.max(T.MathUtils.smoothstep(progress, 0, .2), T.MathUtils.smoothstep(start.y-y, 0, 28));
+      const slide = clamp((progress - .2) / .8, 0, 1);
+      position.copy(rest).addScaledVector(travel, slide);
+      position.y += (seat.y + this.carryClearance - rest.y) * lift;
+      this.refresh(true);
+      return Math.hypot(position.x-seat.x, position.z-seat.z) <= radius * .85;
+    };
+  }
   async placeOnSiru(){
-    const from=this.pottery.root.position.clone(),to=new T.Vector3(0,this.assemblyHeight,0);
-    const start=performance.now(),duration=this.reduced?0:650;
+    const from=this.pottery.root.position.clone(),to=this.assemblySeat();
+    const lifted = from.y >= to.y;
+    const start=performance.now(),duration=this.reduced?0:lifted?200:650;
     let elapsed=0,last=start;
     return new Promise<boolean>(resolve=>{
       const step=(now:number)=>{
         if(this.stage!=='assembly'){resolve(false);return;}
         if(!this.paused&&!document.hidden)elapsed+=now-last;
         last=now;
-        const t=duration?clamp(elapsed/duration,0,1):1,p=t*t*(3-2*t);
-        this.pottery.root.position.copy(from).lerp(to,p);
-        this.pottery.root.position.y+=Math.sin(p*Math.PI)*.16;
+        const t=duration?clamp(elapsed/duration,0,1):1;
+        const position = this.pottery.root.position;
+        if (lifted) position.copy(from).lerp(to, T.MathUtils.smoothstep(t, 0, 1));
+        else {
+          const high = to.y + this.carryClearance;
+          position.copy(from).lerp(to, T.MathUtils.smoothstep(t, .30, .80));
+          position.y = T.MathUtils.lerp(from.y, high, T.MathUtils.smoothstep(t, 0, .30))
+            - this.carryClearance * T.MathUtils.smoothstep(t, .80, 1);
+        }
         this.refresh(true);
         if(t<1)requestAnimationFrame(step);else resolve(true);
       };step(start);
@@ -991,11 +1001,11 @@ export class World {
     if (animated && !this.frame)
       this.frame = requestAnimationFrame(this.animate);
   };
-  createExampleView(example:GameSave):ExampleView {
+  createExampleView(example:Pick<GameSave,'document'|'rotation'>):ExampleView {
     const pottery=new PotteryView();
     try{
       pottery.update(structuredClone(example.document));
-      pottery.appearance(example.firedRevision===example.document.revision?1:0);
+      pottery.appearance(1);
       pottery.root.rotation.y=example.rotation;pottery.outline.visible=false;
       const view=exampleScene(pottery.root,this.art.texture('limestone')),dispose=view.dispose;
       view.dispose=()=>{dispose();pottery.dispose();};

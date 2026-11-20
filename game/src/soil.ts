@@ -13,6 +13,31 @@ export type FindBounds = {
   maxZ: number;
   top: number;
 };
+/** Keep old brush marks in the ground and carry exposed patches with a repositioned find. */
+export function remapFindSoil(mask: Uint8Array, previous: FindBounds[], next: FindBounds[]) {
+  const source = mask.slice(), last = MASK - 1;
+  for (const [i, to] of next.entries()) {
+    const from = previous[i];
+    const cx = (to.minX + to.maxX) / 2, cz = (to.minZ + to.maxZ) / 2;
+    const rx = (to.maxX - to.minX) / 2 + .04, rz = (to.maxZ - to.minZ) / 2 + .04;
+    for (let z = 0; z < MASK; z++) {
+      const v = ((z / last - .5) * SOIL_DEPTH - cz) / rz;
+      if (Math.abs(v) >= 1) continue;
+      const oldZ = (from.minZ + from.maxZ) / 2 + v * ((from.maxZ - from.minZ) / 2 + .04);
+      const row = Math.round((oldZ / SOIL_DEPTH + .5) * last);
+      if (row < 0 || row > last) continue;
+      for (let x = 0; x < MASK; x++) {
+        const u = ((x / last - .5) * SOIL_WIDTH - cx) / rx;
+        if (u ** 4 + v ** 4 >= 1) continue;
+        const oldX = (from.minX + from.maxX) / 2 + u * ((from.maxX - from.minX) / 2 + .04);
+        const col = Math.round((oldX / SOIL_WIDTH + .5) * last);
+        if (col < 0 || col > last) continue;
+        const k = z * MASK + x;
+        mask[k] = Math.max(mask[k], source[row * MASK + col]);
+      }
+    }
+  }
+}
 export function migrateSoilMask(old: Uint8Array) {
   const result = new Uint8Array(MASK * MASK);
   for (let y = 0; y < MASK; y++)

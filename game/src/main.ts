@@ -1094,6 +1094,8 @@ interface Gesture {
   pointer: number;
   kind: ToolId;
   artifact?:'own'|'reference';
+  moveSiru?: ReturnType<World['startSiruDrag']>;
+  overSiru?: boolean;
   startX: number;
   startY: number;
   lastX: number;
@@ -1240,7 +1242,7 @@ function cancelGesture() {
     save.document = gesture.before;
     world.update(false);
   }
-  if (gesture?.kind === "place") world.setStage(stage, true);
+  if (gesture?.kind === "place") world.resetSiruDrag();
   gesture = null;
   world?.previewStroke([]);
   clearOpening();
@@ -1274,16 +1276,7 @@ function sample(e: PointerEvent) {
     // SoilTerrain already fills the world-space path between samples.
     if(world.brushAt(e.clientX,e.clientY))g.moved=true;
   } else if (g.kind === "place") {
-    const p = world.groundHit(e.clientX, e.clientY, world.assemblyHeight);
-    if (p) {
-      world.pottery.root.position.set(
-        clamp(p.x, -1, 1),
-        world.assemblyHeight+.04,
-        clamp(p.z, -0.4, 0.4),
-      );
-      world.refresh(true);
-      g.moved = true;
-    }
+    if (g.travel >= 4) g.overSiru = g.moveSiru!(e.clientX, e.clientY);
   } else if (g.kind === "carve" || g.kind === "pierce") {
     // Collect every hardware sample, including subpixel moves. Fill long
     // screen-space gaps before raycasting. Use the continuous clay surface so
@@ -1393,7 +1386,7 @@ function bindPointer() {
         e.clientX,
         e.clientY,
         ["erase", "refine", "carve", "pierce"].includes(kind),
-        false,
+        kind === "place",
       );
     if(!hit&&['body','mouth','faces','inspect','assembly','compare','ending'].includes(stage))kind='rotate';
     if(stage==='excavation'&&!world.terrain.hit(world.pointer(e.clientX,e.clientY).ray))kind='rotate';
@@ -1404,6 +1397,7 @@ function bindPointer() {
       pointer: e.pointerId,
       kind,
       artifact:artifact??undefined,
+      moveSiru:kind === "place" && hit ? world.startSiruDrag(hit.point) : undefined,
       startX: e.clientX,
       startY: e.clientY,
       lastX: e.clientX,
@@ -1533,14 +1527,10 @@ function bindPointer() {
         if (points.length >= 2) commitFeature(points, "groove", strokeWidth/readForm(save.document).height, g.before, strokeWidth);
       }
     } else if (g.kind === "place") {
-      if (
-        Math.abs(world.pottery.root.position.x) < 0.25 &&
-        Math.abs(world.pottery.root.position.z) < 0.3
-      )
-        place();
+      if (g.overSiru) void place();
       else {
-        world.setStage("assembly");
-        toast("시루 위에 가까이 놓아 보세요.");
+        world.resetSiruDrag();
+        if (g.travel >= 4) toast("시루 위에 가까이 놓아 보세요.");
       }
     } else {void persist();if(g.kind==='brush')checkDiscovery();}
   });

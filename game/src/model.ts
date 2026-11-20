@@ -67,7 +67,7 @@ export interface GameSave {
   stage: SceneId;
   firedRevision: string | null;
   excavationMask: Uint8Array;
-  excavationLayout?: "terrain-v1";
+  excavationLayout?: "terrain-v1" | "terrain-v2";
   assembledRevision: string | null;
   rotation: number;
 }
@@ -162,7 +162,7 @@ export function freshSave(): GameSave {
     stage: "body",
     firedRevision: null,
     excavationMask: new Uint8Array(256 * 256),
-    excavationLayout: "terrain-v1",
+    excavationLayout: "terrain-v2",
     assembledRevision: null,
     rotation: 0,
   };
@@ -365,7 +365,7 @@ export function validateSave(value: unknown): value is GameSave {
         ))) &&
     s.excavationMask instanceof Uint8Array &&
     s.excavationMask.length === 65536 &&
-    (s.excavationLayout === undefined || s.excavationLayout === "terrain-v1") &&
+    (s.excavationLayout === undefined || s.excavationLayout === "terrain-v1" || s.excavationLayout === "terrain-v2") &&
     Number.isFinite(s.rotation)
   );
 }

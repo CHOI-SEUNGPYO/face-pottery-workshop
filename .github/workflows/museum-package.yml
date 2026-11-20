@@ -1,0 +1,37 @@
+name: Publish museum Windows ZIP
+
+on:
+  push:
+    tags: ['museum-*']
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      NODE_VERSION: 24.22.1
+      NODE_WIN_X64_SHA256: d2046d28c2c3dcd211ac5145c0bf30e2047ef9dfb306693c8c6e2eccd8b95fa5
+    steps:
+      - uses: actions/checkout@v6
+      - name: Download the website published from this commit
+        run: |
+          run_id=$(gh run list --workflow pages.yml --event push --branch main --commit "$GITHUB_SHA" --status success --limit 1 --json databaseId --jq '.[0].databaseId // empty')
+          test -n "$run_id" || { echo "This commit has no completed Pages deployment."; exit 1; }
+          gh run download "$run_id" --name workshop-site --dir game/dist
+      - name: Package the Windows runtime with the verified website
+        run: |
+          runtime="node-v${NODE_VERSION}-win-x64"
+          base="https://nodejs.org/dist/v${NODE_VERSION}"
+          cd "$RUNNER_TEMP"
+          curl --fail --silent --show-error --retry 3 --remote-name "$base/$runtime.zip"
+          echo "$NODE_WIN_X64_SHA256  $runtime.zip" | sha256sum --check --strict
+          unzip -q "$runtime.zip" "$runtime/node.exe" "$runtime/LICENSE"
+          python3 "$GITHUB_WORKSPACE/game/scripts/package-windows.py" "$RUNNER_TEMP/face-pottery-workshop-windows-x64.zip" --runtime "$runtime"
+          python3 -m zipfile --test "$RUNNER_TEMP/face-pottery-workshop-windows-x64.zip"
+      - name: Attach the ZIP to the tagged release
+        run: |
+          gh release create "$GITHUB_REF_NAME" "$RUNNER_TEMP/face-pottery-workshop-windows-x64.zip" --verify-tag --title "얼굴모양토기 · 작은 흙 공방 (${GITHUB_REF_NAME#museum-})" --notes-file game/전달용/실행안내.txt

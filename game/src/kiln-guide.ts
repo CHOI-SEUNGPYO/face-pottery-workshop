@@ -1,4 +1,25 @@
-export const KILN_SOURCE='https://portal.nrich.go.kr/kor/archeologyUsrView.do?idx=23429&menuIdx=1074';
+import {sourceLinks} from './museum';
+
 export function kilnGuide(){
-  return `<article class="museum-credits kiln-guide"><p class="eyebrow">흙이 단단한 토기가 되기까지</p><h2>이 둥근 시설은<br>토기를 굽는 ‘가마’예요</h2><p>가마는 흙으로 빚은 그릇을 불과 열로 구워 완성하는 시설이에요. 벽과 천장을 갖춘 가마에서는 안쪽에 토기를 놓고, 불을 때어 생긴 열을 이용해 구웠어요.</p><div class="kiln-flow" aria-label="불과 열의 흐름을 단순화한 설명"><div><span>01</span><strong>아궁이·연소실</strong><p>땔감을 넣고<br>불을 피우는 곳</p></div><b aria-hidden="true">→</b><div><span>02</span><strong>소성실</strong><p>토기를 놓고<br>열로 굽는 곳</p></div><b aria-hidden="true">→</b><div><span>03</span><strong>연도·배연구</strong><p>열과 연기가<br>빠져나가는 곳</p></div></div><section class="creation-note"><h3>왜 이렇게 만들었나요?</h3><p>옛 토기가마 자료의 덮인 굽는 공간과 불길의 흐름을 쉽게 보여주려고, 흙으로 덮인 가마 형태를 재구성했어요. 소월리 유적은 청통천 주변의 넓은 들을 내려다보는 낮은 구릉에 있어요. 가마 너머로 보이는 들과 물길은 이 지형을 바탕으로 그렸어요.</p><h3>토기를 구울 때 벽이 열리는 이유</h3><p>토기가 어디에 놓이고 어떻게 구워지는지 볼 수 있도록 옆면을 투명하게 보여주는 설명용 연출이에요. 실제로 가마 벽을 열어 둔 채 굽는다는 뜻은 아니에요.</p><h3>짧게 보는 굽기 과정</h3><p>마른 토기가 가마 안에 놓인 상태에서 시작해요. 아궁이에 불을 지피고, 불이 잦아든 뒤 토기가 식는 과정을 짧게 살펴봐요. 실제 소성 시간·온도·색 변화의 재현은 아니에요.</p><p class="support-credit">소월리 얼굴모양토기를 구운 특정 가마와 정확한 소성 과정은 현재 확인한 자료로 알 수 없어요.</p></section><div class="credits-actions"><a class="museum-home-link" href="${KILN_SOURCE}" target="_blank" rel="noopener noreferrer">국립문화유산연구원 · 토기 가마의 구조 ↗</a><button data-action="close" class="secondary">가마 장면으로 돌아가기</button></div></article>`;
+  return `<article class="museum-credits kiln-guide">
+    <p class="eyebrow">흙이 단단한 토기가 되기까지</p>
+    <h2>토기를 굽는 가마</h2>
+    <p>가마는 흙으로 빚은 그릇을 불과 열로 구워 완성하는 시설이에요. 아래는 경사면을 따라 만든 옛 토기가마에서 열과 연기가 흐르는 모습을 간단히 그린 그림이에요.</p>
+    <div class="kiln-flow" aria-label="불과 열의 흐름을 단순화한 설명">
+      <div><span>01</span><strong>불을 피우는 곳</strong><p>아궁이로 땔감을 넣고<br>연소실에서 불을 피워요</p></div>
+      <b aria-hidden="true">→</b>
+      <div><span>02</span><strong>소성실</strong><p>토기를 놓고<br>열로 구워요</p></div>
+      <b aria-hidden="true">→</b>
+      <div><span>03</span><strong>연도</strong><p>연기가 지나<br>밖으로 나가는 통로예요</p></div>
+    </div>
+    <section class="creation-note">
+      <h3>가마 안을 어떻게 볼 수 있나요?</h3>
+      <p>벽과 천장은 가마 안의 열을 유지하는 데 도움이 돼요. 게임에서는 토기가 놓인 자리를 볼 수 있게 옆면을 투명하게 보여줘요. 불을 지피고 토기가 식는 과정은 체험에 맞게 줄였어요.</p>
+      <h3>가마 뒤로 보이는 풍경</h3>
+      <p>소월리 유적은 청통천 주변의 넓은 들을 내려다보는 낮은 언덕에 있어요. 이 지형을 참고해 AI로 배경을 그렸어요. 물길의 모양과 가마·건조막의 배치는 게임에 맞게 구성했어요.</p>
+      <p class="support-credit">소월리에서도 토기가마가 발견됐어요. 얼굴모양토기를 어느 가마에서 구웠는지는 현재 확인한 자료로 알 수 없어요.</p>
+    </section>
+    ${sourceLinks(['kiln-dictionary','excavation-2019'])}
+    <div class="credits-actions"><button data-action="close" class="secondary">가마 장면으로 돌아가기</button></div>
+  </article>`;
 }

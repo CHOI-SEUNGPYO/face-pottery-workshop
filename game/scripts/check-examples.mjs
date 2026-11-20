@@ -23,16 +23,31 @@ try{
         return json;
       });
       await page.reload();await page.locator('#loading').waitFor({state:'detached'});
+      const firedFinish=await page.evaluate(()=>{
+        // The welcome pot uses the same completed finish as the kiln.
+        const {pottery}=window.togi.world,prototype=Object.getPrototypeOf(pottery);
+        const finish=p=>[p.material,p.plain,p.interior,p.tunnel].map(m=>[m.color.getHex(),m.roughness]);
+        const appearance=prototype.appearance;
+        prototype.appearance=function(amount){
+          appearance.call(this,amount);
+          if(this!==pottery)window.exampleFinish=finish(this);
+        };
+        return finish(pottery);
+      });
       const entry=await page.locator('.welcome-example').boundingBox();
       assert.ok(entry.x>=0&&entry.y>=0&&entry.x+entry.width<=viewport.width&&entry.y+entry.height<=viewport.height,'example entry remains reachable on the welcome screen');
       await page.screenshot({path:`asset/review/example-welcome-${viewport.width}.png`});
       assert.ok(await page.locator('.welcome-example').evaluate(el=>{const r=el.getBoundingClientRect();return el.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));}),'example entry is not covered');
       const checkExample=async(fromWelcome)=>{
-        const geometries=await page.evaluate(()=>window.togi.world.renderer.info.memory.geometries);
+        const geometries=await page.evaluate(()=>{
+          window.exampleFinish=null;
+          return window.togi.world.renderer.info.memory.geometries;
+        });
         if(!fromWelcome)await page.locator('[data-action="help"]').click();
         await page.locator('[data-action="example-artwork"]').click();
         const canvas=page.locator('.example-viewer canvas');await canvas.waitFor();
-        assert.match(await page.locator('.example-caption').textContent(),/게임을 만든 사람.*빚어.*복원품은 아니/s);
+        assert.deepEqual(await page.evaluate(()=>window.exampleFinish),firedFinish,'the example shows kiln-fired clay on its body, rim, interior and openings');
+        assert.match(await page.locator('.example-caption').textContent(),/게임을 만든 사람.*빚고 구운.*복원품은 아니/s);
         // Inspect the visible compositor output; the direct WebGL preview does
         // not retain a CPU-readable copy of every frame.
         const snapshot=async()=>{await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));return canvas.screenshot();};

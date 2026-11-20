@@ -1,9 +1,64 @@
 import * as T from 'three';
-import {SOIL_DEPTH, SOIL_WIDTH} from './soil';
+import {SOIL_DEPTH, SOIL_FLOOR, SOIL_WIDTH, type FindBounds} from './soil';
 
 type Outline = T.Vector2[]; // world x, z
 type Section = {depth: number; scale: number; color: number};
 const tau = Math.PI * 2;
+
+function footprint(box: T.Box3): FindBounds {
+  return {minX: box.min.x, maxX: box.max.x, minZ: box.min.z, maxZ: box.max.z, top: box.max.y};
+}
+
+export function findMeshBounds(root: T.Object3D) {
+  const bounds = new T.Box3(), point = new T.Vector3();
+  root.updateWorldMatrix(true, true);
+  // Hidden drawing guides have screen-space line geometry, unrelated to the clay.
+  root.traverseVisible(mesh => {
+    if (!(mesh instanceof T.Mesh)) return;
+    const vertices = mesh.geometry.getAttribute('position');
+    if (!vertices) return;
+    for (let i = 0; i < vertices.count; i++) {
+      bounds.expandByPoint(point.fromBufferAttribute(vertices, i).applyMatrix4(mesh.matrixWorld));
+    }
+  });
+  return bounds;
+}
+
+export function arrangeBuriedFinds(pot: T.Object3D, siru: T.Object3D, migrating: boolean) {
+  const finds = [pot, siru];
+  pot.rotation.x = siru.rotation.x = -Math.PI / 2;
+  pot.position.set(-.58, 0, .47);
+  siru.position.set(.62, 0, .30);
+  const bounds = finds.map(findMeshBounds);
+  const gap = .18;
+  // Leave room for the sloping walls and for a brush around each find.
+  const rx = SOIL_WIDTH * .41, rz = SOIL_DEPTH * .41;
+  const fits = bounds[0].max.x + gap <= bounds[1].min.x && bounds.every(b =>
+    Math.hypot(Math.max(-b.min.x, b.max.x) / rx, Math.max(-b.min.z, b.max.z) / rz) <= 1);
+  let previous: FindBounds[] | undefined;
+  if (!fits) {
+    // Old saves used these unscaled positions and box-based discovery targets.
+    if (migrating) previous = finds.map(find => footprint(new T.Box3().setFromObject(find)));
+    const sizes = bounds.map(b => b.getSize(new T.Vector3()));
+    const width = sizes[0].x + sizes[1].x, depth = Math.max(sizes[0].z, sizes[1].z);
+    const scale = Math.min(1, (1 - gap / (2 * rx)) / Math.hypot(width / (2 * rx), depth / (2 * rz)));
+    let left = -(width * scale + gap) / 2;
+    for (const [i, find] of finds.entries()) {
+      const b = bounds[i];
+      find.position.x = left + (find.position.x - b.min.x) * scale;
+      find.position.z = (find.position.z - (b.min.z + b.max.z) / 2) * scale;
+      find.scale.multiplyScalar(scale);
+      left += sizes[i].x * scale + gap;
+      bounds[i] = findMeshBounds(find);
+    }
+  }
+  const targets = bounds.map((b, i) => {
+    const lift = SOIL_FLOOR + .005 - b.min.y;
+    finds[i].position.y += lift;
+    return {...footprint(b), top: b.max.y + lift};
+  });
+  return {targets, previous};
+}
 
 function oval(x: number, z: number, rx: number, rz: number, seed: number, count: number): Outline {
   return Array.from({length: count}, (_, i) => {

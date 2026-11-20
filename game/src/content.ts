@@ -77,7 +77,7 @@ export const scenes: Record<
     eyebrow: "05 · 말리고 굽기",
     instruction: "아궁이에 불을 지피고, 가마 안에서 내 토기가 구워지는 모습을 살펴봐요.",
     character: "경산이",
-    speech: "안쪽을 볼 수 있게 벽을 열어 보여줄게!\n실제로는 벽을 닫고 구워.",
+    speech: "가마 안이 어떻게 생겼는지 보여줄게!\n벽과 천장은 가마 안에 열을 모아 줘.",
     next: "발굴하러 가기",
     tools: [],
     elevation: 12,
