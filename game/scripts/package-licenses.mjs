@@ -13,6 +13,7 @@ for (const [source, name] of [
   ["node_modules/polygon-clipping/LICENSE.md", "polygon-clipping.txt"],
   ["node_modules/robust-predicates/LICENSE", "robust-predicates.txt"],
   ["font/Pretendard-1.3.9/LICENSE.txt", "Pretendard.txt"],
+  ["font/nanum-square-round/LICENSE.txt", "NanumSquareRound.txt"],
   ["font/Cafe24Ssurround-v2.0/License-Ssurround.pdf", "Cafe24-Ssurround.pdf"],
   ["assets/CREDITS.md", "asset-credits.md"],
   ["AI_DISCLOSURE.md", "ai-disclosure.md"],

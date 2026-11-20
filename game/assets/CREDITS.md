@@ -20,7 +20,7 @@
 - `asset/runtime/models`: 프로젝트에서 제작한 작업실·발굴 공간·시루·받침이다. 외부 모델을 내려받아 사용하지 않았다. Blender 편집 원본과 생성 스크립트는 프로젝트 정리 전 복구용 ZIP에 보관했다.
 - `asset/runtime/audio`: 프로젝트에서 직접 합성한 배경음 2개와 효과음 5개다. 역사적 음악의 재현으로 표시하지 않는다.
 - `asset/runtime/ui`: 직접 작성한 버튼 SVG 2개다. 도구 아이콘은 `src/icons.ts`에 있으며, 텍스트는 브라우저에서 표시한다.
-- 글꼴: 제공된 Cafe24 Ssurround v2.0, 나눔스퀘어라운드, Pretendard. 제공된 Pretendard·Cafe24 이용 문서는 `font`와 배포물의 `licenses`에 보관한다. 나눔스퀘어라운드는 제공 폴더에 별도 이용 문서가 없어 운영자가 원 배포처의 이용 조건을 함께 보관해야 한다.
+- Cafe24 Ssurround v2.0, 나눔스퀘어라운드, Pretendard를 사용했다. 세 글꼴의 저작권 안내와 이용 문서는 배포물의 `licenses` 폴더에서 확인할 수 있다. [네이버 나눔글꼴 라이선스 안내](https://help.naver.com/service/30016/contents/18088?lang=ko&osType=PC)
 - Three.js r180, three-mesh-bvh, polygon-clipping, robust-predicates, splaytree의 이용 문서는 배포물의 `licenses`에 포함한다.
 - 게임 속 재질은 생성한 텍스처와 조형 셰이더를 결합한 체험용 시각 표현이다. 실제 유물 사진과 구분한다.
 - `asset/runtime/museum/artifact.png`는 위 `assets/artifact.png`의 편집용 복사본이다. 추가하는 사진·모델의 설명, 출처, 제공자와 이용 조건은 유물 편집기에서 운영자가 관리한다. 초기 상태에는 새로 확보한 외부 유물 모델이 포함되어 있지 않다.
